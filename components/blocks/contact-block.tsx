@@ -1,6 +1,6 @@
 'use client'
 
-import { BlockProps } from '../types'
+import { BlockProps } from './types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'

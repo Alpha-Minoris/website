@@ -30,7 +30,7 @@ export function ServiceFlipCard({ title, desc, details, icon }: ServiceCardProps
                 className="relative w-full h-full transition-all duration-500 transform-style-3d"
                 initial={false}
                 animate={{ rotateY: isFlipped ? 180 : 0 }}
-                transition={{ duration: 0.6, animationDirection: "normal" }}
+                transition={{ duration: 0.6 }}
                 onAnimationComplete={() => setIsAnimating(false)}
             >
                 {/* FRONT FACE */}

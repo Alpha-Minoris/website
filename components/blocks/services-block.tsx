@@ -1,4 +1,4 @@
-import { BlockProps } from '../types'
+import { BlockProps } from './types'
 import { Bot, Workflow, BarChart3, Database, Shield, Zap } from 'lucide-react'
 import { ServiceFlipCard } from './service-flip-card'
 
