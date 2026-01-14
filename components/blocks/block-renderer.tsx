@@ -1,6 +1,7 @@
 import React from 'react'
 import { BlockProps } from './types'
 import { BlockRegistry } from './registry'
+import { EditorBlockWrapper } from '@/components/editor/editor-block-wrapper'
 
 interface BlockRendererProps {
     blocks: BlockProps[]
@@ -23,7 +24,9 @@ export function BlockRenderer({ blocks }: BlockRendererProps) {
 
                 return (
                     <section id={block.id} key={block.id} className="w-full relative">
-                        <Component {...block} />
+                        <EditorBlockWrapper blockId={block.id}>
+                            <Component {...block} />
+                        </EditorBlockWrapper>
                     </section>
                 )
             })}

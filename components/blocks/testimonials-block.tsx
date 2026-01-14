@@ -1,18 +1,32 @@
+'use client'
 
 import { BlockProps } from './types'
 import { Quote } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/client'
+import { useEffect, useState } from 'react'
 
-export async function TestimonialsBlock({ id }: BlockProps) {
-    const supabase = await createClient()
-    const { data: testimonials } = await supabase
-        .from('website_testimonials')
-        .select('*')
-        .eq('is_enabled', true)
-        .order('created_at', { ascending: false })
-        .limit(3)
+export function TestimonialsBlock({ id }: BlockProps) {
+    const [testimonials, setTestimonials] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
 
-    if (!testimonials || testimonials.length === 0) return null
+    useEffect(() => {
+        const fetchTestimonials = async () => {
+            const supabase = createClient()
+            const { data } = await supabase
+                .from('website_testimonials')
+                .select('*')
+                .eq('is_enabled', true)
+                .order('created_at', { ascending: false })
+                .limit(3)
+
+            if (data) setTestimonials(data)
+            setLoading(false)
+        }
+        fetchTestimonials()
+    }, [])
+
+    if (loading) return <div className="py-24 bg-black text-white/50 text-center">Loading testimonials...</div>
+    if (testimonials.length === 0) return null
 
     return (
         <section id={id} className="py-24 bg-black relative overflow-hidden">

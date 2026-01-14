@@ -10,6 +10,7 @@ import { FAQBlock } from './faq-block'
 import { ContactBlock } from './contact-block'
 import { CaseStudyGridBlock } from './case-study-grid-block'
 import { PlaceholderBlock } from './placeholder-block'
+import { GenericSectionBlock } from './generic-section-block'
 
 export const BlockRegistry: Record<BlockType, React.ComponentType<any>> = {
     'hero': HeroBlock,
@@ -23,4 +24,5 @@ export const BlockRegistry: Record<BlockType, React.ComponentType<any>> = {
     'contact': ContactBlock,
     'case-studies': CaseStudyGridBlock,
     'rich-text': PlaceholderBlock,
+    'generic-section': GenericSectionBlock,
 }

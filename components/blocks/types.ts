@@ -10,6 +10,7 @@ export type BlockType =
     | 'contact'
     | 'case-studies'
     | 'rich-text' // generic fallback
+    | 'generic-section'
 
 export interface BlockProps {
     id: string

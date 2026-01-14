@@ -3,6 +3,8 @@ import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
+import { EditorToggle } from "@/components/editor/editor-toggle";
+import { EditorSidebar } from "@/components/editor/editor-sidebar";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-body" });
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-heading" });
@@ -22,6 +24,8 @@ export default function RootLayout({
       <body className={cn("min-h-screen bg-background font-sans antialiased", inter.variable, spaceGrotesk.variable)}>
         <ThemeProvider>
           {children}
+          <EditorToggle />
+          <EditorSidebar />
         </ThemeProvider>
       </body>
     </html>
