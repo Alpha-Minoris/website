@@ -44,10 +44,14 @@ export default async function Home() {
       blockType = version.layout_json.type
     }
 
+    // Prioritize layout_json.content if it exists and has items
+    const layoutContent = version?.layout_json?.content
+    const hasLayoutContent = Array.isArray(layoutContent) && layoutContent.length > 0
+
     const block: BlockProps = {
       id: section.id,
       type: blockType,
-      content: version?.content_html || {}, // Fallback or merge logic
+      content: hasLayoutContent ? layoutContent : (version?.content_html || []),
       settings: version?.layout_json || {}
     }
 

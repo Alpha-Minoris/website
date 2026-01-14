@@ -62,6 +62,7 @@ const config = {
             fontFamily: {
                 sans: ["var(--font-body)", ...fontFamily.sans],
                 heading: ["var(--font-heading)", ...fontFamily.sans],
+                grotesk: ["var(--font-heading)", ...fontFamily.sans],
             },
             keyframes: {
                 "accordion-down": {

@@ -2,12 +2,20 @@
 
 import { useEditorStore } from '@/lib/stores/editor-store'
 import { createGenericSection } from '@/actions/section-actions'
+import { addChildBlock, updateBlock } from '@/actions/block-actions'
 import { cn } from '@/lib/utils'
-import { Layers, Box, Settings, Plus, LayoutTemplate, Monitor, Smartphone, Tablet } from 'lucide-react'
+import { Layers, Box, Settings, Plus, LayoutTemplate, Monitor, Smartphone, Tablet, Type } from 'lucide-react'
+import { v4 as uuidv4 } from 'uuid'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { useState, useRef, useEffect } from 'react'
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 export function EditorSidebar() {
     const { isEditMode, selectedBlockId, setSelectedBlockId, addBlock, blocks } = useEditorStore()
@@ -126,13 +134,64 @@ export function EditorSidebar() {
                                     <LayoutTemplate className="w-5 h-5 opacity-50" />
                                     <span className="text-xs">Generic Section</span>
                                 </Button>
-                                <Button
-                                    variant="outline"
-                                    className="h-20 flex flex-col gap-1 border-white/10 hover:bg-white/5 hover:text-white text-zinc-400 opacity-50 cursor-not-allowed"
-                                >
-                                    <Box className="w-5 h-5 opacity-50" />
-                                    <span className="text-xs">Coming Soon</span>
-                                </Button>
+                                {(() => {
+                                    // Logic to find the correct Parent Section ID
+                                    let parentSectionId: string | null = null
+                                    if (selectedBlockId) {
+                                        const isSection = blocks.find(b => b.id === selectedBlockId)
+                                        if (isSection) {
+                                            parentSectionId = isSection.id
+                                        } else {
+                                            const parentSection = blocks.find(s =>
+                                                Array.isArray(s.content) && s.content.some((child: any) => child.id === selectedBlockId)
+                                            )
+                                            if (parentSection) parentSectionId = parentSection.id
+                                        }
+                                    }
+
+                                    const canAdd = !!parentSectionId
+
+                                    return (
+                                        <TooltipProvider delayDuration={0}>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <span className={!canAdd ? "cursor-not-allowed opacity-50" : ""}>
+                                                        <Button
+                                                            variant="outline"
+                                                            disabled={!canAdd}
+                                                            className="h-20 w-full flex flex-col gap-1 border-white/10 hover:bg-white/5 hover:text-white text-zinc-400 disabled:opacity-100 disabled:pointer-events-none"
+                                                            onClick={async () => {
+                                                                if (!parentSectionId) return
+
+                                                                // Create a new Heading Block Object
+                                                                const newHeading = {
+                                                                    id: uuidv4(),
+                                                                    type: 'heading',
+                                                                    content: 'New Heading',
+                                                                    settings: { level: 'h2', align: 'center' }
+                                                                }
+
+                                                                try {
+                                                                    await addChildBlock(parentSectionId, newHeading)
+                                                                } catch (err) {
+                                                                    console.error("Failed to add heading", err)
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Type className="w-5 h-5 opacity-50" />
+                                                            <span className="text-xs">Heading (Label)</span>
+                                                        </Button>
+                                                    </span>
+                                                </TooltipTrigger>
+                                                {!canAdd && (
+                                                    <TooltipContent side="bottom" className="bg-red-500/90 text-white border-0 text-xs">
+                                                        <p>Select a section first</p>
+                                                    </TooltipContent>
+                                                )}
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    )
+                                })()}
                             </div>
                         </Card>
                     )}
@@ -172,9 +231,61 @@ export function EditorSidebar() {
                                 <h3 className="text-xs font-medium text-white/50 uppercase tracking-wider">Properties</h3>
                             </div>
                             {selectedBlockId ? (
-                                <div className="text-xs text-zinc-400">
-                                    <p>Editing: <span className="text-white">{selectedBlockId}</span></p>
-                                    <p className="mt-2 text-zinc-600">No properties available yet.</p>
+                                <div className="space-y-4">
+                                    <div className="text-xs text-zinc-400 border-b border-white/10 pb-2 mb-2">
+                                        Editing: <span className="text-white font-mono">{selectedBlockId.slice(0, 8)}...</span>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        {(() => {
+                                            const selectedBlock = blocks.find(b => b.id === selectedBlockId)
+                                            const settings = selectedBlock?.settings || {}
+
+                                            return (
+                                                <>
+                                                    <div className="space-y-1">
+                                                        <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Direction</label>
+                                                        <div className="flex bg-white/5 rounded-md p-1 gap-1">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => updateBlock(selectedBlockId, { settings: { ...settings, direction: 'row' } })}
+                                                                className={cn("h-6 flex-1 text-[10px]", settings.direction === 'row' ? "bg-white/10 text-white" : "hover:bg-white/10")}
+                                                            >
+                                                                Row
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => updateBlock(selectedBlockId, { settings: { ...settings, direction: 'column' } })}
+                                                                className={cn("h-6 flex-1 text-[10px]", settings.direction === 'column' ? "bg-white/10 text-white" : "hover:bg-white/10")}
+                                                            >
+                                                                Col
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-1">
+                                                        <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Justify</label>
+                                                        <div className="flex bg-white/5 rounded-md p-1 gap-1">
+                                                            <Button variant="ghost" size="sm" onClick={() => updateBlock(selectedBlockId, { settings: { ...settings, justify: 'start' } })} className={cn("h-6 flex-1 text-[10px]", settings.justify === 'start' ? "bg-white/10 text-white" : "hover:bg-white/10")}>Start</Button>
+                                                            <Button variant="ghost" size="sm" onClick={() => updateBlock(selectedBlockId, { settings: { ...settings, justify: 'center' } })} className={cn("h-6 flex-1 text-[10px]", settings.justify === 'center' ? "bg-white/10 text-white" : "hover:bg-white/10")}>Center</Button>
+                                                            <Button variant="ghost" size="sm" onClick={() => updateBlock(selectedBlockId, { settings: { ...settings, justify: 'end' } })} className={cn("h-6 flex-1 text-[10px]", settings.justify === 'end' ? "bg-white/10 text-white" : "hover:bg-white/10")}>End</Button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-1">
+                                                        <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Align</label>
+                                                        <div className="flex bg-white/5 rounded-md p-1 gap-1">
+                                                            <Button variant="ghost" size="sm" onClick={() => updateBlock(selectedBlockId, { settings: { ...settings, align: 'start' } })} className={cn("h-6 flex-1 text-[10px]", settings.align === 'start' ? "bg-white/10 text-white" : "hover:bg-white/10")}>Start</Button>
+                                                            <Button variant="ghost" size="sm" onClick={() => updateBlock(selectedBlockId, { settings: { ...settings, align: 'center' } })} className={cn("h-6 flex-1 text-[10px]", settings.align === 'center' ? "bg-white/10 text-white" : "hover:bg-white/10")}>Center</Button>
+                                                            <Button variant="ghost" size="sm" onClick={() => updateBlock(selectedBlockId, { settings: { ...settings, align: 'end' } })} className={cn("h-6 flex-1 text-[10px]", settings.align === 'end' ? "bg-white/10 text-white" : "hover:bg-white/10")}>End</Button>
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )
+                                        })()}
+                                    </div>
                                 </div>
                             ) : (
                                 <p className="text-xs text-zinc-500 py-4 text-center">Select a block to edit properties</p>

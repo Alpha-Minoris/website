@@ -45,13 +45,21 @@ export async function createGenericSection() {
         .insert({
             section_id: section.id,
             status: 'published',
-            layout_json: { type: 'generic-section' },
+            layout_json: { type: 'generic-section', content: [], settings: {} },
             created_by: user?.id ?? null
         })
         .select()
         .single()
 
     if (versionError) throw versionError
+
+    // 4. Update the section to point to this published version
+    const { error: updateError } = await supabase
+        .from('website_sections')
+        .update({ published_version_id: version.id })
+        .eq('id', section.id)
+
+    if (updateError) throw updateError
 
     revalidatePath('/')
     return { success: true, sectionId: section.id }

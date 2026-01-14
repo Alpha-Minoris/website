@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
 import { EditorToggle } from "@/components/editor/editor-toggle";
 import { EditorSidebar } from "@/components/editor/editor-sidebar";
+import { TextToolbar } from '@/components/editor/text-toolbar';
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-body" });
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-heading" });
@@ -26,6 +27,7 @@ export default function RootLayout({
           {children}
           <EditorToggle />
           <EditorSidebar />
+          <TextToolbar />
         </ThemeProvider>
       </body>
     </html>

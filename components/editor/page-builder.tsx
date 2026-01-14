@@ -4,6 +4,7 @@ import { BlockProps } from '@/components/blocks/types'
 import { BlockRenderer } from '@/components/blocks/block-renderer'
 import { useEditorStore } from '@/lib/stores/editor-store'
 import { useEffect } from 'react'
+import { KeyboardShortcuts } from './keyboard-shortcuts'
 
 interface PageBuilderProps {
     initialBlocks: BlockProps[]
@@ -22,6 +23,7 @@ export function PageBuilder({ initialBlocks }: PageBuilderProps) {
 
     return (
         <div className="flex flex-col w-full min-h-screen">
+            <KeyboardShortcuts />
             <BlockRenderer blocks={renderBlocks} />
         </div>
     )

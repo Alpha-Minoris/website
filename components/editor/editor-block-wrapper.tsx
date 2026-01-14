@@ -4,14 +4,16 @@ import { ReactNode } from 'react'
 import { useEditorStore } from '@/lib/stores/editor-store'
 import { cn } from '@/lib/utils'
 import { FloatingToolbar } from './floating-toolbar'
+import { TextToolbar } from './text-toolbar'
 
 interface EditorBlockWrapperProps {
     blockId: string
+    blockType: string
     children: ReactNode
     className?: string
 }
 
-export function EditorBlockWrapper({ blockId, children, className }: EditorBlockWrapperProps) {
+export function EditorBlockWrapper({ blockId, blockType, children, className }: EditorBlockWrapperProps) {
     const { isEditMode, selectedBlockId, setSelectedBlockId } = useEditorStore()
 
     if (!isEditMode) {
@@ -19,6 +21,8 @@ export function EditorBlockWrapper({ blockId, children, className }: EditorBlock
     }
 
     const isSelected = selectedBlockId === blockId
+
+    const isContentBlock = ['heading', 'paragraph', 'button', 'rich-text'].includes(blockType)
 
     return (
         <div
@@ -35,15 +39,24 @@ export function EditorBlockWrapper({ blockId, children, className }: EditorBlock
             }}
         >
             {isSelected && (
-                <FloatingToolbar id={blockId} />
+                <>
+                    {/* Only show Section Toolbar for layout blocks */}
+                    {!isContentBlock &&
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full pb-2 z-50">
+                            <FloatingToolbar id={blockId} />
+                        </div>
+                    }
+
+                    {/* Only show Text Toolbar for content blocks */}
+                    {isContentBlock &&
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50">
+                            <TextToolbar blockId={blockId} />
+                        </div>
+                    }
+                </>
             )}
 
-            {/* Hover Label */}
-            {!isSelected && (
-                <div className="absolute top-0 right-0 -translate-y-full bg-blue-500/50 text-white text-[10px] px-2 py-0.5 rounded-t opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                    Select
-                </div>
-            )}
+
 
             {children}
         </div>

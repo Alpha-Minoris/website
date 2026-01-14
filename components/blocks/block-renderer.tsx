@@ -2,12 +2,14 @@ import React from 'react'
 import { BlockProps } from './types'
 import { BlockRegistry } from './registry'
 import { EditorBlockWrapper } from '@/components/editor/editor-block-wrapper'
+import { cn } from '@/lib/utils'
 
 interface BlockRendererProps {
     blocks: BlockProps[]
+    sectionId?: string
 }
 
-export function BlockRenderer({ blocks }: BlockRendererProps) {
+export function BlockRenderer({ blocks, sectionId }: BlockRendererProps) {
     if (!blocks || !Array.isArray(blocks)) {
         return null
     }
@@ -22,10 +24,20 @@ export function BlockRenderer({ blocks }: BlockRendererProps) {
                     return null
                 }
 
+                const isContentBlock = ['heading', 'paragraph', 'button'].includes(block.type)
+
                 return (
-                    <section id={block.id} key={block.id} className="w-full relative">
-                        <EditorBlockWrapper blockId={block.id}>
-                            <Component {...block} />
+                    <section
+                        id={block.id}
+                        key={block.id}
+                        className="w-full relative"
+                    >
+                        <EditorBlockWrapper
+                            blockId={block.id}
+                            blockType={block.type}
+                            className={isContentBlock ? "w-fit mx-auto" : "w-full"}
+                        >
+                            <Component {...block} sectionId={sectionId} />
                         </EditorBlockWrapper>
                     </section>
                 )
