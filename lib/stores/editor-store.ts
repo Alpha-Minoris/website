@@ -4,10 +4,12 @@ import { BlockProps } from '@/components/blocks/types'
 interface EditorState {
     isEditMode: boolean
     selectedBlockId: string | null
+    activeDragId: string | null
     blocks: BlockProps[]
 
     toggleEditMode: () => void
     setSelectedBlockId: (id: string | null) => void
+    setActiveDragId: (id: string | null) => void
     setBlocks: (blocks: BlockProps[]) => void
 
     addBlock: (block: BlockProps) => void
@@ -19,10 +21,12 @@ interface EditorState {
 export const useEditorStore = create<EditorState>((set) => ({
     isEditMode: false,
     selectedBlockId: null,
+    activeDragId: null,
     blocks: [],
 
     toggleEditMode: () => set((state) => ({ isEditMode: !state.isEditMode })),
     setSelectedBlockId: (id) => set({ selectedBlockId: id }),
+    setActiveDragId: (id) => set({ activeDragId: id }),
     setBlocks: (blocks) => set({ blocks }),
 
     addBlock: (block: BlockProps) => set((state) => ({

@@ -3,9 +3,6 @@
 import { BlockProps } from './types'
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-// We will need to import BlockRenderer recursively.
-// Circular dependency might be an issue, but usually fine in React if handled carefully or separate component.
-// Let's assume we can import BlockRenderer. If not, we extract the rendering list logic.
 import { BlockRenderer } from './block-renderer'
 import { useEditorStore } from '@/lib/stores/editor-store'
 import React, { useState } from 'react'
@@ -15,6 +12,7 @@ import { TextToolbarUI } from '@/components/editor/text-toolbar'
 import { IconToolbar } from '@/components/editor/icon-toolbar'
 import dynamicIconImports from 'lucide-react/dynamicIconImports'
 import { lazy, Suspense, useMemo } from 'react'
+import { useDroppable } from '@dnd-kit/core'
 
 const IconDisplay = ({ name, className, style }: { name?: string, className?: string, style?: any }) => {
     const LucideIcon = useMemo(() => {
@@ -34,63 +32,140 @@ const IconDisplay = ({ name, className, style }: { name?: string, className?: st
 }
 
 export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
-    const { isEditMode, selectedBlockId, updateBlock } = useEditorStore()
+    const { isEditMode, selectedBlockId, updateBlock, activeDragId } = useEditorStore()
     const [isFlipped, setIsFlipped] = useState(false)
     const [activeEdit, setActiveEdit] = useState<'front' | 'back' | null>(null)
     const [activeIconEdit, setActiveIconEdit] = useState<'front' | 'back' | null>(null)
 
-    // Sync state if settings change externally
-    React.useEffect(() => {
-        // Removed frontText/backText state, so this useEffect is no longer needed for them.
-        // The contentEditable elements will directly use settings.linkTextFront/Back
-        // and TextToolbarUI will use settings.linkFrontSettings/BackSettings.
-    }, [settings?.linkTextFront, settings?.linkTextBack])
-
     // Parse settings
     const mode = settings?.mode || 'simple' // 'simple' | 'flip'
-    // Default to glass if not specified for better style match
     const variant = settings?.variant || 'glass'
     const width = settings?.width || '100%'
     const minHeight = settings?.minHeight || '200px'
     const bgColor = settings?.backgroundColor
     const textColor = settings?.color
 
-    // Content: 'content' is Front, 'settings.contentBack' is Back (if implementing separation)
-    // For now, let's keep it simple: If in Flip Mode, we need to KNOW which blocks are front vs back.
-    // The current data model likely just pushes all children to `content`.
-    // We need a way to split them. 
-    // TEMPORARY FIX: Render same content for now but give user ability to distinguish via UI? 
-    // No, user said "both side are the same".
-    // Let's implement a 'BackContent' array in settings for real separation.
-
     const frontBlocks = Array.isArray(content) ? content : []
-    // If settings.backContent exists use it, else empty
     const backBlocks = Array.isArray(settings?.backContent) ? settings.backContent : []
 
     const cardClasses = cn(
         "relative transition-all duration-300 rounded-xl",
-        // Only clip overflow if NOT in edit mode AND NOT in flip mode. 
-        // 3D children need to be visible outside if we rotate, though usually inside.
-        // But overflow:hidden KILLS preserve-3d on some browsers.
         (!isEditMode && mode !== 'flip') && "overflow-hidden",
         isEditMode && "overflow-visible",
-
-        // Glassmorphism default
         !bgColor && "bg-white/5 backdrop-blur-md border border-white/10 shadow-xl",
         variant === 'outline' && "bg-transparent border-2 border-dashed border-zinc-700",
-        // Flip specifics
         mode === 'flip' && "transform-style-3d transition-transform duration-700",
         isFlipped && mode === 'flip' && "rotate-y-180",
-        // In flip mode, the container must be transparent; faces hold the styling.
         mode === 'flip' && "bg-transparent border-none shadow-none backdrop-blur-none"
     )
 
     const isSelected = selectedBlockId === id
     const ref = React.useRef<HTMLDivElement>(null)
 
-    // ... (keep listener logic)
+    // Droppable for Front
+    const { setNodeRef: setFrontRef } = useDroppable({
+        id: `${id}-front`,
+        data: {
+            type: 'container',
+            isCard: true,
+            containerId: id,
+            cardId: id,
+            face: 'front',
+            // Pass current relative coordinates to help drop logic
+            x: settings?.x || 0,
+            y: settings?.y || 0
+        },
+        disabled: !isEditMode || activeDragId === id
+    })
 
-    // listeners...
+    // Droppable for Back
+    const { setNodeRef: setBackRef } = useDroppable({
+        id: `${id}-back`,
+        data: {
+            type: 'container',
+            isCard: true,
+            containerId: id,
+            cardId: id,
+            face: 'back'
+        },
+        disabled: !isEditMode || activeDragId === id
+    })
+
+    // Helpers
+    const handleTextSave = (face: 'front' | 'back', html: string) => {
+        const key = face === 'front' ? 'linkTextFront' : 'linkTextBack'
+        updateBlock(id, { settings: { ...settings, [key]: html } })
+        import('@/actions/block-actions').then(({ updateBlockContent }) => {
+            if (sectionId) updateBlockContent(sectionId, id, { settings: { ...settings, [key]: html } })
+        })
+    }
+
+    const handleLinkUpdate = (face: 'front' | 'back' | null, updates: any) => {
+        if (!face) return
+        const key = face === 'front' ? 'linkFrontSettings' : 'linkBackSettings'
+        const newSettings = { ...settings, [key]: { ...(settings?.[key] || {}), ...updates } }
+        updateBlock(id, { settings: newSettings })
+        import('@/actions/block-actions').then(({ updateBlockContent }) => {
+            if (sectionId) updateBlockContent(sectionId, id, { settings: newSettings })
+        })
+    }
+
+    const handleIconUpdate = (face: 'front' | 'back' | null, updates: any) => {
+        if (!face) return
+        const key = face === 'front' ? 'iconFrontSettings' : 'iconBackSettings'
+        const newSettings = { ...settings, [key]: { ...(settings?.[key] || {}), ...updates } }
+        updateBlock(id, { settings: newSettings })
+        import('@/actions/block-actions').then(({ updateBlockContent }) => {
+            if (sectionId) updateBlockContent(sectionId, id, { settings: newSettings })
+        })
+    }
+
+    const handleResizeStart = (e: React.MouseEvent, direction: string) => {
+        e.preventDefault()
+        e.stopPropagation()
+        if (!ref.current) return
+
+        const startX = e.clientX
+        const startY = e.clientY
+        const startRect = ref.current.getBoundingClientRect()
+        const startW = startRect.width
+        const startH = startRect.height
+
+        const doDrag = (ev: MouseEvent) => {
+            const dx = ev.clientX - startX
+            const dy = ev.clientY - startY
+            let newW = startW
+            let newH = startH
+
+            if (direction.includes('e')) newW = startW + dx
+            if (direction.includes('w')) newW = startW - dx
+            if (direction.includes('s')) newH = startH + dy
+            if (direction.includes('n')) newH = startH - dy
+
+            if (ref.current) {
+                if (direction.includes('e') || direction.includes('w')) ref.current.style.width = `${Math.max(100, newW)}px`
+                if (direction.includes('s') || direction.includes('n')) ref.current.style.minHeight = `${Math.max(100, newH)}px`
+            }
+        }
+
+        const stopDrag = () => {
+            window.removeEventListener('mousemove', doDrag)
+            window.removeEventListener('mouseup', stopDrag)
+            if (ref.current && sectionId) {
+                const newSettings = {
+                    ...settings,
+                    width: ref.current.style.width,
+                    minHeight: ref.current.style.minHeight
+                }
+                updateBlock(id, { settings: newSettings })
+                import('@/actions/block-actions').then(({ updateBlockContent }) => {
+                    updateBlockContent(sectionId, id, { settings: newSettings })
+                })
+            }
+        }
+        window.addEventListener('mousemove', doDrag)
+        window.addEventListener('mouseup', stopDrag)
+    }
 
     return (
         <div
@@ -126,7 +201,6 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                     <TextToolbarUI
                         settings={activeEdit === 'front' ? (settings?.linkFrontSettings || {}) : (settings?.linkBackSettings || {})}
                         onUpdate={(u) => handleLinkUpdate(activeEdit, u)}
-                    // No delete for labels
                     />
                 </div>
             )}
@@ -148,13 +222,13 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                     backgroundColor: mode === 'flip' ? undefined : bgColor,
                     color: textColor,
                     borderColor: mode === 'flip' ? undefined : settings?.borderColor,
-                    transformStyle: mode === 'flip' ? 'preserve-3d' : undefined // Explicit reuse
+                    transformStyle: mode === 'flip' ? 'preserve-3d' : undefined
                 }}
             >
                 {mode === 'simple' ? (
-                    <CardContent className="p-6">
+                    <CardContent className="p-6 relative" ref={setFrontRef}>
                         {frontBlocks.length > 0 ? (
-                            <BlockRenderer blocks={frontBlocks} sectionId={sectionId} />
+                            <BlockRenderer blocks={frontBlocks} sectionId={sectionId} layoutMode="canvas" />
                         ) : (
                             <div className="text-zinc-500 text-center py-8 border-2 border-dashed border-zinc-800/50 rounded-lg">
                                 Empty Card
@@ -162,15 +236,7 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                         )}
                     </CardContent>
                 ) : (
-                    // Flip Mode Structure
-                    // Flip Mode Structure
                     <>
-                        {/* Note: In CSS 3D transform, we need distinct faces. 
-                           If we rotate parent, we rotate everything. 
-                           Usually: Container -> Face Front, Face Back.
-                           If parent `cardClasses` has rotate-y-180, ensure faces behave.
-                        */}
-
                         {/* Front Face */}
                         <div
                             className={cn(
@@ -184,9 +250,9 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                                 transformStyle: 'preserve-3d'
                             }}
                         >
-                            <CardContent className="p-6 h-full flex flex-col relative group/front">
+                            <CardContent className="p-6 h-full flex flex-col relative group/front" ref={setFrontRef}>
                                 {frontBlocks.length > 0 ? (
-                                    <BlockRenderer blocks={frontBlocks} sectionId={sectionId} />
+                                    <BlockRenderer blocks={frontBlocks} sectionId={sectionId} layoutMode="canvas" />
                                 ) : (
                                     <div className="text-zinc-500 text-center flex-1 flex items-center justify-center border-2 border-dashed border-zinc-800/20 m-4 rounded">
                                         Front Content
@@ -197,8 +263,6 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                                 <div
                                     className="absolute bottom-4 right-4 text-xs text-zinc-500 hover:text-white flex items-center gap-1.5 transition-colors duration-300 cursor-pointer z-50"
                                     onClick={(e) => {
-                                        // If clicking the container/icon, toggle flip
-                                        // Unless target is the input
                                         if (activeEdit !== 'front') {
                                             e.stopPropagation()
                                             setIsFlipped(true)
@@ -211,7 +275,6 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                                             className="uppercase tracking-widest text-[10px] w-auto min-w-[20px] focus:outline-none focus:ring-1 focus:ring-blue-500/50 rounded px-1 transition-all"
                                             style={{
                                                 ...(settings?.linkFrontSettings || {}),
-                                                // Map standard styles
                                                 color: settings?.linkFrontSettings?.color,
                                                 fontSize: settings?.linkFrontSettings?.fontSize,
                                                 backgroundColor: settings?.linkFrontSettings?.backgroundColor,
@@ -226,7 +289,7 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                                                 setActiveEdit(null)
                                                 handleTextSave('front', e.currentTarget.innerHTML)
                                             }}
-                                            onClick={(e) => e.stopPropagation()} // Stop flip when clicking text
+                                            onClick={(e) => e.stopPropagation()}
                                             suppressContentEditableWarning
                                         />
                                     ) : (
@@ -259,7 +322,7 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                         {/* Back Face */}
                         <div
                             className={cn(
-                                "absolute inset-0 flex flex-col bg-zinc-900 transition-all duration-700", // Force opaque bg-zinc-900 to hide front face
+                                "absolute inset-0 flex flex-col bg-zinc-900 transition-all duration-700",
                                 isFlipped ? "z-20 pointer-events-auto" : "z-0 pointer-events-none"
                             )}
                             style={{
@@ -267,26 +330,24 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
                                 transformStyle: 'preserve-3d',
-                                backgroundColor: bgColor || undefined // Inherit or override if set
+                                backgroundColor: bgColor || undefined
                             }}
                         >
-                            {/* Close/Reverse Button on Back - Top Right (Keep as alternative) */}
                             <div className="absolute top-2 right-2 z-20">
                                 <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-white/10" onClick={(e) => { e.stopPropagation(); setIsFlipped(false) }}>
                                     ✕
                                 </Button>
                             </div>
 
-                            <CardContent className="p-6 h-full flex flex-col relative group/back">
+                            <CardContent className="p-6 h-full flex flex-col relative group/back" ref={setBackRef}>
                                 {backBlocks.length > 0 ? (
-                                    <BlockRenderer blocks={backBlocks} sectionId={sectionId} />
+                                    <BlockRenderer blocks={backBlocks} sectionId={sectionId} layoutMode="canvas" />
                                 ) : (
                                     <div className="text-zinc-500 text-center flex-1 flex items-center justify-center border-2 border-dashed border-zinc-800/20 m-4 rounded">
                                         Back Content
                                     </div>
                                 )}
 
-                                {/* Bottom Right Flip Trigger (Back) */}
                                 <div
                                     className="absolute bottom-4 right-4 text-xs text-zinc-500 hover:text-white flex items-center gap-1.5 transition-colors duration-300 cursor-pointer z-50"
                                     onClick={(e) => {
@@ -349,10 +410,8 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                 )}
             </div>
 
-            {/* Resize Handles - 8 points */}
             {isEditMode && isSelected && (
                 <>
-                    {/* Corners */}
                     {['nw', 'ne', 'se', 'sw'].map((dir) => (
                         <div
                             key={dir}
@@ -366,13 +425,11 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                             onMouseDown={(e) => handleResizeStart(e, dir)}
                         />
                     ))}
-                    {/* Sides */}
                     {['n', 'e', 's', 'w'].map((dir) => (
                         <div
                             key={dir}
                             className={cn(
                                 "absolute bg-transparent z-[55]",
-                                // Hit areas
                                 dir === 'n' && "-top-1 left-0 right-0 h-2 cursor-n-resize",
                                 dir === 'e' && "top-0 -right-1 bottom-0 w-2 cursor-e-resize",
                                 dir === 's' && "-bottom-1 left-0 right-0 h-2 cursor-s-resize",

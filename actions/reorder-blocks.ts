@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache"
 
 // Move a block (reorder or reparent) within a section
 // Supports deep nesting by traversing the JSON tree
-export async function moveBlock(sectionId: string, activeId: string, overId: string) {
+export async function moveBlock(sectionId: string, activeId: string, overId: string, newSettings?: any) {
     const supabase = await createAdminClient()
 
     // 1. Get Section & Version (Active/Published)
@@ -16,10 +16,6 @@ export async function moveBlock(sectionId: string, activeId: string, overId: str
         .single()
 
     if (!section?.published_version_id) {
-        // Fallback: If no published version, check drafts or generic lookup?
-        // But block-actions.ts relies on published_version_id.
-        // Let's allow fallback to finding a 'draft' if published is null?
-        // But for this slice, let's stick to strict linkage.
         throw new Error("Section version not found")
     }
 
@@ -41,6 +37,10 @@ export async function moveBlock(sectionId: string, activeId: string, overId: str
         for (const block of blocks) {
             if (block.id === activeId) {
                 movedBlock = block // Capture it
+                if (newSettings) {
+                    // Apply new settings (e.g. reparented relative coordinates)
+                    movedBlock.settings = { ...movedBlock.settings, ...newSettings }
+                }
                 continue
             }
             // Recurse if children exist (e.g. Card)
@@ -58,45 +58,57 @@ export async function moveBlock(sectionId: string, activeId: string, overId: str
         for (const block of blocks) {
             // Case 1: 'overId' is a sibling
             if (block.id === overId) {
-                // Insert movedBlock BEFORE the 'over' block (standard list behavior)
+                // If the target is a Container (Card) and we want to drop INSIDE? 
+                // Simple heuristic: If overId is a Card and we're not sorting (requires valid strategy?), assume append?
+                // For now, adhere to explicit behavior:
+                // If overId matches, we insert BEFORE (standard sortable).
+                // To Insert INSIDE, we should rely on recursion finding a child? 
+                // OR we check if 'block' is the container we targeted.
+
+                // If we dropped ON a card (Canvas Mode Reparenting), we want to go inside.
+                if ((block.type === 'card' || block.type === 'container') && block.content) {
+                    // Check if we really meant to drop inside. 
+                    // Since we handle "Drop on Card" in frontend, we probably want inside.
+                    // Append movedBlock to block.content
+                    if (movedBlock) {
+                        block.content = [...(block.content || []), movedBlock]
+                        movedBlock = null // Mark as placed
+                    }
+                    newBlocks.push(block)
+                    continue
+                }
+
                 if (movedBlock) newBlocks.push(movedBlock)
                 newBlocks.push(block)
                 continue
             }
 
-            // Recurse first (to potentially insert inside)
+            // Recurse first
             let processedChildren = block.content
             if (block.content && Array.isArray(block.content)) {
                 processedChildren = insertIntoTree(block.content)
             }
-
-            // Case 2: 'overId' IS this container
-            // If we hovered over a Card (the container itself) and not a child.
-            // But usually we hover over a child.
-            // If the user drops *on* the Card border? 
-            // dnd-kit usually interacts with Sortable items.
-            // If the Card IS a Sortable item (it is), dropping ON IT implies swapping?
-            // But if we want to drop INSIDE, we usually drop on a placeholder or exist item.
-            // Let's assume 'overId' is where we want to place it *next to*.
 
             newBlocks.push({ ...block, content: processedChildren })
         }
         return newBlocks
     }
 
-    // 2.1 Remove First
+    // 2.1 Remove First (and update settings)
     const contentMinusBlock = removeFromTree(content)
 
     if (!movedBlock) {
-        console.warn("Block to move not found in active version:", activeId)
-        // If not found in JSON, maybe it was just added? 
-        // Or mismatched IDs.
         return { success: false, error: "Block not found" }
     }
 
     // 2.2 Insert
-    // Special check: If we just removed it, insert it back.
-    const finalContent = insertIntoTree(contentMinusBlock)
+    let finalContent = insertIntoTree(contentMinusBlock)
+
+    // Fallback: If not placed (e.g. overId not found or handled), append to root
+    // This handles "Drop on Cell" where overId is a virtual ID, moving the block to the top level.
+    if (movedBlock) {
+        finalContent.push(movedBlock)
+    }
 
     // Save
     const newLayout = {
@@ -111,6 +123,6 @@ export async function moveBlock(sectionId: string, activeId: string, overId: str
 
     if (error) throw error
 
-    revalidatePath('/') // Revalidate all paths
+    revalidatePath('/')
     return { success: true }
 }

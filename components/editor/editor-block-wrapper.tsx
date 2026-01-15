@@ -8,6 +8,7 @@ import { TextToolbar } from './text-toolbar'
 import { CardToolbar } from './card-toolbar'
 import { IconToolbar } from './icon-toolbar'
 import { useSortable } from '@dnd-kit/sortable'
+import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical } from 'lucide-react'
 
@@ -18,205 +19,258 @@ interface EditorBlockWrapperProps {
     className?: string
     settings?: any
     sectionId?: string
+    layoutMode?: 'flow' | 'canvas' // New prop
 }
 
-export function EditorBlockWrapper({ blockId, blockType, children, className, settings, sectionId }: EditorBlockWrapperProps) {
+export function EditorBlockWrapper(props: EditorBlockWrapperProps) {
+    const { blockId, sectionId, settings, blockType, layoutMode = 'flow' } = props
     const { isEditMode, selectedBlockId, setSelectedBlockId } = useEditorStore()
-
-    // Internal ref for resizing calculations
     const elementRef = React.useRef<HTMLDivElement>(null)
 
     // Connect Resize Logic
     const { handleResizeStart } = useResizeLogic(blockId, sectionId, settings, elementRef as React.RefObject<HTMLDivElement>, blockType)
 
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging
-    } = useSortable({ id: blockId, disabled: !isEditMode })
+    const commonProps = {
+        ...props,
+        isEditMode,
+        isSelected: selectedBlockId === blockId,
+        onSelect: () => setSelectedBlockId(blockId),
+        handleResizeStart,
+        setElementRef: (node: HTMLDivElement | null) => {
+            // @ts-ignore
+            elementRef.current = node
+        }
+    }
 
-    // Merge refs
+    if (layoutMode === 'canvas') {
+        return <CanvasBlockWrapper {...commonProps} />
+    }
+
+    return <FlowBlockWrapper {...commonProps} />
+}
+
+// ------------------------------------------------------------------
+// Canvas Wrapper (Absolute, Free Move)
+// ------------------------------------------------------------------
+function CanvasBlockWrapper(props: any) {
+    const { blockId, isEditMode, settings, setElementRef } = props
+
+    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+        id: blockId,
+        disabled: !isEditMode,
+        data: {
+            settings,
+            x: settings?.x || 0,
+            y: settings?.y || 0
+        }
+    })
+
     const setRefs = (node: HTMLDivElement | null) => {
         setNodeRef(node)
-        // @ts-ignore
-        elementRef.current = node
+        setElementRef(node)
     }
 
-    // ...
+    // Coordinates: Absolute
+    // Style Logic:
+    // - x/y from settings (or 0)
+    // - width/height ONLY if set (resized). Else auto/content.
+    // - NO transition during drag.
+    const style: React.CSSProperties = {
+        position: 'absolute',
+        left: settings?.x || 0,
+        top: settings?.y || 0,
+        width: settings?.width,
+        height: settings?.height,
+        transition: 'none',
+        transform: transform ? CSS.Translate.toString(transform) : undefined,
+        zIndex: isDragging ? 1000 : (settings?.zIndex || 'auto'),
+        opacity: isDragging ? 0.8 : 1,
+    }
 
-    {/* Only show Icon Toolbar for icon blocks */ }
-    {
-        blockType === 'icon' &&
-            <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50">
-                <IconToolbar settings={settings} onUpdate={(u: any) => {
-                    // We need to use updateBlock from store
-                    useEditorStore.getState().updateBlock(blockId, { settings: { ...settings, ...u } })
-                    // And trigger server update (debounced ideally, but direct for now is ok for icons)
-                    if (sectionId) {
-                        import('@/actions/block-actions').then(({ updateBlockContent }) => {
-                            updateBlockContent(sectionId, blockId, { settings: { ...settings, ...u } })
-                        })
-                    }
-                }}
-                    onDelete={async () => {
-                        const { deleteChildBlock } = await import('@/actions/block-actions')
-                        if (sectionId) {
-                            await deleteChildBlock(sectionId, blockId)
-                        }
-                    }}
-                />
+    // Preview Mode (Clean render)
+    if (!isEditMode) {
+        return (
+            <div style={{ ...style, transition: 'none', border: 'none', cursor: 'default' }}>
+                {props.children}
             </div>
+        )
     }
 
-    const style = {
+    return (
+        <BlockFrame
+            {...props}
+            setRefs={setRefs}
+            style={style}
+            listeners={listeners}
+            attributes={attributes}
+            isDragging={isDragging}
+        />
+    )
+}
+
+// ------------------------------------------------------------------
+// Flow Wrapper (Relative, List Sortable)
+// ------------------------------------------------------------------
+function FlowBlockWrapper(props: any) {
+    const { blockId, isEditMode, settings, setElementRef, blockType } = props
+
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+        id: blockId,
+        disabled: !isEditMode
+    })
+
+    const setRefs = (node: HTMLDivElement | null) => {
+        setNodeRef(node)
+        setElementRef(node)
+    }
+
+    const style: React.CSSProperties = {
+        position: 'relative',
         transform: CSS.Transform.toString(transform),
         transition,
         opacity: isDragging ? 0.5 : 1,
         zIndex: isDragging ? 1000 : 'auto',
-        position: 'relative' as const,
         width: blockType === 'icon' ? settings?.width : undefined,
         height: blockType === 'icon' ? settings?.height : undefined,
         minHeight: blockType !== 'icon' ? settings?.minHeight : undefined,
     }
 
     if (!isEditMode) {
-        return <div className={className} style={{
-            width: blockType === 'icon' ? settings?.width : undefined,
-            height: blockType === 'icon' ? settings?.height : undefined,
-            minHeight: blockType !== 'icon' ? settings?.minHeight : undefined,
-        }}>{children}</div>
+        return <div className={props.className} style={style}>{props.children}</div>
     }
 
-    const isSelected = selectedBlockId === blockId
+    return (
+        <BlockFrame
+            {...props}
+            setRefs={setRefs}
+            style={style}
+            listeners={listeners}
+            attributes={attributes} // Handle passed to Grip logic if needed, or whole block
+            isDragging={isDragging}
+        />
+    )
+}
 
+// ------------------------------------------------------------------
+// Shared UI Frame
+// ------------------------------------------------------------------
+function BlockFrame({
+    setRefs, style, className, isSelected, isEditMode, onSelect,
+    listeners, attributes, blockId, blockType, sectionId, settings,
+    handleResizeStart, children, layoutMode
+}: any) {
     const isContentBlock = ['heading', 'paragraph', 'button', 'rich-text'].includes(blockType)
     const isCardBlock = blockType === 'card'
     const isIconBlock = blockType === 'icon'
-
-    // Only allow resizing for specific blocks. Sections (full width) should not use these handles.
     const isResizable = isContentBlock || isCardBlock || isIconBlock
+
+    // Drag Props:
+    // Canvas: Apply to CONTAINER (whole block drags). Exception: Text editing.
+    // Flow: Apply to Grip (handled later). for now passing empty for flow.
+    const dragProps = layoutMode === 'canvas' ? { ...listeners, ...attributes } : {}
 
     return (
         <div
             ref={setRefs}
             style={style}
+            // Sizing Logic:
+            // Flow: w-full relative (standard block behavior)
+            // Canvas: absolute (implied w-auto). NO FORCED WIDTH.
             className={cn(
-                "relative transition-all duration-200 group rounded-md",
-                // Highlight Logic: Subtle gradient accent
-                isSelected
-                    ? "shadow-[0_0_20px_-5px_rgba(59,130,246,0.3)] ring-1 ring-blue-500/20 z-10"
-                    : "hover:ring-1 hover:ring-blue-500/10",
-                // Size Logic: Fit content, but allow full width if the block naturally wants it.
-                // We use inline-flex or w-fit to wrap tightly.
-                "w-fit max-w-full",
+                "group outline-none",
+                layoutMode === 'flow' ? "w-full relative" : "absolute",
+                isSelected ? "ring-2 ring-blue-500 z-10" : "hover:ring-1 hover:ring-blue-500/50",
+                isEditMode && layoutMode === 'canvas' ? "cursor-move" : "",
                 className
             )}
             onClick={(e) => {
                 e.stopPropagation()
-                setSelectedBlockId(blockId)
+                onSelect()
             }}
+            {...dragProps}
         >
+            {/* Text Editing Protection: Stop propagation on content clicks in Canvas */}
+            <div className="w-full h-full" onPointerDown={e => {
+                if (layoutMode === 'canvas' && (e.target as HTMLElement).isContentEditable) {
+                    e.stopPropagation() // Allow text selection, ignore drag
+                }
+            }}>
+                {children}
+            </div>
+
             {isSelected && (
                 <>
-                    {/* Only show Section Toolbar for layout blocks */}
+                    {/* Toolbars */}
                     {!isContentBlock && !isCardBlock && blockType !== 'icon' &&
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full pb-2 z-50">
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full pb-2 z-50 cursor-default" onPointerDown={e => e.stopPropagation()}>
                             <FloatingToolbar id={blockId} />
                         </div>
                     }
 
-                    {/* Only show Text Toolbar for content blocks */}
                     {isContentBlock &&
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50">
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50 cursor-default" onPointerDown={e => e.stopPropagation()}>
                             <TextToolbar blockId={blockId} />
                         </div>
                     }
 
-                    {/* Only show Card Toolbar for card blocks */}
                     {isCardBlock && sectionId &&
                         <CardToolbar blockId={blockId} sectionId={sectionId} settings={settings} />
                     }
 
-                    {/* Only show Icon Toolbar for icon blocks */}
                     {blockType === 'icon' &&
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50">
-                            <IconToolbar settings={settings} onUpdate={(u) => {
-                                // We need to use updateBlock from store
-                                useEditorStore.getState().updateBlock(blockId, { settings: { ...settings, ...u } })
-                                // And trigger server update (debounced ideally, but direct for now is ok for icons)
-                                if (sectionId) {
-                                    import('@/actions/block-actions').then(({ updateBlockContent }) => {
-                                        updateBlockContent(sectionId, blockId, { settings: { ...settings, ...u } })
-                                    })
-                                }
-                            }}
-                                onDelete={async () => {
-                                    const { deleteChildBlock } = await import('@/actions/block-actions')
-                                    if (sectionId) {
-                                        await deleteChildBlock(sectionId, blockId)
-                                    }
-                                }}
-                            />
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50 cursor-default" onPointerDown={e => e.stopPropagation()}>
+                            <IconToolbar settings={settings} onUpdate={(u: any) => useEditorStore.getState().updateBlock(blockId, { settings: { ...settings, ...u } })} onDelete={() => { }} />
                         </div>
                     }
                 </>
             )}
 
-            {/* Drag Handle (Visible on Hover or Select) */}
-            {
-                isEditMode && (
-                    <div
-                        className="absolute left-0 -translate-x-full top-1/2 -translate-y-1/2 p-1 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity z-50 text-zinc-500 hover:text-white"
-                        {...attributes}
-                        {...listeners}
-                    >
-                        <GripVertical className="w-4 h-4" />
-                    </div>
-                )
-            }
+            {/* Resize Handles */}
+            {isEditMode && isSelected && isResizable && (
+                <>
+                    {['nw', 'ne', 'se', 'sw'].map((dir) => (
+                        <div
+                            key={dir}
+                            className={cn(
+                                "absolute w-2.5 h-2.5 bg-white border border-blue-500 rounded-full z-[70] opacity-0 group-hover:opacity-100 transition-opacity hover:opacity-100",
+                                dir === 'nw' && "-top-1.5 -left-1.5 cursor-nw-resize",
+                                dir === 'ne' && "-top-1.5 -right-1.5 cursor-ne-resize",
+                                dir === 'se' && "-bottom-1.5 -right-1.5 cursor-se-resize",
+                                dir === 'sw' && "-bottom-1.5 -left-1.5 cursor-sw-resize"
+                            )}
+                            onMouseDown={(e) => handleResizeStart(e, dir)}
+                            onPointerDown={(e) => e.stopPropagation()}
+                        />
+                    ))}
+                    {['n', 'e', 's', 'w'].map((dir) => (
+                        <div
+                            key={dir}
+                            className={cn(
+                                "absolute bg-transparent z-[65]",
+                                // Hit areas
+                                dir === 'n' && "-top-1 left-0 right-0 h-2 cursor-n-resize",
+                                dir === 'e' && "top-0 -right-1 bottom-0 w-2 cursor-e-resize",
+                                dir === 's' && "-bottom-1 left-0 right-0 h-2 cursor-s-resize",
+                                dir === 'w' && "top-0 -left-1 bottom-0 w-2 cursor-w-resize"
+                            )}
+                            onMouseDown={(e) => handleResizeStart(e, dir)}
+                            onPointerDown={(e) => e.stopPropagation()}
+                        />
+                    ))}
+                </>
+            )}
 
-            {/* Global Resize Handles (8-Point) - Only for Resizable Content Blocks, NOT Sections */}
-            {
-                isEditMode && isSelected && isResizable && (
-                    <>
-                        {/* Corners */}
-                        {['nw', 'ne', 'se', 'sw'].map((dir) => (
-                            <div
-                                key={dir}
-                                className={cn(
-                                    "absolute w-2.5 h-2.5 bg-white border border-blue-500 rounded-full z-[70] opacity-0 group-hover:opacity-100 transition-opacity hover:opacity-100",
-                                    dir === 'nw' && "-top-1.5 -left-1.5 cursor-nw-resize",
-                                    dir === 'ne' && "-top-1.5 -right-1.5 cursor-ne-resize",
-                                    dir === 'se' && "-bottom-1.5 -right-1.5 cursor-se-resize",
-                                    dir === 'sw' && "-bottom-1.5 -left-1.5 cursor-sw-resize"
-                                )}
-                                onMouseDown={(e) => handleResizeStart(e, dir)}
-                            />
-                        ))}
-                        {/* Sides */}
-                        {['n', 'e', 's', 'w'].map((dir) => (
-                            <div
-                                key={dir}
-                                className={cn(
-                                    "absolute bg-transparent z-[65]",
-                                    // Hit areas
-                                    dir === 'n' && "-top-1 left-0 right-0 h-2 cursor-n-resize",
-                                    dir === 'e' && "top-0 -right-1 bottom-0 w-2 cursor-e-resize",
-                                    dir === 's' && "-bottom-1 left-0 right-0 h-2 cursor-s-resize",
-                                    dir === 'w' && "top-0 -left-1 bottom-0 w-2 cursor-w-resize"
-                                )}
-                                onMouseDown={(e) => handleResizeStart(e, dir)}
-                            />
-                        ))}
-                    </>
-                )
-            }
-
-            {children}
-        </div >
+            {/* Flow Mode Grip */}
+            {layoutMode === 'flow' && isEditMode && (
+                <div
+                    className="absolute left-0 -translate-x-full top-1/2 -translate-y-1/2 p-1 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity z-50 text-zinc-500 hover:text-white"
+                    {...attributes}
+                    {...listeners}
+                >
+                    <GripVertical className="w-4 h-4" />
+                </div>
+            )}
+        </div>
     )
 }
 
@@ -301,4 +355,3 @@ function useResizeLogic(blockId: string, sectionId: string | undefined, settings
 
     return { handleResizeStart }
 }
-
