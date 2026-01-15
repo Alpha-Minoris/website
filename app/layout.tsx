@@ -22,12 +22,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={cn("min-h-screen bg-background font-sans antialiased", inter.variable, spaceGrotesk.variable)}>
+      <body suppressHydrationWarning className={cn("min-h-screen bg-background font-sans antialiased", inter.variable, spaceGrotesk.variable)}>
         <ThemeProvider>
           {children}
           <EditorToggle />
           <EditorSidebar />
-          <TextToolbar />
+
         </ThemeProvider>
       </body>
     </html>

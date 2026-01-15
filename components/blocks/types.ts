@@ -12,6 +12,9 @@ export type BlockType =
     | 'rich-text' // generic fallback
     | 'generic-section'
     | 'heading'
+    | 'card'
+    | 'flip-trigger'
+    | 'icon'
 
 export interface BlockProps {
     id: string

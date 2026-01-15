@@ -105,4 +105,18 @@
   .rotate-y-180 {
     transform: rotateY(180deg);
   }
+
+  /* Custom Scrollbar Global */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-zinc-700/50 rounded-full hover:bg-zinc-600;
+  }
 }

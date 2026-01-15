@@ -4,7 +4,7 @@ import { useEditorStore } from '@/lib/stores/editor-store'
 import { createGenericSection } from '@/actions/section-actions'
 import { addChildBlock, updateBlock } from '@/actions/block-actions'
 import { cn } from '@/lib/utils'
-import { Layers, Box, Settings, Plus, LayoutTemplate, Monitor, Smartphone, Tablet, Type } from 'lucide-react'
+import { Layers, Box, Settings, Plus, LayoutTemplate, Monitor, Smartphone, Tablet, Type, Palette, Square, Link } from 'lucide-react'
 import { v4 as uuidv4 } from 'uuid'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -19,7 +19,7 @@ import {
 
 export function EditorSidebar() {
     const { isEditMode, selectedBlockId, setSelectedBlockId, addBlock, blocks } = useEditorStore()
-    const [activeTab, setActiveTab] = useState<'components' | 'layers' | 'settings' | null>(null)
+    const [activeTab, setActiveTab] = useState<'components' | 'layers' | 'settings' | 'theme' | null>(null)
     const islandRef = useRef<HTMLDivElement>(null)
 
     // Close when clicking outside
@@ -35,8 +35,115 @@ export function EditorSidebar() {
 
     if (!isEditMode) return null
 
-    const toggleTab = (tab: 'components' | 'layers' | 'settings') => {
+    const toggleTab = (tab: 'components' | 'layers' | 'settings' | 'theme') => {
         setActiveTab(current => current === tab ? null : tab)
+    }
+
+    // Logic to find the correct Parent ID for adding new blocks
+    let targetParentId: string | null = null
+    let targetField: 'content' | 'backContent' = 'content'
+    const canAdd = !!selectedBlockId
+
+    if (selectedBlockId) {
+        // 1. Check if selected is a Section
+        const isSection = blocks.find(b => b.id === selectedBlockId)
+        if (isSection) {
+            targetParentId = isSection.id
+        } else {
+            // 2. Check if selected is a Block. We need to find WHAT it is.
+            // Since we only have `blocks` (sections), we need to search.
+            // But wait, `useEditorStore` might not have full deep index.
+            // We can find the container.
+
+            // Simple Heuristic:
+            // If the selected block is a Card, we want to add TO the card?
+            // Or do we want to add NEXT to the card?
+            // The user said: "I can still not add a text to the card from the menu it just gets added to the section"
+            // This implies if they select a Card, they want to add INSIDE.
+
+            // We need to know if the selected block is a container.
+            // We can find the block in the tree.
+
+            const findBlock = (nodes: any[]): any => {
+                for (const node of nodes) {
+                    if (node.id === selectedBlockId) return node
+                    if (Array.isArray(node.content)) {
+                        const found = findBlock(node.content)
+                        if (found) return found
+                    }
+                    if (Array.isArray(node.settings?.backContent)) {
+                        const found = findBlock(node.settings.backContent)
+                        if (found) return found
+                    }
+                }
+                return null
+            }
+
+            const selectedBlock = findBlock(blocks)
+            if (selectedBlock && (selectedBlock.type === 'card' || selectedBlock.type === 'grid' || selectedBlock.type === 'generic-section')) {
+                targetParentId = selectedBlock.id
+                // If it's a card, default to content (front).
+                // TODO: If we could detect flip state, we could switch to backContent.
+                // But usually user selects a CHILD to verify context.
+            } else {
+                // If it's a leaf node (text, image), add to its PARENT.
+                // We need to find the parent ID and WHICH FIELD it belongs to.
+                const findParent = (nodes: any[], parentId: string): { id: string, field: 'content' | 'backContent' } | null => {
+                    for (const node of nodes) {
+                        if (node.id === selectedBlockId) return { id: parentId, field: 'content' } // Parent passed in. Wait, if nodes came from backContent...
+
+                        // Check children
+                        if (Array.isArray(node.content)) {
+                            const found = findParent(node.content, node.id)
+                            if (found) return found
+                        }
+                        if (Array.isArray(node.settings?.backContent)) {
+                            // If found in backContent, returns parent=node.id, field='backContent'?
+                            // No, recursive call needs to know context.
+                            // Let's refactor findParent to be smarter.
+                            const found = findParentInArray(node.settings.backContent, node.id, 'backContent')
+                            if (found) return found
+                        }
+                    }
+                    return null
+                }
+
+                const findParentInArray = (nodes: any[], parentId: string, field: 'content' | 'backContent'): { id: string, field: 'content' | 'backContent' } | null => {
+                    for (const node of nodes) {
+                        if (node.id === selectedBlockId) return { id: parentId, field }
+
+                        // Recurse
+                        if (Array.isArray(node.content)) {
+                            const found = findParentInArray(node.content, node.id, 'content')
+                            if (found) return found
+                        }
+                        if (Array.isArray(node.settings?.backContent)) {
+                            const found = findParentInArray(node.settings.backContent, node.id, 'backContent')
+                            if (found) return found
+                        }
+                    }
+                    return null
+                }
+
+                // Iterate sections
+                for (const s of blocks) {
+                    if (s.id === selectedBlockId) {
+                        targetParentId = s.id
+                        targetField = 'content'
+                        break
+                    }
+
+                    if (s.content) {
+                        const p = findParentInArray(s.content, s.id, 'content')
+                        if (p) {
+                            targetParentId = p.id
+                            targetField = p.field
+                            break
+                        }
+                    }
+                }
+            }
+        }
     }
 
     return (
@@ -64,6 +171,18 @@ export function EditorSidebar() {
                     >
                         <Plus className="w-3.5 h-3.5" />
                         Add
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleTab('theme')}
+                        className={cn(
+                            "rounded-full px-3 h-8 text-xs hover:bg-white/5 transition-all gap-1.5",
+                            activeTab === 'theme' ? "bg-white/10 text-white" : "text-zinc-400"
+                        )}
+                    >
+                        <Palette className="w-3.5 h-3.5" />
+                        Theme
                     </Button>
                     <Button
                         variant="ghost"
@@ -134,64 +253,118 @@ export function EditorSidebar() {
                                     <LayoutTemplate className="w-5 h-5 opacity-50" />
                                     <span className="text-xs">Generic Section</span>
                                 </Button>
-                                {(() => {
-                                    // Logic to find the correct Parent Section ID
-                                    let parentSectionId: string | null = null
-                                    if (selectedBlockId) {
-                                        const isSection = blocks.find(b => b.id === selectedBlockId)
-                                        if (isSection) {
-                                            parentSectionId = isSection.id
-                                        } else {
-                                            const parentSection = blocks.find(s =>
-                                                Array.isArray(s.content) && s.content.some((child: any) => child.id === selectedBlockId)
-                                            )
-                                            if (parentSection) parentSectionId = parentSection.id
-                                        }
-                                    }
+                                <TooltipProvider delayDuration={0}>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <span className={!canAdd ? "cursor-not-allowed opacity-50" : ""}>
+                                                <Button
+                                                    variant="outline"
+                                                    disabled={!canAdd}
+                                                    className="h-20 w-full flex flex-col gap-1 border-white/10 hover:bg-white/5 hover:text-white text-zinc-400 disabled:opacity-100 disabled:pointer-events-none"
+                                                    onClick={async () => {
+                                                        if (!targetParentId) return
+                                                        const newHeading = {
+                                                            id: uuidv4(),
+                                                            type: 'heading',
+                                                            content: 'New Heading',
+                                                            settings: { level: 'h2', align: 'center' }
+                                                        }
+                                                        try {
+                                                            await addChildBlock(targetParentId, newHeading, targetField)
+                                                        } catch (err) {
+                                                            console.error("Failed to add heading", err)
+                                                        }
+                                                    }}
+                                                >
+                                                    <Type className="w-5 h-5 opacity-50" />
+                                                    <span className="text-xs">Text Block</span>
+                                                </Button>
+                                            </span>
+                                        </TooltipTrigger>
+                                        {!canAdd && (
+                                            <TooltipContent side="bottom" className="bg-red-500/90 text-white border-0 text-xs">
+                                                <p>Select a container (section or card)</p>
+                                            </TooltipContent>
+                                        )}
+                                    </Tooltip>
+                                </TooltipProvider>
 
-                                    const canAdd = !!parentSectionId
+                                <TooltipProvider delayDuration={0}>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <span className={!canAdd ? "cursor-not-allowed opacity-50" : ""}>
+                                                <Button
+                                                    variant="outline"
+                                                    disabled={!canAdd}
+                                                    className="h-20 w-full flex flex-col gap-1 border-white/10 hover:bg-white/5 hover:text-white text-zinc-400 disabled:opacity-100 disabled:pointer-events-none"
+                                                    onClick={async () => {
+                                                        if (!targetParentId) return
+                                                        const newCard = {
+                                                            id: uuidv4(),
+                                                            type: 'card',
+                                                            content: [],
+                                                            settings: {
+                                                                mode: 'simple',
+                                                                variant: 'default',
+                                                                width: '100%',
+                                                                minHeight: '200px'
+                                                            }
+                                                        }
+                                                        try {
+                                                            await addChildBlock(targetParentId, newCard, targetField)
+                                                        } catch (err) {
+                                                            console.error("Failed to add card", err)
+                                                        }
+                                                    }}
+                                                >
+                                                    <Square className="w-5 h-5 opacity-50" />
+                                                    <span className="text-xs">Card</span>
+                                                </Button>
+                                            </span>
+                                        </TooltipTrigger>
+                                        {!canAdd && (
+                                            <TooltipContent side="bottom" className="bg-red-500/90 text-white border-0 text-xs">
+                                                <p>Select a container (section or card)</p>
+                                            </TooltipContent>
+                                        )}
+                                    </Tooltip>
+                                </TooltipProvider>
 
-                                    return (
-                                        <TooltipProvider delayDuration={0}>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <span className={!canAdd ? "cursor-not-allowed opacity-50" : ""}>
-                                                        <Button
-                                                            variant="outline"
-                                                            disabled={!canAdd}
-                                                            className="h-20 w-full flex flex-col gap-1 border-white/10 hover:bg-white/5 hover:text-white text-zinc-400 disabled:opacity-100 disabled:pointer-events-none"
-                                                            onClick={async () => {
-                                                                if (!parentSectionId) return
-
-                                                                // Create a new Heading Block Object
-                                                                const newHeading = {
-                                                                    id: uuidv4(),
-                                                                    type: 'heading',
-                                                                    content: 'New Heading',
-                                                                    settings: { level: 'h2', align: 'center' }
-                                                                }
-
-                                                                try {
-                                                                    await addChildBlock(parentSectionId, newHeading)
-                                                                } catch (err) {
-                                                                    console.error("Failed to add heading", err)
-                                                                }
-                                                            }}
-                                                        >
-                                                            <Type className="w-5 h-5 opacity-50" />
-                                                            <span className="text-xs">Heading (Label)</span>
-                                                        </Button>
-                                                    </span>
-                                                </TooltipTrigger>
-                                                {!canAdd && (
-                                                    <TooltipContent side="bottom" className="bg-red-500/90 text-white border-0 text-xs">
-                                                        <p>Select a section first</p>
-                                                    </TooltipContent>
-                                                )}
-                                            </Tooltip>
-                                        </TooltipProvider>
-                                    )
-                                })()}
+                                <TooltipProvider delayDuration={0}>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <span className={!canAdd ? "cursor-not-allowed opacity-50" : ""}>
+                                                <Button
+                                                    variant="outline"
+                                                    disabled={!canAdd}
+                                                    className="h-20 w-full flex flex-col gap-1 border-white/10 hover:bg-white/5 hover:text-white text-zinc-400 disabled:opacity-100 disabled:pointer-events-none"
+                                                    onClick={async () => {
+                                                        if (!targetParentId) return
+                                                        const newIcon = {
+                                                            id: uuidv4(),
+                                                            type: 'icon',
+                                                            content: '', // not used
+                                                            settings: { iconName: 'sparkles', width: '2rem', height: '2rem' }
+                                                        }
+                                                        try {
+                                                            await addChildBlock(targetParentId, newIcon, targetField)
+                                                        } catch (err) {
+                                                            console.error("Failed to add icon", err)
+                                                        }
+                                                    }}
+                                                >
+                                                    <div className="w-5 h-5 flex items-center justify-center">✨</div>
+                                                    <span className="text-xs">Icon</span>
+                                                </Button>
+                                            </span>
+                                        </TooltipTrigger>
+                                        {!canAdd && (
+                                            <TooltipContent side="bottom" className="bg-red-500/90 text-white border-0 text-xs">
+                                                <p>Select a container (section or card)</p>
+                                            </TooltipContent>
+                                        )}
+                                    </Tooltip>
+                                </TooltipProvider>
                             </div>
                         </Card>
                     )}
@@ -293,7 +466,8 @@ export function EditorSidebar() {
                         </Card>
                     )}
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     )
 }

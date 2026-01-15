@@ -7,6 +7,9 @@ import { BlockRenderer } from './block-renderer'
 import { useEditorStore } from '@/lib/stores/editor-store'
 import { updateBlock } from '@/actions/block-actions'
 import { FloatingToolbar } from '@/components/editor/floating-toolbar'
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
+import { arrayMove, sortableKeyboardCoordinates, horizontalListSortingStrategy } from '@dnd-kit/sortable'
+import { moveBlock } from '@/actions/reorder-blocks'
 
 interface GenericSectionSettings {
     justify?: 'start' | 'center' | 'end'
@@ -77,6 +80,28 @@ export function GenericSectionBlock({ id, content, settings }: BlockProps) {
     // Toolbar - Only show if THIS section is selected
     const showToolbar = isEditMode && selectedBlockId === id
 
+    // DND Sensors
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    )
+
+    const handleDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event
+
+        if (active.id !== over?.id) {
+            try {
+                // Use Deep Reorder Action
+                // id passed here is Section ID (top level block)
+                await moveBlock(id, active.id as string, over?.id as string)
+            } catch (err) {
+                console.error("Failed to move block", err)
+            }
+        }
+    }
+
     return (
         <div
             className={cn(
@@ -109,7 +134,13 @@ export function GenericSectionBlock({ id, content, settings }: BlockProps) {
             {/* Actual Content */}
             {hasContent && (
                 <div className="w-full h-full relative z-10">
-                    <BlockRenderer blocks={content} sectionId={id} />
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                    >
+                        <BlockRenderer blocks={content} sectionId={id} />
+                    </DndContext>
                 </div>
             )}
 
