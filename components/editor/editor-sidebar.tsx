@@ -378,21 +378,7 @@ export function EditorSidebar() {
                                 {blocks.length === 0 ? (
                                     <p className="text-xs text-zinc-500 py-4 text-center">No blocks added</p>
                                 ) : (
-                                    blocks.map((block, i) => (
-                                        <div
-                                            key={block.id}
-                                            className={cn(
-                                                "text-xs px-3 py-2 rounded-md hover:bg-white/5 cursor-pointer flex items-center gap-2 group justify-between",
-                                                selectedBlockId === block.id ? "bg-white/10 text-white" : "text-zinc-400"
-                                            )}
-                                            onClick={() => setSelectedBlockId(block.id)}
-                                        >
-                                            <div className="flex items-center gap-2">
-                                                <span className="w-4 h-4 flex items-center justify-center text-[10px] bg-white/5 rounded text-zinc-500">{i + 1}</span>
-                                                <span>{block.type}</span>
-                                            </div>
-                                        </div>
-                                    ))
+                                    <LayersList blocks={blocks} selectedBlockId={selectedBlockId} onSelect={setSelectedBlockId} />
                                 )}
                             </div>
                         </Card>
@@ -469,5 +455,54 @@ export function EditorSidebar() {
             )
             }
         </div >
+    )
+}
+
+// Helper Components for Recursive Layers
+function LayersList({ blocks, selectedBlockId, onSelect }: { blocks: any[], selectedBlockId: string | null, onSelect: (id: string) => void }) {
+    return (
+        <div className="flex flex-col gap-0.5">
+            {blocks.map((block, i) => (
+                <LayerItem key={block.id} block={block} index={i} depth={0} selectedBlockId={selectedBlockId} onSelect={onSelect} />
+            ))}
+        </div>
+    )
+}
+
+function LayerItem({ block, index, depth, selectedBlockId, onSelect }: { block: any, index: number, depth: number, selectedBlockId: string | null, onSelect: (id: string) => void }) {
+    const isSelected = selectedBlockId === block.id
+    // Collect children
+    const children = block.content && Array.isArray(block.content) ? block.content : []
+    // Also include back content for cards if present
+    if (block.settings?.backContent && Array.isArray(block.settings.backContent)) {
+        children.push(...block.settings.backContent)
+    }
+
+    return (
+        <div className="flex flex-col">
+            <div
+                className={cn(
+                    "text-xs px-2 py-1.5 rounded-sm hover:bg-white/5 cursor-pointer flex items-center gap-2 group transition-colors",
+                    isSelected ? "bg-blue-500/20 text-blue-200" : "text-zinc-400"
+                )}
+                style={{ paddingLeft: `${(depth * 12) + 8}px` }}
+                onClick={(e) => {
+                    e.stopPropagation()
+                    onSelect(block.id)
+                }}
+            >
+                <div className="flex items-center gap-2 truncate">
+                    <span className="opacity-50 font-mono text-[10px]">{index + 1}</span>
+                    <span className="truncate max-w-[150px] capitalize">{block.type.replace('-', ' ')}</span>
+                </div>
+            </div>
+            {children.length > 0 && (
+                <div className="flex flex-col border-l border-white/5 ml-3">
+                    {children.map((child: any, i: number) => (
+                        <LayerItem key={child.id} block={child} index={i} depth={depth + 1} selectedBlockId={selectedBlockId} onSelect={onSelect} />
+                    ))}
+                </div>
+            )}
+        </div>
     )
 }

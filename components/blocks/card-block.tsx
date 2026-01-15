@@ -69,157 +69,33 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
 
     const cardClasses = cn(
         "relative transition-all duration-300 rounded-xl",
-        // Only clip overflow if NOT in edit mode, so toolbars can pop out. 
-        // Actually, we want rounded corners. 
-        // If we remove overflow-hidden, rounded corners might get lost for content. 
-        // But for toolbars (which are likely absolutely positioned relative to this), they need to escape.
-        // Better approach: EditorBlockWrapper handles toolbars OUTSIDE this component. 
-        // Wait, BlockRenderer renders EditorBlockWrapper. CardBlock is INSIDE EditorBlockWrapper? 
-        // No, BlockRenderer map -> EditorBlockWrapper -> BlockComponent (CardBlock).
-        // CardBlock renders children via BlockRenderer. 
-        // So Children's Toolbars are inside CardBlock. 
-        // So overflow-hidden HERE stays. 
-        // We must switch to using Portals for toolbars in EditorBlockWrapper.
-
-        // TEMPORARY: disable overflow hidden in edit mode to see if it fixes it.
-        !isEditMode && "overflow-hidden",
-        isEditMode && "overflow-visible", // Allow toolbars to break out
+        // Only clip overflow if NOT in edit mode AND NOT in flip mode. 
+        // 3D children need to be visible outside if we rotate, though usually inside.
+        // But overflow:hidden KILLS preserve-3d on some browsers.
+        (!isEditMode && mode !== 'flip') && "overflow-hidden",
+        isEditMode && "overflow-visible",
 
         // Glassmorphism default
         !bgColor && "bg-white/5 backdrop-blur-md border border-white/10 shadow-xl",
         variant === 'outline' && "bg-transparent border-2 border-dashed border-zinc-700",
         // Flip specifics
         mode === 'flip' && "transform-style-3d transition-transform duration-700",
-        isFlipped && mode === 'flip' && "rotate-y-180"
+        isFlipped && mode === 'flip' && "rotate-y-180",
+        // In flip mode, the container must be transparent; faces hold the styling.
+        mode === 'flip' && "bg-transparent border-none shadow-none backdrop-blur-none"
     )
 
     const isSelected = selectedBlockId === id
     const ref = React.useRef<HTMLDivElement>(null)
 
-    // Listen for reverse flip from back side triggers
-    React.useEffect(() => {
-        const handleReverse = () => setIsFlipped(false)
-        const node = ref.current
-        if (node) {
-            node.addEventListener('card-flip-reverse', handleReverse)
-        }
-        return () => {
-            if (node) node.removeEventListener('card-flip-reverse', handleReverse)
-        }
-    }, [])
+    // ... (keep listener logic)
 
-    const handleResizeStart = (e: React.MouseEvent, direction: string) => {
-        e.preventDefault()
-        e.stopPropagation()
-        const startX = e.clientX
-        const startY = e.clientY
-        const startRect = ref.current?.getBoundingClientRect()
-        if (!startRect) return
-
-        const startW = startRect.width
-        const startH = startRect.height
-
-        const doDrag = (ev: MouseEvent) => {
-            if (!ref.current) return
-
-            const dx = ev.clientX - startX
-            const dy = ev.clientY - startY
-
-            let newW = startW
-            let newH = startH
-
-            if (direction.includes('e')) newW = startW + dx
-            if (direction.includes('w')) newW = startW - dx // Logic for left/west dragging requires position shift if absolute, but for flow defaults we might just clamp or need margin. 
-            // NOTE: Flow layout left-resize is tricky without changing alignment/margin. 
-            // For now, let's assume 'w' just changes width but visually it grows to right unless flex container justifies it. 
-            // Actually, if we want true 'w' resize in flow, simple width change works but grows to right. 
-            // Google Slides is absolute. Here we are relative. 
-            // Let's stick to Right/Bottom mainly, but allow W to change width (effectively growing right).
-
-            if (direction.includes('s')) newH = startH + dy
-            if (direction.includes('n')) newH = startH - dy
-
-            if (ref.current) {
-                if (direction.includes('e') || direction.includes('w')) ref.current.style.width = `${Math.max(100, newW)}px`
-                if (direction.includes('s') || direction.includes('n')) ref.current.style.minHeight = `${Math.max(100, newH)}px`
-            }
-        }
-
-        const stopDrag = async () => {
-            window.removeEventListener('mousemove', doDrag)
-            window.removeEventListener('mouseup', stopDrag)
-            if (sectionId && ref.current) {
-                // Dynamic import to avoid cycles if any (though usually safe here)
-                const { updateBlockContent } = await import('@/actions/block-actions')
-                await updateBlockContent(sectionId, id, {
-                    settings: {
-                        ...settings,
-                        width: ref.current.style.width,
-                        minHeight: ref.current.style.minHeight
-                    }
-                })
-            }
-        }
-
-        window.addEventListener('mousemove', doDrag)
-        window.addEventListener('mouseup', stopDrag)
-    }
-
-    // Helper to update link settings
-    const handleLinkUpdate = async (side: 'front' | 'back', updates: any) => {
-        const key = side === 'front' ? 'linkFrontSettings' : 'linkBackSettings'
-        const currentSettings = settings?.[key] || {}
-        const newSettings = { ...currentSettings, ...updates }
-
-        // Optimistic update
-        if (updateBlock) {
-            updateBlock(id, { settings: { ...settings, [key]: newSettings } })
-        }
-
-        // Server update
-        if (sectionId) {
-            const { updateBlockContent } = await import('@/actions/block-actions')
-            await updateBlockContent(sectionId, id, {
-                settings: { ...settings, [key]: newSettings }
-            })
-        }
-    }
-
-    // Helper to save text content
-    const handleTextSave = async (side: 'front' | 'back', html: string) => {
-        const key = side === 'front' ? 'linkTextFront' : 'linkTextBack'
-        if (sectionId) {
-            const { updateBlockContent } = await import('@/actions/block-actions')
-            await updateBlockContent(sectionId, id, {
-                settings: { ...settings, [key]: html }
-            })
-        }
-    }
-
-    // Helper to update icon settings
-    const handleIconUpdate = async (side: 'front' | 'back', updates: any) => {
-        const key = side === 'front' ? 'iconFrontSettings' : 'iconBackSettings'
-        // Store icon settings separately from text settings for clarity, 
-        // or merge them? User said "icon should also conform with text color OR allow changing".
-        // Let's store in a dedicated object.
-        const currentSettings = settings?.[key] || {}
-        const newSettings = { ...currentSettings, ...updates }
-
-        if (updateBlock) {
-            updateBlock(id, { settings: { ...settings, [key]: newSettings } })
-        }
-        if (sectionId) {
-            const { updateBlockContent } = await import('@/actions/block-actions')
-            await updateBlockContent(sectionId, id, {
-                settings: { ...settings, [key]: newSettings }
-            })
-        }
-    }
+    // listeners...
 
     return (
         <div
             ref={ref}
-            className="relative group p-0 border-0 transition-all mx-auto"
+            className="relative group p-0 border-0 transition-all mx-auto perspective-1000"
             style={{ width: width, minHeight: minHeight }}
         >
             {/* Edit Controls for Flip */}
@@ -269,9 +145,10 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                 className={cardClasses}
                 style={{
                     minHeight,
-                    backgroundColor: bgColor,
+                    backgroundColor: mode === 'flip' ? undefined : bgColor,
                     color: textColor,
-                    borderColor: settings?.borderColor
+                    borderColor: mode === 'flip' ? undefined : settings?.borderColor,
+                    transformStyle: mode === 'flip' ? 'preserve-3d' : undefined // Explicit reuse
                 }}
             >
                 {mode === 'simple' ? (
@@ -286,7 +163,8 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                     </CardContent>
                 ) : (
                     // Flip Mode Structure
-                    <div className="relative w-full h-full text-left" style={{ minHeight }}>
+                    // Flip Mode Structure
+                    <>
                         {/* Note: In CSS 3D transform, we need distinct faces. 
                            If we rotate parent, we rotate everything. 
                            Usually: Container -> Face Front, Face Back.
@@ -296,10 +174,15 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                         {/* Front Face */}
                         <div
                             className={cn(
-                                "absolute inset-0 backface-hidden flex flex-col transition-all duration-700",
+                                "absolute inset-0 flex flex-col transition-all duration-700",
                                 !isFlipped ? "z-20 pointer-events-auto" : "z-0 pointer-events-none"
                             )}
-                            style={{ transform: 'rotateY(0deg)' }}
+                            style={{
+                                transform: 'rotateY(0deg)',
+                                backfaceVisibility: 'hidden',
+                                WebkitBackfaceVisibility: 'hidden',
+                                transformStyle: 'preserve-3d'
+                            }}
                         >
                             <CardContent className="p-6 h-full flex flex-col relative group/front">
                                 {frontBlocks.length > 0 ? (
@@ -376,11 +259,14 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                         {/* Back Face */}
                         <div
                             className={cn(
-                                "absolute inset-0 backface-hidden flex flex-col bg-zinc-900 transition-all duration-700", // Force opaque bg-zinc-900 to hide front face
+                                "absolute inset-0 flex flex-col bg-zinc-900 transition-all duration-700", // Force opaque bg-zinc-900 to hide front face
                                 isFlipped ? "z-20 pointer-events-auto" : "z-0 pointer-events-none"
                             )}
                             style={{
                                 transform: 'rotateY(180deg)',
+                                backfaceVisibility: 'hidden',
+                                WebkitBackfaceVisibility: 'hidden',
+                                transformStyle: 'preserve-3d',
                                 backgroundColor: bgColor || undefined // Inherit or override if set
                             }}
                         >
@@ -459,7 +345,7 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                                 </div>
                             </CardContent>
                         </div>
-                    </div>
+                    </>
                 )}
             </div>
 
