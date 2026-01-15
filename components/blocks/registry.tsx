@@ -14,7 +14,7 @@ import { GenericSectionBlock } from './generic-section-block'
 import { TextBlock } from './text-block'
 import { CardBlock } from './card-block'
 import { FlipTriggerBlock } from './flip-trigger-block'
-
+import { GridSectionBlock } from './grid-section-block'
 import { IconBlock } from './icon-block'
 
 export const BlockRegistry: Record<BlockType, React.ComponentType<any>> = {
@@ -30,8 +30,9 @@ export const BlockRegistry: Record<BlockType, React.ComponentType<any>> = {
     'case-studies': CaseStudyGridBlock,
     'rich-text': PlaceholderBlock,
     'generic-section': GenericSectionBlock,
-    'heading': TextBlock, // Mapped to TextBlock now
+    'heading': TextBlock,
     'card': CardBlock,
     'flip-trigger': FlipTriggerBlock,
+    'grid-section': GridSectionBlock,
     'icon': IconBlock,
 }

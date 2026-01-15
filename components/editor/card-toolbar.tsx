@@ -18,6 +18,17 @@ import { useRef, useCallback } from 'react'
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 // Predefined Palette matching the new glassmorphism theme
 const PRESET_COLORS = [
@@ -148,11 +159,6 @@ export function CardToolbar({ blockId, sectionId, settings }: CardToolbarProps) 
     const handleDelete = async () => {
         if (!sectionId) return
 
-        if (typeof window !== 'undefined') {
-            const confirmed = window.confirm("Are you sure you want to delete this card?")
-            if (!confirmed) return
-        }
-
         try {
             await deleteChildBlock(sectionId, blockId)
         } catch (err) {
@@ -219,21 +225,37 @@ export function CardToolbar({ blockId, sectionId, settings }: CardToolbarProps) 
 
             <div className="w-px h-4 bg-zinc-800" />
 
-            <TooltipProvider delayDuration={0}>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleDelete}
-                            className="hover:bg-red-900/20 hover:text-red-500 h-8 w-8 p-0 rounded-full"
-                        >
-                            <Trash className="w-4 h-4" />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p className="text-red-500">Delete Card</p></TooltipContent>
-                </Tooltip>
-            </TooltipProvider>
+            <AlertDialog>
+                <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <AlertDialogTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="hover:bg-red-900/20 hover:text-red-500 h-8 w-8 p-0 rounded-full"
+                                >
+                                    <Trash className="w-4 h-4" />
+                                </Button>
+                            </AlertDialogTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent><p className="text-red-500">Delete Card</p></TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+
+                <AlertDialogContent className="bg-zinc-950 border-zinc-800 text-white">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Card?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-zinc-400">
+                            This action cannot be undone. It will remove the card and all its content.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="bg-transparent border-zinc-800 hover:bg-zinc-800 text-white hover:text-white">Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 text-white border-none">Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
         </Card>
     )

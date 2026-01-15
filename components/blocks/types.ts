@@ -11,6 +11,7 @@ export type BlockType =
     | 'case-studies'
     | 'rich-text' // generic fallback
     | 'generic-section'
+    | 'grid-section' // New Responsive Grid
     | 'heading'
     | 'card'
     | 'flip-trigger'
