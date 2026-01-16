@@ -16,6 +16,7 @@ import { CardBlock } from './card-block'
 import { FlipTriggerBlock } from './flip-trigger-block'
 import { GridSectionBlock } from './grid-section-block'
 import { IconBlock } from './icon-block'
+import { FooterBlock } from './footer-block'
 
 export const BlockRegistry: Record<BlockType, React.ComponentType<any>> = {
     'hero': HeroBlock,
@@ -35,4 +36,5 @@ export const BlockRegistry: Record<BlockType, React.ComponentType<any>> = {
     'flip-trigger': FlipTriggerBlock,
     'grid-section': GridSectionBlock,
     'icon': IconBlock,
+    'footer': FooterBlock,
 }

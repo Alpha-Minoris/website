@@ -16,7 +16,10 @@ interface TextSettings {
     fontFamily?: string
 }
 
+import { useEditorStore } from '@/lib/stores/editor-store'
+
 export function TextBlock({ id, content, settings, sectionId }: BlockProps) {
+    const { isEditMode } = useEditorStore()
     const s = settings as TextSettings || {}
     const Tag = (s.level === 'label' ? 'span' : s.level) || 'h2'
 
@@ -48,6 +51,27 @@ export function TextBlock({ id, content, settings, sectionId }: BlockProps) {
     // React will unmount the old node and mount a new one.
     // We need to make sure the NEW node gets the content.
     // The useLayoutEffect above handles this naturally because 'elementRef' changes.
+
+    // 3. MutationObserver for execCommand/Toolbar changes
+    // This ensures isDirty is set true even if onInput doesn't fire (e.g. from Toolbar buttons)
+    React.useEffect(() => {
+        if (!elementRef.current) return
+
+        const observer = new MutationObserver(() => {
+            isDirty.current = true
+            // We don't auto-save here to avoid spamming, handleBlur will catch it.
+            // But we MUST mark dirty so useLayoutEffect doesn't overwrite us with stale props.
+        })
+
+        observer.observe(elementRef.current, {
+            characterData: true,
+            childList: true,
+            subtree: true,
+            attributes: true
+        })
+
+        return () => observer.disconnect()
+    }, [])
 
     const handleInput = useCallback(() => {
         isDirty.current = true
@@ -105,10 +129,32 @@ export function TextBlock({ id, content, settings, sectionId }: BlockProps) {
                 backgroundColor: s.backgroundColor,
                 fontFamily: s.fontFamily
             }}
-            contentEditable
+            contentEditable={isEditMode}
             suppressContentEditableWarning
             onInput={handleInput}
             onBlur={handleBlur}
+            onClick={(e) => {
+                if (!isEditMode) {
+                    const link = (e.target as HTMLElement).closest('a')
+                    if (link) {
+                        const href = link.getAttribute('href')
+                        if (href) {
+                            if (href.startsWith('#')) {
+                                // Internal anchor, let default handle or scroll manually? 
+                                // Default usually works unless prevented.
+                            } else {
+                                // External or absolute
+                                window.open(href, '_blank')
+                            }
+                        }
+                    }
+                } else {
+                    // In edit mode, maybe prevent default? TextToolbar usually handles it by not setting target.
+                    // But if user clicks link in edit mode, capturing it prevents navigation which is GOOD.
+                    const link = (e.target as HTMLElement).closest('a')
+                    if (link) e.preventDefault()
+                }
+            }}
         // IMPORTANT: No dangerouslySetInnerHTML here. 
         // We manage content manually to prevent React re-renders from clobbering cursor/selection.
         // React will only manage className and style.

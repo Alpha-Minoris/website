@@ -16,6 +16,7 @@ export type BlockType =
     | 'card'
     | 'flip-trigger'
     | 'icon'
+    | 'footer'
 
 export interface BlockProps {
     id: string

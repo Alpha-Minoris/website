@@ -211,14 +211,20 @@ function BlockFrame({
             {isSelected && (
                 <>
                     {/* Toolbars */}
-                    {!isContentBlock && !isCardBlock && blockType !== 'icon' &&
+                    {!isContentBlock && !isCardBlock && blockType !== 'icon' && blockType !== 'footer' &&
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full pb-2 z-50 cursor-default" onPointerDown={e => e.stopPropagation()}>
                             <FloatingToolbar id={blockId} />
                         </div>
                     }
 
                     {isContentBlock &&
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50 cursor-default" onPointerDown={e => e.stopPropagation()}>
+                        <div
+                            className={cn(
+                                "absolute left-1/2 -translate-x-1/2 z-50 cursor-default",
+                                blockType === 'footer' ? "top-0 -translate-y-full pb-2" : "top-full pt-2"
+                            )}
+                            onPointerDown={e => e.stopPropagation()}
+                        >
                             <TextToolbar blockId={blockId} />
                         </div>
                     }
@@ -271,7 +277,7 @@ function BlockFrame({
             )}
 
             {/* Flow Mode Grip */}
-            {layoutMode === 'flow' && isEditMode && (
+            {layoutMode === 'flow' && isEditMode && blockType !== 'footer' && (
                 <div
                     className="absolute left-0 -translate-x-full top-1/2 -translate-y-1/2 p-1 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity z-50 text-zinc-500 hover:text-white"
                     {...attributes}

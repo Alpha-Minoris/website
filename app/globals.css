@@ -87,6 +87,20 @@
   h6 {
     font-family: var(--font-heading);
   }
+
+  /* Force link styles universally */
+  a {
+    @apply cursor-pointer;
+  }
+
+  /* Specific styles for rich text content areas */
+  /* User requested NO visual change, just functional link */
+  [contenteditable] a,
+  [data-block-text] a,
+  .editable-text a {
+    @apply cursor-pointer;
+    /* Removed color/decoration per user feedback */
+  }
 }
 
 @layer utilities {

@@ -595,28 +595,30 @@ function LayerItem({ block, index, depth, selectedBlockId, onSelect, onRefetch }
                 </div>
 
                 {/* Actions Group - Show on hover or selected */}
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {/* Visibility Toggle */}
-                    <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={handleToggleVisibility}
-                        className={cn("p-1 rounded hover:bg-white/10 transition-colors", (block.is_enabled === false) ? "text-yellow-500" : "text-zinc-500 hover:text-white")}
-                        title={block.is_enabled === false ? "Show Section" : "Hide Section"}
-                    >
-                        {block.is_enabled === false ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                    </div>
+                {block.type !== 'footer' && block.slug !== 'footer' && (
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* Visibility Toggle */}
+                        <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={handleToggleVisibility}
+                            className={cn("p-1 rounded hover:bg-white/10 transition-colors", (block.is_enabled === false) ? "text-yellow-500" : "text-zinc-500 hover:text-white")}
+                            title={block.is_enabled === false ? "Show Section" : "Hide Section"}
+                        >
+                            {block.is_enabled === false ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                        </div>
 
-                    {/* Delete Action */}
-                    <div
-                        role="button"
-                        onClick={handleDelete}
-                        className="p-1 hover:bg-red-500/20 hover:text-red-400 rounded transition-colors text-zinc-500"
-                        title="Delete Section"
-                    >
-                        <Trash2 className="w-3 h-3" />
+                        {/* Delete Action */}
+                        <div
+                            role="button"
+                            onClick={handleDelete}
+                            className="p-1 hover:bg-red-500/20 hover:text-red-400 rounded transition-colors text-zinc-500"
+                            title="Delete Section"
+                        >
+                            <Trash2 className="w-3 h-3" />
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
             {children.length > 0 && (
                 <div className="flex flex-col border-l border-white/5 ml-3">

@@ -16,8 +16,8 @@ export function BlockRenderer({ blocks, sectionId, layoutMode = 'flow' }: BlockR
         return null
     }
 
-    const renderBlocks = () => {
-        return blocks.map((block) => {
+    const renderBlocks = (list: BlockProps[]) => {
+        return list.map((block) => {
             const Component = BlockRegistry[block.type]
 
             if (!Component) {
@@ -26,10 +26,15 @@ export function BlockRenderer({ blocks, sectionId, layoutMode = 'flow' }: BlockR
             }
 
             const isContentBlock = ['heading', 'paragraph', 'button', 'card', 'flip-trigger', 'icon'].includes(block.type)
+            const isFooter = block.type === 'footer' || block.slug === 'footer'
 
             // In Canvas mode, we strictly avoid wrapping in <section> or other layout-affecting elements
             // The EditorBlockWrapper handles absolute positioning directly.
-            const Wrapper = layoutMode === 'canvas' ? React.Fragment : 'section'
+            const Wrapper = layoutMode === 'canvas' ? React.Fragment : (isFooter ? 'footer' : 'section')
+
+            // For footer, maybe we don't want 'w-full relative' if it messes up? 
+            // Actually footer-block has the footer tag. So Wrapper can be a div or Fragment?
+            // Existing `section` wrapper gives it an ID.
             const wrapperProps = layoutMode === 'canvas' ? {} : {
                 id: block.slug || block.id,
                 className: "w-full relative",
@@ -56,19 +61,26 @@ export function BlockRenderer({ blocks, sectionId, layoutMode = 'flow' }: BlockR
     if (layoutMode === 'canvas') {
         return (
             <div className="w-full h-full relative">
-                {renderBlocks()}
+                {renderBlocks(blocks)}
             </div>
         )
     }
 
+    // Split blocks: Main content vs Fixed (Footer)
+    const footerBlock = blocks.find(b => b.type === 'footer' || b.slug === 'footer')
+    const mainBlocks = blocks.filter(b => b.type !== 'footer' && b.slug !== 'footer')
+
     return (
         <div className="flex flex-col w-full">
             <SortableContext
-                items={blocks.map(b => b.id)}
+                items={mainBlocks.map(b => b.id)}
                 strategy={verticalListSortingStrategy}
             >
-                {renderBlocks()}
+                {renderBlocks(mainBlocks)}
             </SortableContext>
+
+            {/* Render Footer outside sortable context = Immovable */}
+            {footerBlock && renderBlocks([footerBlock])}
         </div>
     )
 }

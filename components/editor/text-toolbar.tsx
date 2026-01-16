@@ -1,6 +1,6 @@
 'use client'
 
-import { Bold, Italic, AlignLeft, AlignCenter, AlignRight, Type, Trash, ChevronDown, Minus, Plus, Smile } from 'lucide-react'
+import { Bold, Italic, AlignLeft, AlignCenter, AlignRight, Type, Trash, ChevronDown, Minus, Plus, Smile, Link, Check, Unlink } from 'lucide-react'
 import { IconSymbolPicker } from './icon-symbol-picker'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -36,17 +36,38 @@ interface TextToolbarUIProps {
     settings: any
     onUpdate: (updates: any) => void
     onDelete?: () => void
-    formatState?: { bold: boolean, italic: boolean }
+    formatState?: { bold: boolean, italic: boolean, isLink?: boolean }
 }
 
 export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: TextToolbarUIProps) {
-    const [localFormatState, setLocalFormatState] = useState(formatState || { bold: false, italic: false })
+    const [localFormatState, setLocalFormatState] = useState(formatState || { bold: false, italic: false, isLink: false })
+
+    // Link State
+    const [linkUrl, setLinkUrl] = useState('')
+    const savedRange = useRef<Range | null>(null)
+    const [isLinkPopoverOpen, setIsLinkPopoverOpen] = useState(false)
 
     const updateUIFormatState = useCallback(() => {
         if (typeof document === 'undefined') return
+
+        // Check for link
+        let isLink = false
+        const sel = window.getSelection()
+        if (sel && sel.rangeCount > 0) {
+            let node = sel.anchorNode
+            while (node && node !== document.body) {
+                if (node.nodeName === 'A') {
+                    isLink = true
+                    break
+                }
+                node = node.parentNode
+            }
+        }
+
         setLocalFormatState({
             bold: document.queryCommandState('bold'),
-            italic: document.queryCommandState('italic')
+            italic: document.queryCommandState('italic'),
+            isLink // Add this property to state
         })
     }, [])
 
@@ -66,6 +87,49 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
         // If it's a color change, we might want to persist it to settings too?
         // But for Bold/Italic, it's just HTML modification.
     }
+
+    const saveSelection = () => {
+        const sel = window.getSelection()
+        if (sel && sel.rangeCount > 0) {
+            savedRange.current = sel.getRangeAt(0)
+        }
+    }
+
+    const restoreSelection = () => {
+        const sel = window.getSelection()
+        if (sel && savedRange.current) {
+            sel.removeAllRanges()
+            sel.addRange(savedRange.current)
+        }
+    }
+
+    const handleApplyLink = () => {
+        restoreSelection()
+        if (linkUrl) {
+            let finalUrl = linkUrl.trim()
+            // Logic: If it starts with / or #, it's internal.
+            // If it starts with http:// or https://, it's absolute.
+            // Otherwise, assume it's external (e.g. google.com) and prepend https://
+            if (!finalUrl.startsWith('/') && !finalUrl.startsWith('#') && !finalUrl.startsWith('http://') && !finalUrl.startsWith('https://') && !finalUrl.startsWith('mailto:')) {
+                finalUrl = 'https://' + finalUrl
+            }
+
+            handleExec('createLink', finalUrl)
+        }
+        setIsLinkPopoverOpen(false)
+        setLinkUrl('')
+    }
+
+    const handleRemoveLink = () => {
+        restoreSelection()
+        handleExec('unlink')
+        setIsLinkPopoverOpen(false)
+        setLinkUrl('')
+    }
+
+    // Detect if current selection is a link to pre-fill URL?
+    // document.queryCommandValue('createLink') might return the URL? No.
+    // We'd need to check anchorNode. But 'createLink' command usually doesn't need pre-fill to work.
 
     return (
         <Card className="absolute top-full left-1/2 -translate-x-1/2 mt-3 z-50 flex items-center p-2 gap-2 bg-zinc-900/95 border-zinc-800 backdrop-blur-md shadow-2xl rounded-full animate-in fade-in zoom-in-95 duration-200">
@@ -186,6 +250,125 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
 
             <Separator orientation="vertical" className="h-4 bg-white/10" />
 
+            {/* Link - Advanced Popover */}
+            <div className="flex bg-white/5 rounded-full p-0.5">
+                <Popover open={isLinkPopoverOpen} onOpenChange={(open) => {
+                    setIsLinkPopoverOpen(open)
+                    if (open) {
+                        saveSelection()
+
+                        // Detect existing link in selection
+                        const sel = window.getSelection()
+                        if (sel && sel.rangeCount > 0) {
+                            let node = sel.anchorNode
+                            // Check up to 3 levels up for an anchor tag
+                            let foundHref = ''
+                            let curr = node
+                            while (curr && curr !== document.body && !foundHref) {
+                                if (curr.nodeName === 'A') {
+                                    foundHref = (curr as HTMLAnchorElement).getAttribute('href') || ''
+                                }
+                                curr = curr.parentNode
+                            }
+                            if (foundHref) setLinkUrl(foundHref)
+                        }
+                    } else {
+                        // Optional: clear on close if needed, but we keep state usually?
+                        // setLinkUrl('') // Better to clear on close or on apply?
+                    }
+                }}>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onMouseDown={(e) => {
+                                // Save selection before focus moves to popover
+                                e.preventDefault()
+                            }}
+                            // Highlight if linked (state detection needed globally or on selection change, forcing generic "Active" state if URL detected in popover logic is tricky without state, but we can do it.)
+                            // Actually, let's add `isLinked` state computed in `updateUIFormatState`
+                            className={cn("h-7 w-7 rounded-full hover:text-white hover:bg-white/10", (isLinkPopoverOpen || (localFormatState as any).isLink) ? "text-white bg-white/20" : "text-zinc-500")}
+                        >
+                            {(localFormatState as any).isLink ? <Unlink className="w-3.5 h-3.5" /> : <Link className="w-3.5 h-3.5" />}
+                        </Button>
+                    </PopoverTrigger>
+
+                    {/* Position: Bottom, Align: Center, FORCE BOTTOM even if offscreen (user request) */}
+                    <PopoverContent
+                        className="p-1.5 flex items-center gap-2 bg-zinc-900/95 border-zinc-800 backdrop-blur-md w-auto min-w-[320px] shadow-2xl rounded-2xl animate-in fade-in zoom-in-95 duration-200"
+                        side="bottom"
+                        sideOffset={10}
+                        align="center"
+                        avoidCollisions={false}
+                    >
+                        {/* Link Input - Integrated Style */}
+                        <div className="relative flex-1 group pl-2">
+                            <Link className="absolute left-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 group-focus-within:text-white transition-colors" />
+                            <Input
+                                placeholder="Paste link..."
+                                value={linkUrl}
+                                onChange={(e) => setLinkUrl(e.target.value)}
+                                className="h-8 pl-6 text-xs bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-white placeholder:text-zinc-600 w-full"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleApplyLink()
+                                }}
+                            />
+                        </div>
+
+                        {/* Preview Thumbnail (Mini, expands on hover) */}
+                        {linkUrl && !linkUrl.startsWith('/') && !linkUrl.startsWith('#') && (
+                            <div className="relative group/preview">
+                                {/* Trigger / Mini Thumb */}
+                                <div className="relative w-8 h-8 shrink-0 rounded-md overflow-hidden border border-white/10 bg-black/50 cursor-help">
+                                    <img
+                                        src={`https://api.microlink.io?url=${encodeURIComponent(linkUrl.startsWith('http') ? linkUrl : 'https://' + linkUrl)}&screenshot=true&meta=false&embed=screenshot.url`}
+                                        alt="Preview"
+                                        className="w-full h-full object-cover opacity-70 transition-opacity"
+                                    />
+                                </div>
+
+                                {/* Expanded Hover Card */}
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-[480px] aspect-video bg-zinc-950 border border-white/10 shadow-2xl rounded-lg overflow-hidden opacity-0 invisible group-hover/preview:opacity-100 group-hover/preview:visible transition-all duration-200 z-50 pointer-events-none origin-bottom scale-95 group-hover/preview:scale-100">
+                                    <div className="absolute inset-0 bg-zinc-900/50 animate-pulse" /> {/* Loading skeleton bg */}
+                                    <img
+                                        src={`https://api.microlink.io?url=${encodeURIComponent(linkUrl.startsWith('http') ? linkUrl : 'https://' + linkUrl)}&screenshot=true&meta=false&embed=screenshot.url`}
+                                        alt="Large Preview"
+                                        className="relative z-10 w-full h-full object-cover"
+                                    />
+                                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
+                                        <p className="text-[10px] text-zinc-300 truncate font-mono">{linkUrl}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <Separator orientation="vertical" className="h-5 bg-white/10" />
+
+                        {/* Action Icons */}
+                        <div className="flex items-center gap-1">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={handleRemoveLink}
+                                className="h-7 w-7 rounded-full text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                            >
+                                <Trash className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={handleApplyLink}
+                                className="h-7 w-7 rounded-full text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                            >
+                                <Check className="w-3.5 h-3.5" />
+                            </Button>
+                        </div>
+                    </PopoverContent>
+                </Popover>
+            </div>
+
+            <Separator orientation="vertical" className="h-4 bg-white/10" />
+
             {/* Colors using ColorControl */}
             <div className="flex items-center gap-1.5 px-1">
                 <ColorControl
@@ -207,14 +390,16 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
                 />
             </div>
 
-            {onDelete && (
-                <>
-                    <Separator orientation="vertical" className="h-4 bg-white/10 mx-1" />
-                    <Button variant="ghost" size="icon" onClick={onDelete} className="h-7 w-7 rounded-full text-red-400 hover:text-red-300 hover:bg-red-500/10">
-                        <Trash className="w-3.5 h-3.5" />
-                    </Button>
-                </>
-            )}
+            {
+                onDelete && (
+                    <>
+                        <Separator orientation="vertical" className="h-4 bg-white/10 mx-1" />
+                        <Button variant="ghost" size="icon" onClick={onDelete} className="h-7 w-7 rounded-full text-red-400 hover:text-red-300 hover:bg-red-500/10">
+                            <Trash className="w-3.5 h-3.5" />
+                        </Button>
+                    </>
+                )
+            }
 
             <Separator orientation="vertical" className="h-4 bg-white/10 mx-1" />
 
@@ -259,7 +444,7 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
                     />
                 </PopoverContent>
             </Popover>
-        </Card>
+        </Card >
     )
 }
 
@@ -338,12 +523,29 @@ export function TextToolbar({ blockId }: TextToolbarProps) {
 
         saveTimeoutRef.current = setTimeout(async () => {
             const sectionId = findParentSectionId(blockId)
+
+            // If we can't find a parent section (and it's not in the tree as a child),
+            // it might BE the section itself (like Footer).
+            // findParentSectionId returns the ID of the section containing the block.
+            // If blockId IS the section, it returns the section ID (itself) if implemented deeply, 
+            // but the current implementation of findParentSectionId might return itself?
+            // Let's check findParentSectionId implementation lines 294-314 in view_file 883.
+            // It iterates `blocks`. If `block.id === childId` returns `block.id`.
+            // So yes, if Footer is root, sectionId === blockId.
+
             if (!sectionId) return
+
             try {
-                // Determine current settings from store or local?
-                // Best to read fresh from block (which is updated via store) or use accumulated newSettings
-                // We'll use newSettings to be sure.
-                await updateBlockContent(sectionId, blockId, { settings: newSettings })
+                if (sectionId === blockId) {
+                    // It is a root section. Use updateBlock (Section Level)
+                    // Dynamic import to avoid cycles if needed, or stick to what we have.
+                    // block-actions exports updateBlock.
+                    const { updateBlock } = await import('@/actions/block-actions')
+                    await updateBlock(blockId, newSettings)
+                } else {
+                    // It is a child. Use updateBlockContent.
+                    await updateBlockContent(sectionId, blockId, { settings: newSettings })
+                }
             } catch (err) {
                 console.error("Failed to save text settings", err)
             }
