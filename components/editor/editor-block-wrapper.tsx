@@ -288,6 +288,9 @@ function useResizeLogic(blockId: string, sectionId: string | undefined, settings
         const startW = startRect.width
         const startH = startRect.height
 
+        // Calculate aspect ratio for shift+resize
+        const aspectRatio = startW / startH
+
         // Track starting position for directional resize
         const startX = parseInt(settings?.x) || 0
         const startY = parseInt(settings?.y) || 0
@@ -301,6 +304,7 @@ function useResizeLogic(blockId: string, sectionId: string | undefined, settings
 
             const dx = ev.clientX - startMouseX
             const dy = ev.clientY - startMouseY
+            const shiftHeld = ev.shiftKey
 
             let newW = startW
             let newH = startH
@@ -327,6 +331,28 @@ function useResizeLogic(blockId: string, sectionId: string | undefined, settings
             if (direction.includes('n')) {
                 newH = startH - dy
                 newY = startY + dy // Move position up as we expand
+            }
+
+            // Shift+Resize: Lock aspect ratio (only for corner resizes)
+            const isCorner = direction.length === 2 // 'nw', 'ne', 'sw', 'se'
+            if (shiftHeld && isCorner) {
+                // Calculate new dimensions maintaining aspect ratio
+                const currentAspect = newW / newH
+                if (currentAspect > aspectRatio) {
+                    // Width is too wide, adjust it
+                    newW = newH * aspectRatio
+                    // Recalculate X if we were resizing from west
+                    if (direction.includes('w')) {
+                        newX = startX + (startW - newW)
+                    }
+                } else {
+                    // Height is too tall, adjust it
+                    newH = newW / aspectRatio
+                    // Recalculate Y if we were resizing from north
+                    if (direction.includes('n')) {
+                        newY = startY + (startH - newH)
+                    }
+                }
             }
 
             // Enforce minimum sizes

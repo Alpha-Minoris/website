@@ -6,13 +6,16 @@ import { cn } from '@/lib/utils'
 import { BlockRenderer } from './block-renderer'
 import { useEditorStore } from '@/lib/stores/editor-store'
 import { updateBlock } from '@/actions/block-actions'
-import { DndContext, pointerWithin, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, useDroppable, DragStartEvent } from '@dnd-kit/core'
+import { DndContext, pointerWithin, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, useDroppable, DragStartEvent, DragMoveEvent } from '@dnd-kit/core'
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
+import { calculateSnapPoints, applySnapping, SnapGuide } from '@/lib/hooks/use-snapping'
+import { AlignmentGuides } from '@/components/editor/alignment-guides'
 
 interface GenericSectionSettings {
     minHeight?: number | string
     padding?: string
     backgroundColor?: string
+    gridSnapSize?: number
 }
 
 export function GenericSectionBlock({ id, content, settings }: BlockProps) {
@@ -21,6 +24,9 @@ export function GenericSectionBlock({ id, content, settings }: BlockProps) {
     const s = (blockFromStore?.settings || settings) as GenericSectionSettings || {}
 
     const sectionRef = React.useRef<HTMLDivElement>(null)
+
+    // State for alignment guides during drag
+    const [activeGuides, setActiveGuides] = React.useState<SnapGuide[]>([])
 
     // Parse initial height from settings
     const getInitialHeight = () => {

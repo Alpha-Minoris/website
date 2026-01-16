@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { ArrowUp, ArrowDown, Trash2, GripVertical } from 'lucide-react'
+import { ArrowUp, ArrowDown, Trash2, GripVertical, Grid3X3 } from 'lucide-react'
 import { useEditorStore } from '@/lib/stores/editor-store'
 import { deleteSection, updateSectionOrder } from '@/actions/section-actions'
 import { updateBlock } from '@/actions/block-actions'
@@ -22,6 +22,15 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useCallback, useRef } from 'react'
+
+// Grid size presets
+const GRID_SIZES = [
+    { label: 'Off', value: 0 },
+    { label: '8px', value: 8 },
+    { label: '16px', value: 16 },
+    { label: '24px', value: 24 },
+    { label: '32px', value: 32 },
+]
 
 // Color Presets matching theme
 const PRESET_COLORS = [
@@ -111,7 +120,28 @@ export function FloatingToolbar({ id }: FloatingToolbarProps) {
         }, 500)
     }, [id, settings, updateBlockLocal])
 
+    const handleGridSizeChange = useCallback((size: number) => {
+        const newSettings = { ...settings, gridSnapSize: size }
+
+        // Immediate update to store
+        updateBlockLocal(id, { settings: newSettings })
+
+        // Debounced save to server
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current)
+        }
+
+        saveTimeoutRef.current = setTimeout(async () => {
+            try {
+                await updateBlock(id, { gridSnapSize: size })
+            } catch (err) {
+                console.error("Failed to update grid size", err)
+            }
+        }, 500)
+    }, [id, settings, updateBlockLocal])
+
     const displayColor = settings?.backgroundColor || 'transparent'
+    const currentGridSize = settings?.gridSnapSize || 0
 
     return (
         <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-black/90 text-white p-1.5 rounded-md shadow-2xl border border-white/20 animate-in fade-in zoom-in-95 duration-200 z-[60]">
@@ -189,6 +219,54 @@ export function FloatingToolbar({ id }: FloatingToolbarProps) {
                                     </button>
                                 ))}
                             </div>
+                        </div>
+                    </div>
+                </PopoverContent>
+            </Popover>
+
+            {/* Grid Size Control */}
+            <Popover>
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 hover:bg-white/20 text-white"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <Grid3X3 className="w-4 h-4" />
+                                    {currentGridSize > 0 && (
+                                        <span className="absolute -top-1 -right-1 text-[8px] bg-blue-500 rounded-full w-3 h-3 flex items-center justify-center">
+                                            {currentGridSize}
+                                        </span>
+                                    )}
+                                </Button>
+                            </PopoverTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="text-xs">
+                            <p>Snap Grid: {currentGridSize > 0 ? `${currentGridSize}px` : 'Off'}</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+
+                <PopoverContent className="w-40 p-2 bg-zinc-950/95 border-zinc-800 backdrop-blur-xl" side="top" onClick={(e) => e.stopPropagation()}>
+                    <div className="space-y-1">
+                        <Label className="text-[10px] text-zinc-400 uppercase tracking-widest">Snap Grid</Label>
+                        <div className="flex flex-col gap-1">
+                            {GRID_SIZES.map((g) => (
+                                <button
+                                    key={g.value}
+                                    className={`px-3 py-1.5 text-xs rounded-md text-left transition-colors ${currentGridSize === g.value
+                                            ? 'bg-blue-600 text-white'
+                                            : 'hover:bg-white/10 text-zinc-300'
+                                        }`}
+                                    onClick={() => handleGridSizeChange(g.value)}
+                                >
+                                    {g.label}
+                                </button>
+                            ))}
                         </div>
                     </div>
                 </PopoverContent>
