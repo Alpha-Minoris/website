@@ -120,57 +120,12 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
         })
     }
 
-    const handleResizeStart = (e: React.MouseEvent, direction: string) => {
-        e.preventDefault()
-        e.stopPropagation()
-        if (!ref.current) return
-
-        const startX = e.clientX
-        const startY = e.clientY
-        const startRect = ref.current.getBoundingClientRect()
-        const startW = startRect.width
-        const startH = startRect.height
-
-        const doDrag = (ev: MouseEvent) => {
-            const dx = ev.clientX - startX
-            const dy = ev.clientY - startY
-            let newW = startW
-            let newH = startH
-
-            if (direction.includes('e')) newW = startW + dx
-            if (direction.includes('w')) newW = startW - dx
-            if (direction.includes('s')) newH = startH + dy
-            if (direction.includes('n')) newH = startH - dy
-
-            if (ref.current) {
-                if (direction.includes('e') || direction.includes('w')) ref.current.style.width = `${Math.max(100, newW)}px`
-                if (direction.includes('s') || direction.includes('n')) ref.current.style.minHeight = `${Math.max(100, newH)}px`
-            }
-        }
-
-        const stopDrag = () => {
-            window.removeEventListener('mousemove', doDrag)
-            window.removeEventListener('mouseup', stopDrag)
-            if (ref.current && sectionId) {
-                const newSettings = {
-                    ...settings,
-                    width: ref.current.style.width,
-                    minHeight: ref.current.style.minHeight
-                }
-                updateBlock(id, { settings: newSettings })
-                import('@/actions/block-actions').then(({ updateBlockContent }) => {
-                    updateBlockContent(sectionId, id, { settings: newSettings })
-                })
-            }
-        }
-        window.addEventListener('mousemove', doDrag)
-        window.addEventListener('mouseup', stopDrag)
-    }
+    // Resize is now handled by EditorBlockWrapper
 
     return (
         <div
             ref={ref}
-            className="relative group p-0 border-0 transition-all mx-auto perspective-1000"
+            className="relative group p-0 border-0 mx-auto perspective-1000"
             style={{ width: width, minHeight: minHeight }}
         >
             {/* Edit Controls for Flip */}
@@ -409,37 +364,6 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                     </>
                 )}
             </div>
-
-            {isEditMode && isSelected && (
-                <>
-                    {['nw', 'ne', 'se', 'sw'].map((dir) => (
-                        <div
-                            key={dir}
-                            className={cn(
-                                "absolute w-3 h-3 bg-white border border-blue-500 rounded-full z-[60] opacity-0 group-hover:opacity-100 transition-opacity",
-                                dir === 'nw' && "-top-1.5 -left-1.5 cursor-nw-resize",
-                                dir === 'ne' && "-top-1.5 -right-1.5 cursor-ne-resize",
-                                dir === 'se' && "-bottom-1.5 -right-1.5 cursor-se-resize",
-                                dir === 'sw' && "-bottom-1.5 -left-1.5 cursor-sw-resize"
-                            )}
-                            onMouseDown={(e) => handleResizeStart(e, dir)}
-                        />
-                    ))}
-                    {['n', 'e', 's', 'w'].map((dir) => (
-                        <div
-                            key={dir}
-                            className={cn(
-                                "absolute bg-transparent z-[55]",
-                                dir === 'n' && "-top-1 left-0 right-0 h-2 cursor-n-resize",
-                                dir === 'e' && "top-0 -right-1 bottom-0 w-2 cursor-e-resize",
-                                dir === 's' && "-bottom-1 left-0 right-0 h-2 cursor-s-resize",
-                                dir === 'w' && "top-0 -left-1 bottom-0 w-2 cursor-w-resize"
-                            )}
-                            onMouseDown={(e) => handleResizeStart(e, dir)}
-                        />
-                    ))}
-                </>
-            )}
         </div>
     )
 }

@@ -12,10 +12,11 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 interface GenericSectionSettings {
     minHeight?: number | string
     padding?: string
+    backgroundColor?: string
 }
 
 export function GenericSectionBlock({ id, content, settings }: BlockProps) {
-    const { isEditMode, updateBlock: updateBlockLocal, blocks, setActiveDragId } = useEditorStore()
+    const { isEditMode, updateBlock: updateBlockLocal, blocks, setActiveDragId, selectedBlockId, setSelectedBlockId } = useEditorStore()
     const blockFromStore = blocks.find(b => b.id === id)
     const s = (blockFromStore?.settings || settings) as GenericSectionSettings || {}
 
@@ -239,12 +240,22 @@ export function GenericSectionBlock({ id, content, settings }: BlockProps) {
         <div
             ref={setCombinedRef}
             className={cn(
-                "w-full relative group/section transition-all",
+                "w-full relative group/section",
                 isEditMode ? "border-2 border-dashed border-zinc-800 hover:border-zinc-700 rounded-lg" : "border-0 p-0",
-                isOver && isEditMode && "border-blue-500/50 bg-blue-500/5"
+                isOver && isEditMode && "border-blue-500/50"
             )}
-            style={{ minHeight: `${minHeight}px` }}
+            style={{
+                minHeight: `${minHeight}px`,
+                backgroundColor: s.backgroundColor || 'transparent'
+            }}
+            onClick={(e) => {
+                if (isEditMode) {
+                    e.stopPropagation()
+                    setSelectedBlockId(id)
+                }
+            }}
         >
+
             {content.length === 0 && isEditMode && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center w-full h-full text-zinc-500 select-none pointer-events-none z-10 opacity-50">
                     <span className="text-lg font-medium">Empty Section</span>

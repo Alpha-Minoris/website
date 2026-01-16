@@ -274,7 +274,7 @@ function BlockFrame({
     )
 }
 
-// Update useResizeLogic signature and logic
+// Update useResizeLogic signature and logic - Google Slides-style directional resize
 function useResizeLogic(blockId: string, sectionId: string | undefined, settings: any, nodeRef: React.RefObject<HTMLDivElement>, blockType?: string) {
     const handleResizeStart = (e: React.MouseEvent, direction: string) => {
         e.preventDefault()
@@ -282,39 +282,88 @@ function useResizeLogic(blockId: string, sectionId: string | undefined, settings
 
         if (!nodeRef.current) return
 
-        const startX = e.clientX
-        const startY = e.clientY
+        const startMouseX = e.clientX
+        const startMouseY = e.clientY
         const startRect = nodeRef.current.getBoundingClientRect()
         const startW = startRect.width
         const startH = startRect.height
 
+        // Track starting position for directional resize
+        const startX = parseInt(settings?.x) || 0
+        const startY = parseInt(settings?.y) || 0
+
+        // Track position changes during drag
+        let currentX = startX
+        let currentY = startY
+
         const doDrag = (ev: MouseEvent) => {
             if (!nodeRef.current) return
 
-            const dx = ev.clientX - startX
-            const dy = ev.clientY - startY
+            const dx = ev.clientX - startMouseX
+            const dy = ev.clientY - startMouseY
 
             let newW = startW
             let newH = startH
+            let newX = startX
+            let newY = startY
 
-            if (direction.includes('e')) newW = startW + dx
-            if (direction.includes('w')) newW = startW - dx
+            // East: expand width to the right (position stays same)
+            if (direction.includes('e')) {
+                newW = startW + dx
+            }
 
-            if (direction.includes('s')) newH = startH + dy
-            if (direction.includes('n')) newH = startH - dy
+            // West: expand width to the left (position moves left)
+            if (direction.includes('w')) {
+                newW = startW - dx
+                newX = startX + dx // Move position left as we expand
+            }
 
-            // Apply directly to DOM
-            if (direction.includes('e') || direction.includes('w')) {
-                nodeRef.current.style.width = `${Math.max(20, newW)}px`
+            // South: expand height downward (position stays same)
+            if (direction.includes('s')) {
+                newH = startH + dy
+            }
+
+            // North: expand height upward (position moves up)
+            if (direction.includes('n')) {
+                newH = startH - dy
+                newY = startY + dy // Move position up as we expand
+            }
+
+            // Enforce minimum sizes
+            const minSize = 20
+            if (newW < minSize) {
+                newW = minSize
+                if (direction.includes('w')) {
+                    newX = startX + startW - minSize
+                }
+            }
+            if (newH < minSize) {
+                newH = minSize
+                if (direction.includes('n')) {
+                    newY = startY + startH - minSize
+                }
+            }
+
+            // Store current position for saving
+            currentX = newX
+            currentY = newY
+
+            // Apply directly to DOM - no transitions, instant response
+            nodeRef.current.style.transition = 'none'
+            nodeRef.current.style.width = `${newW}px`
+
+            // Update position for directional resize
+            if (direction.includes('w') || direction.includes('n')) {
+                nodeRef.current.style.left = `${newX}px`
+                nodeRef.current.style.top = `${newY}px`
             }
 
             if (direction.includes('s') || direction.includes('n')) {
-                const h = Math.max(20, newH)
                 if (blockType === 'icon') {
-                    nodeRef.current.style.height = `${h}px`
+                    nodeRef.current.style.height = `${newH}px`
                     nodeRef.current.style.minHeight = 'unset'
                 } else {
-                    nodeRef.current.style.minHeight = `${h}px`
+                    nodeRef.current.style.minHeight = `${newH}px`
                 }
             }
         }
@@ -327,14 +376,15 @@ function useResizeLogic(blockId: string, sectionId: string | undefined, settings
                 // Dynamic import to avoid cycles
                 const { updateBlockContent } = await import('@/actions/block-actions')
 
-                const newSettings = {
+                const newSettings: Record<string, any> = {
                     ...settings,
                     width: nodeRef.current.style.width,
+                    x: currentX,
+                    y: currentY,
                 }
 
                 if (blockType === 'icon') {
                     newSettings.height = nodeRef.current.style.height
-                    // Ensure we don't save minHeight if we switched to strict height
                     delete newSettings.minHeight
                 } else {
                     newSettings.minHeight = nodeRef.current.style.minHeight
@@ -344,7 +394,7 @@ function useResizeLogic(blockId: string, sectionId: string | undefined, settings
                     settings: newSettings
                 })
 
-                // Also update local store immediately to reflect change in UI if needed
+                // Also update local store immediately
                 useEditorStore.getState().updateBlock(blockId, { settings: newSettings })
             }
         }
