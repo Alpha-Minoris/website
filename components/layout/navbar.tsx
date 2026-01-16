@@ -21,38 +21,42 @@ export function Navbar({ sections }: NavbarProps) {
     const [activeSection, setActiveSection] = useState<string>('')
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
-    // Filter enabled sections and exclude hidden ones (unless we want to show everything)
-    // Per requirements: "if its hidden it should not come in the nav bar"
+    // Filter enabled sections
     const navItems = sections.filter(s => s.is_enabled)
 
-    // Handle scroll spy to highlight active section
+    // Handle scroll spy
     useEffect(() => {
         const handleScroll = () => {
-            const scrollPosition = window.scrollY + 100 // Offset
+            const scrollPosition = window.scrollY + 100
 
             for (const section of navItems) {
-                const element = document.getElementById(section.id)
+                // Use slug if available, else ID
+                const targetId = section.slug || section.id
+                const element = document.getElementById(targetId)
+
                 if (element) {
                     const { offsetTop, offsetHeight } = element
                     if (
                         scrollPosition >= offsetTop &&
                         scrollPosition < offsetTop + offsetHeight
                     ) {
-                        setActiveSection(section.id)
+                        setActiveSection(section.id) // Keep tracking active by ID internally or switch to slug? 
+                        // Let's stick to checking equality against ID for state, but looking up DOM by slug.
+                        // Actually better to use ID for state to avoid confusion if slug changes? 
+                        // But href is #slug. Active state usually matches href. 
+                        // Let's use ID for state, but ensure href matches DOM id.
                     }
                 }
             }
         }
-
         window.addEventListener('scroll', handleScroll)
         return () => window.removeEventListener('scroll', handleScroll)
     }, [navItems])
 
-    const scrollToSection = (e: React.MouseEvent, id: string) => {
+    const scrollToSection = (e: React.MouseEvent, identifier: string) => {
         e.preventDefault()
-        const element = document.getElementById(id)
+        const element = document.getElementById(identifier)
         if (element) {
-            // Navbar height offset (approx 80px)
             const offset = 80
             const bodyRect = document.body.getBoundingClientRect().top
             const elementRect = element.getBoundingClientRect().top
@@ -72,12 +76,12 @@ export function Navbar({ sections }: NavbarProps) {
     return (
         <header className="fixed top-0 left-0 right-0 z-50 px-4 py-4 pointer-events-none">
             <div className="container mx-auto">
-                <nav className="bg-black/60 backdrop-blur-2xl border border-white/10 rounded-full px-6 py-3 shadow-2xl flex items-center justify-between pointer-events-auto transition-all duration-300">
+                <nav className="bg-black/40 backdrop-blur-3xl backdrop-saturate-150 border border-white/[0.08] rounded-full px-6 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex items-center justify-between pointer-events-auto transition-all duration-300">
 
-                    {/* Brand / Logo Area */}
+                    {/* Brand */}
                     <a
                         href="#"
-                        onClick={(e) => scrollToSection(e, navItems[0]?.id)}
+                        onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
                         className="text-lg font-bold font-heading text-white hover:text-accent transition-colors hidden md:block"
                     >
                         Alpha Minoris
@@ -86,21 +90,25 @@ export function Navbar({ sections }: NavbarProps) {
                     {/* Desktop Navigation */}
                     <div className="hidden md:flex flex-1 items-center justify-center px-4">
                         <div className="flex flex-wrap justify-center gap-1">
-                            {navItems.map((section) => (
-                                <a
-                                    key={section.id}
-                                    href={`#${section.id}`}
-                                    onClick={(e) => scrollToSection(e, section.id)}
-                                    className={cn(
-                                        "px-3 py-2 text-sm font-medium rounded-full transition-all duration-300 whitespace-nowrap",
-                                        activeSection === section.id
-                                            ? "bg-white/10 text-white"
-                                            : "text-muted-foreground hover:text-white hover:bg-white/5"
-                                    )}
-                                >
-                                    {section.title}
-                                </a>
-                            ))}
+                            {navItems.map((section) => {
+                                const targetId = section.slug || section.id
+                                return (
+                                    <a
+                                        key={section.id}
+                                        href={`#${targetId}`}
+                                        onClick={(e) => scrollToSection(e, targetId)}
+                                        className={cn(
+                                            "px-3 py-2 text-sm font-medium rounded-full transition-all duration-300 whitespace-nowrap",
+                                            activeSection === section.id // we still track active by ID in spy? 
+                                                // Wait, spy above sets activeSection to ID. So this check works.
+                                                ? "bg-white/10 text-white"
+                                                : "text-muted-foreground hover:text-white hover:bg-white/5"
+                                        )}
+                                    >
+                                        {section.title}
+                                    </a>
+                                )
+                            })}
                         </div>
                     </div>
 
@@ -138,21 +146,24 @@ export function Navbar({ sections }: NavbarProps) {
                             className="absolute top-20 left-4 right-4 bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl pointer-events-auto md:hidden"
                         >
                             <div className="flex flex-col gap-2">
-                                {navItems.map((section) => (
-                                    <a
-                                        key={section.id}
-                                        href={`#${section.id}`}
-                                        onClick={(e) => scrollToSection(e, section.id)}
-                                        className={cn(
-                                            "px-4 py-3 text-sm font-medium rounded-xl transition-all",
-                                            activeSection === section.id
-                                                ? "bg-white/10 text-white"
-                                                : "text-muted-foreground hover:text-white hover:bg-white/5"
-                                        )}
-                                    >
-                                        {section.title}
-                                    </a>
-                                ))}
+                                {navItems.map((section) => {
+                                    const targetId = section.slug || section.id
+                                    return (
+                                        <a
+                                            key={section.id}
+                                            href={`#${targetId}`}
+                                            onClick={(e) => scrollToSection(e, targetId)}
+                                            className={cn(
+                                                "px-4 py-3 text-sm font-medium rounded-xl transition-all",
+                                                activeSection === section.id
+                                                    ? "bg-white/10 text-white"
+                                                    : "text-muted-foreground hover:text-white hover:bg-white/5"
+                                            )}
+                                        >
+                                            {section.title}
+                                        </a>
+                                    )
+                                })}
                                 <div className="h-px bg-white/10 my-2" />
                                 <Button
                                     onClick={(e) => scrollToSection(e, 'contact')}

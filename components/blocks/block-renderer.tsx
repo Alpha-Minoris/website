@@ -31,8 +31,9 @@ export function BlockRenderer({ blocks, sectionId, layoutMode = 'flow' }: BlockR
             // The EditorBlockWrapper handles absolute positioning directly.
             const Wrapper = layoutMode === 'canvas' ? React.Fragment : 'section'
             const wrapperProps = layoutMode === 'canvas' ? {} : {
-                id: block.id,
-                className: "w-full relative"
+                id: block.slug || block.id,
+                className: "w-full relative",
+                "data-block-type": block.type
             }
 
             return (

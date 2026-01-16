@@ -25,4 +25,5 @@ export interface BlockProps {
     is_enabled?: boolean // Track visibility status
     title?: string // Section/Block display name
     sectionId?: string
+    slug?: string
 }

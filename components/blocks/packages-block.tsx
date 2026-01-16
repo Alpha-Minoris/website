@@ -65,8 +65,8 @@ export function PackagesBlock({ id }: BlockProps) {
                                         pkg.highlight
                                             ? "bg-accent text-white hover:bg-accent/90 hover:shadow-accent/20"
                                             : "bg-white text-black hover:bg-white/90"
-                                    )}>
-                                        Get Started
+                                    )} asChild>
+                                        <a href="#contact">Get Started</a>
                                     </Button>
                                 </CardFooter>
                             </Card>

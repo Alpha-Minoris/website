@@ -94,7 +94,8 @@ export default async function Home() {
       content: hasLayoutContent ? layoutContent : (version?.content_html || []),
       settings: version?.layout_json || {},
       is_enabled: section.is_enabled,
-      title: section.title
+      title: section.title,
+      slug: section.slug
     }
 
     return block
