@@ -23,7 +23,7 @@ export function HowWeWorkBlock({ id }: BlockProps) {
 
                     <div className="grid md:grid-cols-4 gap-8">
                         {STEPS.map((step, idx) => (
-                            <div key={idx} className="relative pt-8 group">
+                            <div key={idx} className="relative pt-8 group h-full flex flex-col">
                                 {/* Number Chip */}
                                 <div className="absolute top-0 left-0 md:left-1/2 md:-translate-x-1/2 w-24 h-24 flex items-center justify-center">
                                     <span className="text-6xl font-bold text-white/5 font-heading group-hover:text-accent/10 transition-colors duration-500">
@@ -31,9 +31,9 @@ export function HowWeWorkBlock({ id }: BlockProps) {
                                     </span>
                                 </div>
 
-                                <div className="relative bg-white/5 border border-white/10 p-6 rounded-2xl backdrop-blur-md hover:border-accent/30 transition-colors mt-8">
+                                <div className="relative bg-white/5 border border-white/10 p-6 rounded-2xl backdrop-blur-md hover:border-accent/30 transition-colors mt-8 flex-1 flex flex-col">
                                     <h3 className="text-xl font-bold font-heading mb-3">{step.title}</h3>
-                                    <p className="text-sm text-muted-foreground leading-relaxed">
+                                    <p className="text-sm text-muted-foreground leading-relaxed flex-1">
                                         {step.desc}
                                     </p>
                                 </div>

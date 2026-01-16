@@ -50,7 +50,7 @@ export function ServicesBlock({ id }: BlockProps) {
                     <p className="text-muted-foreground text-lg">Comprehensive AI solutions tailored for modern enterprises.</p>
                 </div>
 
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {SERVICES.map((service, idx) => (
                         <ServiceFlipCard
                             key={idx}

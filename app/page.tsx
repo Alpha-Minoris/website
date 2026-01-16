@@ -1,18 +1,32 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { BlockProps, BlockType } from '@/components/blocks/types'
 import { PageBuilder } from '@/components/editor/page-builder'
+import { Navbar } from '@/components/layout/navbar'
 
-export const revalidate = 60 // Revalidate every minute for now
+export const revalidate = 0 // Disable caching for active editing
 
 export default async function Home() {
-  const supabase = await createClient()
+  const isDev = process.env.NODE_ENV === 'development'
+  // In Dev, use Admin client to bypass RLS so Anon users (Editor) can see hidden sections
+  // In Prod, use standard User client which respects RLS (Public=Visible only, Auth=All)
+  const supabase = isDev ? await createAdminClient() : await createClient()
 
-  // 1. Fetch Enabled Sections
-  const { data: sections, error } = await supabase
+  const user = await supabase.auth.getUser()
+  const isAdmin = user.data.user?.role === 'authenticated' // Verify role properly if needed, simpler check for now if authenticated users are admins
+
+  // 1. Fetch Sections
+  // usage of AdminClient in dev ensures we get ALL sections (ignoring RLS 'enabled only' for anon).
+  // usage of Client in prod ensures RLS enforces privacy.
+  let query = supabase
     .from('website_sections')
     .select('*')
-    .eq('is_enabled', true)
     .order('sort_order', { ascending: true })
+
+  const { data: sections, error } = await query
+  console.log(`[Page] User: ${!!user.data.user}, Sections fetched: ${sections?.length}`)
+  if (sections) {
+    console.log(`[Page] Section statuses:`, sections.map(s => `${s.slug}:${s.is_enabled}`))
+  }
 
   if (error) {
     console.error('Error fetching sections:', error)
@@ -24,6 +38,16 @@ export default async function Home() {
   }
 
   // 2. Fetch Published Versions
+  if (!sections || sections.length === 0) {
+    return (
+      <main className="min-h-screen bg-background text-foreground selection:bg-accent/30">
+        <Navbar sections={[]} />
+        {/* <div className="p-10 text-center">No sections found.</div> */}
+        <PageBuilder initialBlocks={[]} />
+      </main>
+    )
+  }
+
   const sectionIds = sections.map(s => s.id)
   const { data: versions } = await supabase
     .from('website_section_versions')
@@ -68,7 +92,9 @@ export default async function Home() {
       id: section.id,
       type: blockType as BlockType,
       content: hasLayoutContent ? layoutContent : (version?.content_html || []),
-      settings: version?.layout_json || {}
+      settings: version?.layout_json || {},
+      is_enabled: section.is_enabled,
+      title: section.title
     }
 
     return block
@@ -76,6 +102,7 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-background text-foreground selection:bg-accent/30">
+      <Navbar sections={sections} />
       {/* 
         This is the new PageBuilder that handles Editor wrappers.
         It accepts initialBlocks for hydration.

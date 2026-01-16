@@ -22,5 +22,7 @@ export interface BlockProps {
     type: BlockType
     content: any
     settings?: any
+    is_enabled?: boolean // Track visibility status
+    title?: string // Section/Block display name
     sectionId?: string
 }

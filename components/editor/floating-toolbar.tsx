@@ -1,8 +1,9 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { ArrowUp, ArrowDown, Trash2, GripVertical, Grid3X3 } from 'lucide-react'
+import { ArrowUp, ArrowDown, Trash2, GripVertical, Grid3X3, Eye, EyeOff } from 'lucide-react'
 import { useEditorStore } from '@/lib/stores/editor-store'
+import { cn } from '@/lib/utils'
 import { deleteSection, updateSectionOrder } from '@/actions/section-actions'
 import { updateBlock } from '@/actions/block-actions'
 import { useRouter } from 'next/navigation'
@@ -140,6 +141,29 @@ export function FloatingToolbar({ id }: FloatingToolbarProps) {
         }, 500)
     }, [id, settings, updateBlockLocal])
 
+    const handleToggleVisibility = async () => {
+        // Toggle current state
+        const newEnabledState = !isSectionEnabled
+
+        // 1. Optimistic update (requires store update if we tracked is_enabled there, but block usually tracks generic settings)
+        // For now, we might need to rely on server revalidation or store update if we add is_enabled to block model
+        // Assuming block model in store has 'is_enabled' property top-level or we just refresh.
+
+        try {
+            const { updateSectionVisibility } = await import('@/actions/section-actions')
+            const res = await updateSectionVisibility(id, newEnabledState)
+            if (res.success) {
+                // Update local store to reflect change
+                updateBlockLocal(id, { is_enabled: newEnabledState })
+                router.refresh()
+            }
+        } catch (error) {
+            console.error("Failed to toggle visibility", error)
+        }
+    }
+
+    const isSectionEnabled = block?.is_enabled ?? true
+
     const displayColor = settings?.backgroundColor || 'transparent'
     const currentGridSize = settings?.gridSnapSize || 0
 
@@ -259,8 +283,8 @@ export function FloatingToolbar({ id }: FloatingToolbarProps) {
                                 <button
                                     key={g.value}
                                     className={`px-3 py-1.5 text-xs rounded-md text-left transition-colors ${currentGridSize === g.value
-                                            ? 'bg-blue-600 text-white'
-                                            : 'hover:bg-white/10 text-zinc-300'
+                                        ? 'bg-blue-600 text-white'
+                                        : 'hover:bg-white/10 text-zinc-300'
                                         }`}
                                     onClick={() => handleGridSizeChange(g.value)}
                                 >
@@ -290,6 +314,28 @@ export function FloatingToolbar({ id }: FloatingToolbarProps) {
             >
                 <ArrowDown className="w-4 h-4" />
             </Button>
+            {/* Visibility Toggle */}
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn(
+                                "h-8 w-8 hover:bg-white/20",
+                                !isSectionEnabled ? "text-yellow-400" : "text-white"
+                            )}
+                            onClick={(e) => { e.stopPropagation(); handleToggleVisibility() }}
+                        >
+                            {isSectionEnabled ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-xs">
+                        <p>{isSectionEnabled ? "Hide Section" : "Show Section"}</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+
             <div className="w-px h-4 bg-white/20 mx-1" />
 
             <AlertDialog>

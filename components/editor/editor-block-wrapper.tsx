@@ -24,8 +24,12 @@ interface EditorBlockWrapperProps {
 
 export function EditorBlockWrapper(props: EditorBlockWrapperProps) {
     const { blockId, sectionId, settings, blockType, layoutMode = 'flow' } = props
-    const { isEditMode, selectedBlockId, setSelectedBlockId } = useEditorStore()
+    const { isEditMode, selectedBlockId, setSelectedBlockId, blocks } = useEditorStore() // Get blocks from store to check is_enabled
     const elementRef = React.useRef<HTMLDivElement>(null)
+
+    // Check if section is disabled (hidden)
+    const block = blocks.find(b => b.id === blockId)
+    const isHidden = block?.is_enabled === false
 
     // Connect Resize Logic
     const { handleResizeStart } = useResizeLogic(blockId, sectionId, settings, elementRef as React.RefObject<HTMLDivElement>, blockType)
@@ -46,7 +50,7 @@ export function EditorBlockWrapper(props: EditorBlockWrapperProps) {
         return <CanvasBlockWrapper {...commonProps} />
     }
 
-    return <FlowBlockWrapper {...commonProps} />
+    return <FlowBlockWrapper {...commonProps} isHidden={isHidden} />
 }
 
 // ------------------------------------------------------------------
@@ -54,6 +58,8 @@ export function EditorBlockWrapper(props: EditorBlockWrapperProps) {
 // ------------------------------------------------------------------
 function CanvasBlockWrapper(props: any) {
     const { blockId, isEditMode, settings, setElementRef } = props
+    const { blocks } = useEditorStore()
+    const block = blocks.find(b => b.id === blockId)
 
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
         id: blockId,
@@ -89,6 +95,7 @@ function CanvasBlockWrapper(props: any) {
 
     // Preview Mode (Clean render)
     if (!isEditMode) {
+        if (block?.is_enabled === false) return null
         return (
             <div style={{ ...style, transition: 'none', border: 'none', cursor: 'default' }}>
                 {props.children}
@@ -112,7 +119,7 @@ function CanvasBlockWrapper(props: any) {
 // Flow Wrapper (Relative, List Sortable)
 // ------------------------------------------------------------------
 function FlowBlockWrapper(props: any) {
-    const { blockId, isEditMode, settings, setElementRef, blockType } = props
+    const { blockId, isEditMode, settings, setElementRef, blockType, isHidden } = props
 
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: blockId,
@@ -136,6 +143,7 @@ function FlowBlockWrapper(props: any) {
     }
 
     if (!isEditMode) {
+        if (isHidden) return null
         return <div className={props.className} style={style}>{props.children}</div>
     }
 
@@ -157,7 +165,7 @@ function FlowBlockWrapper(props: any) {
 function BlockFrame({
     setRefs, style, className, isSelected, isEditMode, onSelect,
     listeners, attributes, blockId, blockType, sectionId, settings,
-    handleResizeStart, children, layoutMode
+    handleResizeStart, children, layoutMode, isHidden
 }: any) {
     const isContentBlock = ['heading', 'paragraph', 'button', 'rich-text'].includes(blockType)
     const isCardBlock = blockType === 'card'
@@ -181,6 +189,8 @@ function BlockFrame({
                 layoutMode === 'flow' ? "w-full relative" : "absolute",
                 isSelected ? "ring-2 ring-blue-500 z-10" : "hover:ring-1 hover:ring-blue-500/50",
                 isEditMode && layoutMode === 'canvas' ? "cursor-move" : "",
+                // Visual feedback for hidden sections - stronger yellow glow
+                isHidden && isEditMode ? "opacity-75 grayscale border-2 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)] outline-none ring-2 ring-yellow-500" : "",
                 className
             )}
             onClick={(e) => {

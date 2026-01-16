@@ -108,5 +108,36 @@ export async function updateSectionOrder(items: { id: string; sort_order: number
     await Promise.all(updates)
 
     revalidatePath('/')
+    await Promise.all(updates)
+
+    revalidatePath('/')
+    return { success: true }
+}
+
+export async function updateSection(sectionId: string, updates: { title?: string }) {
+    const supabase = await createAdminClient()
+
+    const { error } = await supabase
+        .from('website_sections')
+        .update(updates)
+        .eq('id', sectionId)
+
+    if (error) throw error
+
+    revalidatePath('/')
+    return { success: true }
+}
+
+export async function updateSectionVisibility(sectionId: string, isEnabled: boolean) {
+    const supabase = await createAdminClient()
+
+    const { error } = await supabase
+        .from('website_sections')
+        .update({ is_enabled: isEnabled })
+        .eq('id', sectionId)
+
+    if (error) throw error
+
+    revalidatePath('/')
     return { success: true }
 }

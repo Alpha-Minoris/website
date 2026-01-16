@@ -25,7 +25,7 @@ export function ServiceFlipCard({ title, desc, details, icon }: ServiceCardProps
     }
 
     return (
-        <div className="h-[320px] w-full perspective-1000 group">
+        <div className="h-[420px] w-full perspective-1000 group">
             <motion.div
                 className="relative w-full h-full transition-all duration-500 transform-style-3d"
                 initial={false}
@@ -34,30 +34,34 @@ export function ServiceFlipCard({ title, desc, details, icon }: ServiceCardProps
                 onAnimationComplete={() => setIsAnimating(false)}
             >
                 {/* FRONT FACE */}
-                <Card className="absolute inset-0 w-full h-full backface-hidden bg-white/5 border-white/10 backdrop-blur-sm flex flex-col justify-between">
-                    <CardHeader>
-                        <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center mb-4 group-hover:bg-accent/20 transition-colors">
+                <Card className="absolute inset-0 w-full h-full backface-hidden bg-white/5 border-white/10 overflow-hidden group hover:border-accent/40 transition-colors flex flex-col justify-between">
+                    <div className="h-48 bg-white/5 relative group-hover:bg-white/10 transition-colors flex items-center justify-center border-b border-white/5">
+                        <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
                             {/* Render the passed node */}
                             {icon}
                         </div>
-                        <CardTitle className="font-heading text-xl">{title}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
+                    </div>
+
+                    <CardContent className="flex-1 pt-6 text-center space-y-2 px-6">
+                        <CardTitle className="font-heading text-xl text-white group-hover:text-accent transition-colors">{title}</CardTitle>
                         <p className="text-muted-foreground text-sm leading-relaxed line-clamp-3">
                             {desc}
                         </p>
+                    </CardContent>
+
+                    <div className="pb-6 text-center">
                         <Button
                             variant="link"
-                            className="p-0 h-auto text-accent hover:text-white transition-colors"
+                            className="p-0 h-auto text-accent text-xs uppercase tracking-widest font-bold hover:text-white transition-colors"
                             onClick={handleFlip}
                         >
-                            Learn more &rarr;
+                            View Details
                         </Button>
-                    </CardContent>
+                    </div>
                 </Card>
 
                 {/* BACK FACE */}
-                <Card className="absolute inset-0 w-full h-full backface-hidden bg-accent/10 border-accent/30 backdrop-blur-md flex flex-col rotate-y-180">
+                <Card className="absolute inset-0 w-full h-full backface-hidden bg-zinc-900 border-accent/40 flex flex-col rotate-y-180 overflow-hidden">
                     <CardContent className="flex flex-col h-full pt-6">
                         <div className="flex-1 space-y-3">
                             <h4 className="font-bold text-white mb-2">Key Features</h4>

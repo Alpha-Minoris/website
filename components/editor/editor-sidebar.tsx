@@ -4,7 +4,7 @@ import { useEditorStore } from '@/lib/stores/editor-store'
 import { createGenericSection } from '@/actions/section-actions'
 import { addChildBlock, updateBlock } from '@/actions/block-actions'
 import { cn } from '@/lib/utils'
-import { Layers, Box, Settings, Plus, LayoutTemplate, Monitor, Smartphone, Tablet, Type, Palette, Square, Link } from 'lucide-react'
+import { Layers, Box, Settings, Plus, LayoutTemplate, Monitor, Smartphone, Tablet, Type, Palette, Square, Link, Eye, EyeOff, Trash2 } from 'lucide-react'
 import { v4 as uuidv4 } from 'uuid'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -17,8 +17,11 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip"
 
+import { useRouter } from 'next/navigation'
+
 export function EditorSidebar() {
     const { isEditMode, selectedBlockId, setSelectedBlockId, addBlock, blocks } = useEditorStore()
+    const router = useRouter()
     const [activeTab, setActiveTab] = useState<'components' | 'layers' | 'settings' | 'theme' | null>(null)
     const islandRef = useRef<HTMLDivElement>(null)
 
@@ -463,14 +466,23 @@ function LayersList({ blocks, selectedBlockId, onSelect }: { blocks: any[], sele
     return (
         <div className="flex flex-col gap-0.5">
             {blocks.map((block, i) => (
-                <LayerItem key={block.id} block={block} index={i} depth={0} selectedBlockId={selectedBlockId} onSelect={onSelect} />
+                <LayerItem key={block.id} block={block} index={i} depth={0} selectedBlockId={selectedBlockId} onSelect={onSelect} onRefetch={() => { }} />
             ))}
         </div>
     )
 }
 
-function LayerItem({ block, index, depth, selectedBlockId, onSelect }: { block: any, index: number, depth: number, selectedBlockId: string | null, onSelect: (id: string) => void }) {
+// Dynamic Import for server actions to update title
+import { updateSection, deleteSection as deleteSectionAction, updateSectionVisibility } from '@/actions/section-actions'
+
+function LayerItem({ block, index, depth, selectedBlockId, onSelect, onRefetch }: { block: any, index: number, depth: number, selectedBlockId: string | null, onSelect: (id: string) => void, onRefetch: () => void }) {
+    const { removeBlock, updateBlock } = useEditorStore()
+    const router = useRouter()
     const isSelected = selectedBlockId === block.id
+    const [isEditing, setIsEditing] = useState(false)
+    const [editValue, setEditValue] = useState(block.title || block.type)
+    const [isHovered, setIsHovered] = useState(false)
+
     // Collect children
     const children = block.content && Array.isArray(block.content) ? block.content : []
     // Also include back content for cards if present
@@ -478,11 +490,76 @@ function LayerItem({ block, index, depth, selectedBlockId, onSelect }: { block: 
         children.push(...block.settings.backContent)
     }
 
+    const handleRename = async () => {
+        setIsEditing(false)
+        if (editValue.trim() !== block.title) {
+            // Determine if it's a section (has title in DB usually) or a block
+            // Based on our type system, sections are blocks too.
+            // We'll try to update section title via server action if it's a root section (depth 0, assuming root blocks are sections)
+            if (depth === 0) {
+                try {
+                    await updateSection(block.id, { title: editValue })
+                    // Also update local store? The store might not persist title separate from settings/content.
+                    // We probably need to refresh or update store manually.
+                    // For now, let's assume PageBuilder re-renders on route refresh or we update store.
+                    updateBlock(block.id, { title: editValue }) // Assuming block model has title
+                    router.refresh()
+                } catch (e) {
+                    console.error("Failed to rename section", e)
+                }
+            } else {
+                // It's a regular block, maybe update content or something?
+                // For now, only sections have "Titles" used in Navbar.
+                updateBlock(block.id, { title: editValue })
+            }
+        }
+    }
+
+    const handleToggleVisibility = async (e: React.MouseEvent) => {
+        e.stopPropagation()
+        const newStatus = !(block.is_enabled ?? true) // Default true if undefined
+        console.log("Toggling visibility for", block.id, "to", newStatus)
+
+        // Optimistic
+        updateBlock(block.id, { is_enabled: newStatus })
+
+        if (depth === 0) {
+            try {
+                await updateSectionVisibility(block.id, newStatus)
+                router.refresh()
+            } catch (e) {
+                console.error("Failed to update visibility", e)
+            }
+        }
+    }
+
+    const handleDelete = async (e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (!confirm("Are you sure you want to delete this layer?")) return
+
+        if (depth === 0) {
+            try {
+                await deleteSectionAction(block.id)
+                removeBlock(block.id)
+                // onRefetch() // Maybe trigger parent refresh
+            } catch (e) {
+                console.error("Failed to delete section", e)
+            }
+        } else {
+            // Child block delete
+            // We need parent ID to delete child properly via addChildBlock/updateBlock actions...
+            // OR just remove from store and let auto-save (if implemented) handle it?
+            // Currently EditorSidebar LayerItem doesn't easily support deleting deeply nested children without parent context.
+            // Let's implement full delete for root sections mainly as requested.
+            alert("Deletion implementation for nested blocks pending parent context.")
+        }
+    }
+
     return (
         <div className="flex flex-col">
             <div
                 className={cn(
-                    "text-xs px-2 py-1.5 rounded-sm hover:bg-white/5 cursor-pointer flex items-center gap-2 group transition-colors",
+                    "text-xs px-2 py-1.5 rounded-sm hover:bg-white/5 cursor-pointer flex items-center justify-between group transition-colors",
                     isSelected ? "bg-blue-500/20 text-blue-200" : "text-zinc-400"
                 )}
                 style={{ paddingLeft: `${(depth * 12) + 8}px` }}
@@ -490,16 +567,61 @@ function LayerItem({ block, index, depth, selectedBlockId, onSelect }: { block: 
                     e.stopPropagation()
                     onSelect(block.id)
                 }}
+                onDoubleClick={(e) => {
+                    e.stopPropagation()
+                    if (depth === 0) setIsEditing(true) // Only allow renaming root sections for Navbar
+                }}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
             >
-                <div className="flex items-center gap-2 truncate">
+                <div className="flex items-center gap-2 truncate flex-1 block">
                     <span className="opacity-50 font-mono text-[10px]">{index + 1}</span>
-                    <span className="truncate max-w-[150px] capitalize">{block.type.replace('-', ' ')}</span>
+
+                    {isEditing ? (
+                        <input
+                            autoFocus
+                            className="bg-zinc-950 border border-blue-500/50 text-white rounded px-1 py-0.5 text-xs w-full max-w-[120px]"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onBlur={handleRename}
+                            onKeyDown={(e) => e.key === 'Enter' && handleRename()}
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    ) : (
+                        <span className={cn("truncate max-w-[120px] capitalize select-none", (block.is_enabled === false) && "opacity-50 line-through")}>
+                            {block.title || block.type.replace('-', ' ')}
+                        </span>
+                    )}
+                </div>
+
+                {/* Actions Group - Show on hover or selected */}
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {/* Visibility Toggle */}
+                    <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={handleToggleVisibility}
+                        className={cn("p-1 rounded hover:bg-white/10 transition-colors", (block.is_enabled === false) ? "text-yellow-500" : "text-zinc-500 hover:text-white")}
+                        title={block.is_enabled === false ? "Show Section" : "Hide Section"}
+                    >
+                        {block.is_enabled === false ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                    </div>
+
+                    {/* Delete Action */}
+                    <div
+                        role="button"
+                        onClick={handleDelete}
+                        className="p-1 hover:bg-red-500/20 hover:text-red-400 rounded transition-colors text-zinc-500"
+                        title="Delete Section"
+                    >
+                        <Trash2 className="w-3 h-3" />
+                    </div>
                 </div>
             </div>
             {children.length > 0 && (
                 <div className="flex flex-col border-l border-white/5 ml-3">
                     {children.map((child: any, i: number) => (
-                        <LayerItem key={child.id} block={child} index={i} depth={depth + 1} selectedBlockId={selectedBlockId} onSelect={onSelect} />
+                        <LayerItem key={child.id} block={child} index={i} depth={depth + 1} selectedBlockId={selectedBlockId} onSelect={onSelect} onRefetch={onRefetch} />
                     ))}
                 </div>
             )}

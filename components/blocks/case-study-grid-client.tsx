@@ -39,7 +39,7 @@ export function CaseStudyGridClient({ caseStudies }: { caseStudies: CaseStudy[] 
                     <h2 className="text-3xl md:text-5xl font-bold font-heading">Recent Case Studies</h2>
                     <p className="text-muted-foreground text-lg">Real results from real deployments.</p>
                 </div>
-                <Button variant="outline" className="rounded-full border-white/20 hover:bg-white/10 text-white gap-2">
+                <Button variant="outline" className="border-white/20 hover:bg-white/10 text-white gap-2">
                     View All Work <ArrowRight className="w-4 h-4" />
                 </Button>
             </div>

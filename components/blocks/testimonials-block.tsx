@@ -1,9 +1,9 @@
 'use client'
 
 import { BlockProps } from './types'
-import { Quote } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState } from 'react'
+import { TestimonialCarousel } from './testimonials/testimonial-carousel'
 
 export function TestimonialsBlock({ id }: BlockProps) {
     const [testimonials, setTestimonials] = useState<any[]>([])
@@ -11,13 +11,14 @@ export function TestimonialsBlock({ id }: BlockProps) {
 
     useEffect(() => {
         const fetchTestimonials = async () => {
+            // ... existing fetch logic
             const supabase = createClient()
             const { data } = await supabase
                 .from('website_testimonials')
                 .select('*')
                 .eq('is_enabled', true)
                 .order('created_at', { ascending: false })
-                .limit(3)
+                .limit(5) // Increased limit for carousel
 
             if (data) setTestimonials(data)
             setLoading(false)
@@ -38,29 +39,7 @@ export function TestimonialsBlock({ id }: BlockProps) {
                     <h2 className="text-3xl md:text-5xl font-bold font-heading mb-4">Client Stories</h2>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-8">
-                    {testimonials.map((t, idx) => (
-                        <div key={t.id} className="bg-white/5 border border-white/10 p-8 rounded-2xl relative">
-                            <Quote className="w-10 h-10 text-accent/20 absolute top-6 left-6" />
-                            <div className="relative z-10 space-y-6 pt-6">
-                                <p className="text-lg font-medium text-white/90 leading-relaxed">
-                                    "{t.quote}"
-                                </p>
-                                <div className="flex items-center gap-4 pt-4 border-t border-white/10">
-                                    <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center font-bold text-accent">
-                                        {t.name.charAt(0)}
-                                    </div>
-                                    <div>
-                                        <div className="font-bold text-white">{t.name}</div>
-                                        <div className="text-xs text-muted-foreground uppercase tracking-widest">
-                                            {t.role}, {t.company}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                <TestimonialCarousel testimonials={testimonials} />
             </div>
         </section>
     )

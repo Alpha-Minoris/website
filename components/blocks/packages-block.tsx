@@ -3,6 +3,7 @@ import { Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { TiltCard } from '@/components/ui/tilt-card'
 
 const PACKAGES = [
     {
@@ -34,38 +35,42 @@ export function PackagesBlock({ id }: BlockProps) {
 
                 <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
                     {PACKAGES.map((pkg, idx) => (
-                        <Card key={idx} className={cn(
-                            "relative flex flex-col border-white/10 backdrop-blur-sm transition-all duration-300",
-                            pkg.highlight ? "bg-white/10 border-accent/50 shadow-2xl scale-105 z-10" : "bg-white/5 hover:bg-white/8"
-                        )}>
-                            {pkg.highlight && (
-                                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-accent text-white text-xs font-bold uppercase tracking-widest rounded-full">
-                                    Most Popular
-                                </div>
-                            )}
-                            <CardHeader>
-                                <CardTitle className="text-2xl font-heading">{pkg.name}</CardTitle>
-                                <CardDescription className="text-white/60">{pkg.desc}</CardDescription>
-                            </CardHeader>
-                            <CardContent className="flex-1">
-                                <ul className="space-y-4">
-                                    {pkg.features.map((feat, i) => (
-                                        <li key={i} className="flex items-start gap-3 text-sm text-foreground/90">
-                                            <Check className="w-5 h-5 text-accent shrink-0" />
-                                            {feat}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </CardContent>
-                            <CardFooter>
-                                <Button className={cn(
-                                    "w-full rounded-full h-12 text-base",
-                                    pkg.highlight ? "bg-white text-black hover:bg-white/90" : "bg-white/10 hover:bg-white/20 text-white"
-                                )} asChild>
-                                    <a href="#contact">Get Started</a>
-                                </Button>
-                            </CardFooter>
-                        </Card>
+                        <TiltCard key={idx} className={cn("h-full", pkg.highlight ? "z-10" : "")}>
+                            <Card className={cn(
+                                "relative flex flex-col border-white/10 backdrop-blur-sm transition-all duration-300 h-full",
+                                pkg.highlight ? "bg-white/10 border-accent/50 shadow-2xl" : "bg-white/5 hover:bg-white/8"
+                            )}>
+                                {pkg.highlight && (
+                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-accent text-white text-xs font-bold uppercase tracking-widest rounded-full">
+                                        Most Popular
+                                    </div>
+                                )}
+                                <CardHeader>
+                                    <CardTitle className="text-2xl font-heading">{pkg.name}</CardTitle>
+                                    <CardDescription className="text-white/60">{pkg.desc}</CardDescription>
+                                </CardHeader>
+                                <CardContent className="flex-1">
+                                    <ul className="space-y-4">
+                                        {pkg.features.map((feat, i) => (
+                                            <li key={i} className="flex items-start gap-3 text-sm text-foreground/90">
+                                                <Check className="w-5 h-5 text-accent shrink-0" />
+                                                {feat}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </CardContent>
+                                <CardFooter>
+                                    <Button className={cn(
+                                        "w-full h-12 text-base font-bold tracking-wide shadow-lg",
+                                        pkg.highlight
+                                            ? "bg-accent text-white hover:bg-accent/90 hover:shadow-accent/20"
+                                            : "bg-white text-black hover:bg-white/90"
+                                    )}>
+                                        Get Started
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+                        </TiltCard>
                     ))}
                 </div>
             </div>
