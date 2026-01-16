@@ -1,37 +1,38 @@
+'use client'
 
 import React from 'react'
 import { BlockProps } from './types'
 import { cn } from '@/lib/utils'
-import { Plus } from 'lucide-react'
 import { BlockRenderer } from './block-renderer'
 import { useEditorStore } from '@/lib/stores/editor-store'
 import { updateBlock } from '@/actions/block-actions'
-import { FloatingToolbar } from '@/components/editor/floating-toolbar'
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, useDroppable } from '@dnd-kit/core'
+import { DndContext, pointerWithin, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, useDroppable, DragStartEvent } from '@dnd-kit/core'
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
-import { moveBlock } from '@/actions/reorder-blocks'
 
 interface GenericSectionSettings {
-    rows?: number
-    cols?: number
     minHeight?: number | string
     padding?: string
 }
 
 export function GenericSectionBlock({ id, content, settings }: BlockProps) {
-    const { isEditMode, selectedBlockId, updateBlock: updateBlockLocal, blocks } = useEditorStore()
+    const { isEditMode, updateBlock: updateBlockLocal, blocks, setActiveDragId } = useEditorStore()
     const blockFromStore = blocks.find(b => b.id === id)
     const s = (blockFromStore?.settings || settings) as GenericSectionSettings || {}
 
-    const rows = s.rows || 1
-    const cols = s.cols || 1
+    const sectionRef = React.useRef<HTMLDivElement>(null)
 
-    const initialHeight = s.minHeight
-        ? parseInt(s.minHeight.toString())
-        : (s.padding ? parseInt(s.padding) : 300)
+    // Parse initial height from settings
+    const getInitialHeight = () => {
+        const settingsHeight = s.minHeight
+        if (settingsHeight) {
+            return parseInt(settingsHeight.toString())
+        }
+        return s.padding ? parseInt(s.padding) : 300
+    }
 
-    const [minHeight, setMinHeight] = React.useState(initialHeight)
+    const [minHeight, setMinHeight] = React.useState(getInitialHeight)
     const heightRef = React.useRef(minHeight)
+    const userResizedRef = React.useRef(false)
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -39,11 +40,11 @@ export function GenericSectionBlock({ id, content, settings }: BlockProps) {
     )
 
     // Helper for finding nested blocks
-    const findBlockRecursive = (blocks: any[], id: string): any | null => {
+    const findBlockRecursive = (blocks: any[], targetId: string): any | null => {
         for (const block of blocks) {
-            if (block.id === id) return block
+            if (block.id === targetId) return block
             if (Array.isArray(block.content)) {
-                const found = findBlockRecursive(block.content, id)
+                const found = findBlockRecursive(block.content, targetId)
                 if (found) return found
             }
         }
@@ -64,16 +65,20 @@ export function GenericSectionBlock({ id, content, settings }: BlockProps) {
 
     // Auto-Resize Logic
     React.useEffect(() => {
-        if (!content) return
+        if (!content || !Array.isArray(content)) return
+        if (userResizedRef.current) return
 
         let maxY = 0
         const traverse = (nodes: any[]) => {
             nodes.forEach(node => {
                 if (node.settings?.y !== undefined) {
-                    const h = parseInt(node.settings.height) || 100
+                    const h = parseInt(node.settings.height) || parseInt(node.settings.minHeight) || 100
                     const y = parseInt(node.settings.y) || 0
                     const bottom = y + h
                     if (bottom > maxY) maxY = bottom
+                }
+                if (Array.isArray(node.content)) {
+                    traverse(node.content)
                 }
             })
         }
@@ -86,18 +91,24 @@ export function GenericSectionBlock({ id, content, settings }: BlockProps) {
         }
     }, [content])
 
-
+    // Sync with persisted settings
     React.useEffect(() => {
-        setMinHeight(initialHeight)
-        heightRef.current = initialHeight
-    }, [initialHeight])
+        const settingsHeight = s.minHeight ? parseInt(s.minHeight.toString()) : null
+        if (settingsHeight && settingsHeight !== heightRef.current && !userResizedRef.current) {
+            setMinHeight(settingsHeight)
+            heightRef.current = settingsHeight
+        }
+    }, [s.minHeight])
 
     const handleMouseDown = (e: React.MouseEvent) => {
         if (!isEditMode) return
         e.preventDefault()
+        e.stopPropagation()
+
         const startY = e.clientY
         const startHeight = minHeight
         heightRef.current = minHeight
+        userResizedRef.current = true
 
         const onMouseMove = (moveEvent: MouseEvent) => {
             const delta = moveEvent.clientY - startY
@@ -109,8 +120,12 @@ export function GenericSectionBlock({ id, content, settings }: BlockProps) {
         const onMouseUp = async () => {
             document.removeEventListener('mousemove', onMouseMove)
             document.removeEventListener('mouseup', onMouseUp)
+
+            const finalHeight = heightRef.current
+
             try {
-                await updateBlock(id, { settings: { ...s, minHeight: heightRef.current } })
+                await updateBlock(id, { settings: { ...s, minHeight: finalHeight } })
+                updateBlockLocal(id, { settings: { ...s, minHeight: finalHeight } })
             } catch (err) {
                 console.error("Failed to save section height", err)
             }
@@ -119,169 +134,142 @@ export function GenericSectionBlock({ id, content, settings }: BlockProps) {
         document.addEventListener('mouseup', onMouseUp)
     }
 
+    const handleDragStart = (event: DragStartEvent) => {
+        setActiveDragId(event.active.id as string)
+    }
+
     const handleDragEnd = async (event: DragEndEvent) => {
         const { active, over, delta } = event
+        setActiveDragId(null)
 
-        if (!over) return
+        // Always need a valid delta to proceed
+        if (!delta) return
 
         const activeBlock = findBlockRecursive(content, active.id as string)
         if (!activeBlock) return
 
+        const currentX = parseInt(activeBlock.settings?.x) || 0
+        const currentY = parseInt(activeBlock.settings?.y) || 0
+
         let newSettings = { ...(activeBlock.settings as any) }
-        let hasChanges = false
 
-        // Determine Final Visual Rect (Universal Truth)
-        const finalRect = active.rect.current.translated || {
-            left: (active.rect.current.initial?.left || 0) + delta.x,
-            top: (active.rect.current.initial?.top || 0) + delta.y
-        }
+        const overData = over?.data.current
+        const isDropOnContainer = overData?.type === 'container' || overData?.isCard
+        const isDropOnSectionCanvas = overData?.type === 'section-canvas'
 
-        // CASE A: Dropping into a Cell (GenericSection Grid) -> Top Level
-        if (over.id.toString().includes('cell-')) {
-            const targetCellId = over.data.current?.cellId
-            if (!targetCellId) return
+        // Check current parent
+        const currentParent = findParentRecursive(content, active.id as string)
 
-            // STRICT RECT SUBTRACTION
-            if (over.rect) {
-                const cellRect = over.rect
-                newSettings.x = Math.round(finalRect.left - cellRect.left)
-                newSettings.y = Math.round(finalRect.top - cellRect.top)
-                newSettings.cellId = targetCellId
-                hasChanges = true
+        if (isDropOnContainer && over) {
+            // Dropping INTO a container
+            const containerId = overData.containerId || overData.cardId
+            const containerRect = over.rect
+            const isSameParent = currentParent?.id === containerId
+
+            if (containerRect) {
+                const activeInitialRect = active.rect.current.initial
+                if (activeInitialRect) {
+                    const finalLeft = activeInitialRect.left + delta.x
+                    const finalTop = activeInitialRect.top + delta.y
+                    newSettings.x = Math.max(0, Math.round(finalLeft - containerRect.left))
+                    newSettings.y = Math.max(0, Math.round(finalTop - containerRect.top))
+                }
+
+                if (!isSameParent) {
+                    // Reparent
+                    updateBlockLocal(active.id as string, { settings: newSettings })
+                    try {
+                        const { moveBlock } = await import('@/actions/reorder-blocks')
+                        await moveBlock(id, active.id as string, containerId, newSettings)
+                    } catch (e) {
+                        console.error("Reparenting failed", e)
+                    }
+                    return
+                }
             }
+        } else if (isDropOnSectionCanvas || !overData) {
+            // Dropping on section canvas - use delta-based positioning
+            newSettings.x = Math.max(0, currentX + delta.x)
+            newSettings.y = Math.max(0, currentY + delta.y)
 
-            // Un-Nesting Trigger (If coming from a Container)
-            const curParent = findParentRecursive(content, active.id as string)
-            if (curParent) {
+            if (currentParent && sectionRef.current) {
+                // Un-nest: recalculate absolute position
+                const sectionRect = sectionRef.current.getBoundingClientRect()
+                const activeInitialRect = active.rect.current.initial
+                if (activeInitialRect) {
+                    const finalLeft = activeInitialRect.left + delta.x
+                    const finalTop = activeInitialRect.top + delta.y
+                    newSettings.x = Math.max(0, Math.round(finalLeft - sectionRect.left))
+                    newSettings.y = Math.max(0, Math.round(finalTop - sectionRect.top))
+                }
+
                 updateBlockLocal(active.id as string, { settings: newSettings })
                 try {
-                    const { moveBlock: reorderBlock } = await import('@/actions/reorder-blocks')
-                    await reorderBlock(id, active.id as string, over.id as string, newSettings)
-                    return
+                    const { moveBlock } = await import('@/actions/reorder-blocks')
+                    await moveBlock(id, active.id as string, id, newSettings)
                 } catch (e) {
                     console.error("Un-nesting failed", e)
                 }
-            }
-        }
-        // CASE B: Dropping into a Container (Reparenting or Moving Inside)
-        else if (over.data.current?.type === 'container' || over.data.current?.isCard) {
-            const containerId = over.data.current.containerId || over.data.current.cardId
-            const currentParent = findParentRecursive(content, active.id as string)
-            const isSameParent = currentParent?.id === containerId
-
-            if (over.rect) {
-                const containerRect = over.rect
-
-                // STRICT RECT SUBTRACTION
-                newSettings.x = Math.round(finalRect.left - containerRect.left)
-                newSettings.y = Math.round(finalRect.top - containerRect.top)
-                hasChanges = true
-
-                // Optimistic Update
-                updateBlockLocal(active.id as string, { settings: newSettings })
-
-                if (isSameParent) {
-                    // Optimized Path: Just Update Settings (No structure change)
-                } else {
-                    // Reparenting Path: Structure Change (Heavy)
-                    try {
-                        const { moveBlock: reorderBlock } = await import('@/actions/reorder-blocks')
-                        await reorderBlock(id, active.id as string, containerId, newSettings)
-                        return
-                    } catch (e) {
-                        console.error("Reparenting/Move failed", e)
-                    }
-                }
+                return
             }
         }
 
-        if (hasChanges) {
-            updateBlockLocal(active.id as string, { settings: newSettings })
-
-            try {
-                const { updateBlockContent } = await import('@/actions/block-actions')
-                await updateBlockContent(id, active.id as string, { settings: newSettings })
-            } catch (e) {
-                console.error("Failed to update block position", e)
-            }
+        // Default: just update position
+        updateBlockLocal(active.id as string, { settings: newSettings })
+        try {
+            const { updateBlockContent } = await import('@/actions/block-actions')
+            await updateBlockContent(id, active.id as string, { settings: newSettings })
+        } catch (e) {
+            console.error("Failed to update block position", e)
         }
     }
 
-    // Cells
-    const cells = []
-    for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-            cells.push(`${r}-${c}`)
-        }
+    // Droppable for section canvas
+    const { setNodeRef: setDroppableRef, isOver } = useDroppable({
+        id: `${id}-canvas`,
+        data: { type: 'section-canvas', sectionId: id }
+    })
+
+    const setCombinedRef = (node: HTMLDivElement | null) => {
+        sectionRef.current = node
+        setDroppableRef(node)
     }
 
     return (
         <div
+            ref={setCombinedRef}
             className={cn(
                 "w-full relative group/section transition-all",
-                isEditMode ? "border-2 border-dashed border-zinc-800 hover:border-zinc-700 rounded-lg p-8" : "border-0 p-0"
+                isEditMode ? "border-2 border-dashed border-zinc-800 hover:border-zinc-700 rounded-lg" : "border-0 p-0",
+                isOver && isEditMode && "border-blue-500/50 bg-blue-500/5"
             )}
             style={{ minHeight: `${minHeight}px` }}
         >
             {content.length === 0 && isEditMode && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center w-full h-full text-zinc-500 select-none pointer-events-none z-10 opacity-50">
-                    <span className="text-lg font-medium">New Grid Section</span>
-                    <span className="text-xs">Drag corners to resize or add content</span>
+                    <span className="text-lg font-medium">Empty Section</span>
+                    <span className="text-xs">Drag components here</span>
                 </div>
             )}
 
             <DndContext
                 sensors={sensors}
-                collisionDetection={closestCenter}
+                collisionDetection={pointerWithin}
+                onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
             >
-                <div
-                    className="grid w-full h-full gap-4 relative z-10"
-                    style={{
-                        gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-                        gridTemplateRows: `repeat(${rows}, minmax(100px, 1fr))`,
-                        minHeight: '100%'
-                    }}
-                >
-                    {cells.map(cellId => (
-                        <Cell
-                            key={cellId}
-                            cellId={cellId}
-                            sectionId={id}
-                            content={content}
-                            isEditMode={isEditMode}
-                        />
-                    ))}
+                <div className="w-full h-full relative">
+                    <BlockRenderer blocks={content} sectionId={id} layoutMode="canvas" />
                 </div>
             </DndContext>
 
             {isEditMode && (
-                <div title="Drag height" className="absolute bottom-0 left-0 right-0 h-4 cursor-ns-resize z-20 hover:bg-white/5" onMouseDown={handleMouseDown} />
+                <div
+                    title="Drag to resize section"
+                    className="absolute bottom-0 left-0 right-0 h-4 cursor-ns-resize z-20 hover:bg-white/10 bg-white/5 transition-colors"
+                    onMouseDown={handleMouseDown}
+                />
             )}
-        </div>
-    )
-}
-
-function Cell({ cellId, sectionId, content, isEditMode }: any) {
-    const { setNodeRef } = useDroppable({
-        id: `${sectionId}-cell-${cellId}`,
-        data: { cellId }
-    })
-
-    const cellContent = content.filter((block: BlockProps) => {
-        const bCell = block.settings?.cellId || '0-0'
-        return bCell === cellId
-    })
-
-    return (
-        <div
-            ref={setNodeRef}
-            className={cn(
-                "relative w-full h-full min-h-[50px] transition-colors",
-                isEditMode && "border border-dashed border-zinc-700/30 rounded-md hover:bg-white/5"
-            )}
-        >
-            <BlockRenderer blocks={cellContent} sectionId={sectionId} layoutMode="canvas" />
         </div>
     )
 }

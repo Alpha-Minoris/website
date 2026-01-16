@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { BlockProps } from '@/components/blocks/types'
+import { BlockProps, BlockType } from '@/components/blocks/types'
 import { PageBuilder } from '@/components/editor/page-builder'
 
 export const revalidate = 60 // Revalidate every minute for now
@@ -34,14 +34,30 @@ export default async function Home() {
   const versionMap = new Map()
   versions?.forEach(v => versionMap.set(v.section_id, v))
 
+  // Known block types that are registered
+  const knownBlockTypes = [
+    'hero', 'mission', 'services', 'packages', 'how-we-work',
+    'team', 'testimonials', 'faq', 'contact', 'case-studies',
+    'rich-text', 'generic-section', 'heading', 'card',
+    'flip-trigger', 'grid-section', 'icon'
+  ] as const
+
   // 3. Construct BlockProps
   const blocks: BlockProps[] = sections.map(section => {
     const version = versionMap.get(section.id)
-    // Default to slug, but override if version has a specific type in layout_json
-    let blockType = section.slug as any
+
+    // Determine block type with proper fallback:
+    // 1. Use layout_json.type if present
+    // 2. Otherwise use slug if it's a known type
+    // 3. Otherwise default to 'generic-section'
+    let blockType: string = section.slug
 
     if (version?.layout_json?.type) {
       blockType = version.layout_json.type
+    } else if (!knownBlockTypes.includes(section.slug as any)) {
+      // Slug is not a known block type (e.g., 'section-73e1295c')
+      // Default to generic-section
+      blockType = 'generic-section'
     }
 
     // Prioritize layout_json.content if it exists and has items
@@ -50,7 +66,7 @@ export default async function Home() {
 
     const block: BlockProps = {
       id: section.id,
-      type: blockType,
+      type: blockType as BlockType,
       content: hasLayoutContent ? layoutContent : (version?.content_html || []),
       settings: version?.layout_json || {}
     }

@@ -101,13 +101,20 @@ export async function moveBlock(sectionId: string, activeId: string, overId: str
         return { success: false, error: "Block not found" }
     }
 
-    // 2.2 Insert
-    let finalContent = insertIntoTree(contentMinusBlock)
+    // Check if we're un-nesting: overId equals sectionId means move to root
+    let finalContent: any[]
+    if (overId === sectionId) {
+        // Un-nesting: append to root content array
+        finalContent = [...contentMinusBlock, movedBlock]
+        movedBlock = null // Mark as placed
+    } else {
+        // 2.2 Insert relative to overId
+        finalContent = insertIntoTree(contentMinusBlock)
 
-    // Fallback: If not placed (e.g. overId not found or handled), append to root
-    // This handles "Drop on Cell" where overId is a virtual ID, moving the block to the top level.
-    if (movedBlock) {
-        finalContent.push(movedBlock)
+        // Fallback: If not placed (e.g. overId not found), append to root
+        if (movedBlock) {
+            finalContent.push(movedBlock)
+        }
     }
 
     // Save
