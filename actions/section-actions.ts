@@ -74,10 +74,16 @@ export async function deleteSection(sectionId: string) {
     //     throw new Error('Unauthorized')
     // }
 
-    const { error } = await supabase
-        .from('website_sections')
-        .delete()
-        .eq('id', sectionId)
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sectionId)
+
+    let query = supabase.from('website_sections').delete()
+    if (isUuid) {
+        query = query.eq('id', sectionId)
+    } else {
+        query = query.eq('slug', sectionId)
+    }
+
+    const { error } = await query
 
     if (error) throw error
 
@@ -98,12 +104,17 @@ export async function updateSectionOrder(items: { id: string; sort_order: number
     // without a specific rpc or making multiple calls. 
     // For < 20 sections, Promise.all is acceptable.
 
-    const updates = items.map(item =>
-        supabase
-            .from('website_sections')
-            .update({ sort_order: item.sort_order })
-            .eq('id', item.id)
-    )
+    const updates = items.map(item => {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.id)
+        let query = supabase.from('website_sections').update({ sort_order: item.sort_order })
+
+        if (isUuid) {
+            query = query.eq('id', item.id)
+        } else {
+            query = query.eq('slug', item.id)
+        }
+        return query
+    })
 
     await Promise.all(updates)
 
@@ -117,10 +128,16 @@ export async function updateSectionOrder(items: { id: string; sort_order: number
 export async function updateSection(sectionId: string, updates: { title?: string }) {
     const supabase = await createAdminClient()
 
-    const { error } = await supabase
-        .from('website_sections')
-        .update(updates)
-        .eq('id', sectionId)
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sectionId)
+
+    let query = supabase.from('website_sections').update(updates)
+    if (isUuid) {
+        query = query.eq('id', sectionId)
+    } else {
+        query = query.eq('slug', sectionId)
+    }
+
+    const { error } = await query
 
     if (error) throw error
 
@@ -131,10 +148,16 @@ export async function updateSection(sectionId: string, updates: { title?: string
 export async function updateSectionVisibility(sectionId: string, isEnabled: boolean) {
     const supabase = await createAdminClient()
 
-    const { error } = await supabase
-        .from('website_sections')
-        .update({ is_enabled: isEnabled })
-        .eq('id', sectionId)
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sectionId)
+
+    let query = supabase.from('website_sections').update({ is_enabled: isEnabled })
+    if (isUuid) {
+        query = query.eq('id', sectionId)
+    } else {
+        query = query.eq('slug', sectionId)
+    }
+
+    const { error } = await query
 
     if (error) throw error
 

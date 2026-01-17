@@ -3,27 +3,53 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 // Move a block (reorder or reparent) within a section
 // Supports deep nesting by traversing the JSON tree
 export async function moveBlock(sectionId: string, activeId: string, overId: string, newSettings?: any) {
+    console.log(`[moveBlock] START sectionId=${sectionId}, activeId=${activeId}, overId=${overId}`)
+    if (!sectionId || !activeId || !overId) {
+        console.error(`[moveBlock] Missing arguments: sectionId=${sectionId}, activeId=${activeId}, overId=${overId}`)
+        throw new Error("All IDs are required for moveBlock")
+    }
     const supabase = await createAdminClient()
 
     // 1. Get Section & Version (Active/Published)
-    const { data: section } = await supabase
-        .from('website_sections')
-        .select('published_version_id')
-        .eq('id', sectionId)
-        .single()
+    const isUuid = UUID_REGEX.test(sectionId)
+    console.log(`[moveBlock] isUuid(sectionId)=${isUuid}`)
 
-    if (!section?.published_version_id) {
+    let query = supabase.from('website_sections').select('published_version_id, slug')
+    if (isUuid) {
+        query = query.eq('id', sectionId)
+    } else {
+        query = query.eq('slug', sectionId)
+    }
+
+    const { data: sectionRow, error: sectionError } = await query.single()
+
+    if (sectionError) {
+        console.error(`[moveBlock] Section query error for ${sectionId}:`, sectionError)
+        throw sectionError
+    }
+
+    if (!sectionRow?.published_version_id) {
+        console.error(`[moveBlock] Published version not found for section ${sectionId}`)
         throw new Error("Section version not found")
     }
 
-    const { data: version } = await supabase
+    console.log(`[moveBlock] Using version ${sectionRow.published_version_id} for section ${sectionRow.slug}`)
+
+    const { data: version, error: versionError } = await supabase
         .from('website_section_versions')
         .select('layout_json')
-        .eq('id', section.published_version_id)
+        .eq('id', sectionRow.published_version_id)
         .single()
+
+    if (versionError) {
+        console.error(`[moveBlock] Error fetching version ${sectionRow.published_version_id}:`, versionError)
+        throw versionError
+    }
 
     const currentLayout = version?.layout_json || {}
     const content = (currentLayout.content as any[]) || []
@@ -126,7 +152,7 @@ export async function moveBlock(sectionId: string, activeId: string, overId: str
     const { error } = await supabase
         .from('website_section_versions')
         .update({ layout_json: newLayout })
-        .eq('id', section.published_version_id)
+        .eq('id', sectionRow.published_version_id)
 
     if (error) throw error
 

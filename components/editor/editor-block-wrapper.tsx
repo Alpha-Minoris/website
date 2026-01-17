@@ -23,11 +23,13 @@ interface EditorBlockWrapperProps {
 }
 
 export function EditorBlockWrapper(props: EditorBlockWrapperProps) {
-    const { blockId, sectionId, settings, blockType, layoutMode = 'flow' } = props
-    const { isEditMode, selectedBlockId, setSelectedBlockId, blocks } = useEditorStore() // Get blocks from store to check is_enabled
+    const { blockId, settings, blockType, layoutMode = 'flow' } = props
+    // Use sectionId if provided, otherwise fallback to blockId if it's a top-level section
+    const sectionId = props.sectionId || blockId
+    const { isEditMode, selectedBlockId, setSelectedBlockId, blocks } = useEditorStore()
     const elementRef = React.useRef<HTMLDivElement>(null)
 
-    // Check if section is disabled (hidden)
+    // Check if block exists and is enabled
     const block = blocks.find(b => b.id === blockId)
     const isHidden = block?.is_enabled === false
 

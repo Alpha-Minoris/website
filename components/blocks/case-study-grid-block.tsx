@@ -4,8 +4,10 @@ import { BlockProps } from './types'
 import { createClient } from '@/lib/supabase/client'
 import { CaseStudyGridClient } from './case-study-grid-client'
 import { useEffect, useState } from 'react'
+import { useEditorStore } from '@/lib/stores/editor-store'
 
-export function CaseStudyGridBlock({ id }: BlockProps) {
+export function CaseStudyGridBlock({ id, settings }: BlockProps) {
+    const { isEditMode } = useEditorStore()
     const [caseStudies, setCaseStudies] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
 
@@ -30,7 +32,12 @@ export function CaseStudyGridBlock({ id }: BlockProps) {
 
     return (
         <section id={id} className="py-24 bg-black relative">
-            <CaseStudyGridClient caseStudies={caseStudies} />
+            <CaseStudyGridClient
+                id={id}
+                caseStudies={caseStudies}
+                settings={settings}
+                isEditMode={isEditMode}
+            />
         </section>
     )
 }

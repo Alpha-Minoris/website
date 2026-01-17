@@ -14,18 +14,84 @@ import {
 import ReactMarkdown from 'react-markdown'
 import { cn } from '@/lib/utils'
 
+import { useRef, useEffect, useCallback } from 'react'
+import { EditableText } from '@/components/editor/editable-text'
+import { TextToolbar } from '@/components/editor/text-toolbar'
+import { useEditorStore } from '@/lib/stores/editor-store'
+import { updateBlock as updateBlockAction } from '@/actions/block-actions'
+
 type CaseStudy = {
     id: string
     title: string
     summary: string | null
     tags: string[] | null
-    content_html: string | null // We treat this as MD
+    content_html: string | null
     layout_json: any
 }
 
-export function CaseStudyGridClient({ caseStudies }: { caseStudies: CaseStudy[] }) {
+interface CaseStudyGridClientProps {
+    id: string
+    caseStudies: CaseStudy[]
+    settings?: any
+    isEditMode: boolean
+}
+
+export function CaseStudyGridClient({ id, caseStudies, settings, isEditMode }: CaseStudyGridClientProps) {
+    const { updateBlock } = useEditorStore()
+    const sectionRef = useRef<HTMLDivElement>(null)
+    const [activeToolbarPos, setActiveToolbarPos] = useState<{ top: number, left: number } | null>(null)
     const [selectedStudy, setSelectedStudy] = useState<CaseStudy | null>(null)
     const [open, setOpen] = useState(false)
+
+    // Local state for settings
+    const [localSettings, setLocalSettings] = useState<any>({
+        title: 'Recent Case Studies',
+        tagline: 'Real results from real deployments.',
+        ...settings
+    })
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+    useEffect(() => {
+        if (settings) {
+            setLocalSettings((prev: any) => ({ ...prev, ...settings }))
+        }
+    }, [settings])
+
+    const saveSettings = useCallback((newSettings: any) => {
+        setLocalSettings(newSettings)
+        updateBlock(id, { settings: newSettings })
+
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+        saveTimeoutRef.current = setTimeout(async () => {
+            try {
+                await updateBlockAction(id, newSettings)
+            } catch (err) {
+                console.error("Failed to save case studies settings:", err)
+            }
+        }, 800)
+    }, [id, updateBlock])
+
+    const handleTextChange = (key: string, value: string) => {
+        saveSettings({ ...localSettings, [key]: value })
+    }
+
+    const onTextFocus = useCallback((rect: DOMRect) => {
+        if (sectionRef.current) {
+            const sectionRect = sectionRef.current.getBoundingClientRect()
+            const relativeLeft = rect.left - sectionRect.left + (rect.width / 2)
+            const relativeTop = rect.bottom - sectionRect.top
+            setActiveToolbarPos({ top: relativeTop, left: relativeLeft })
+        }
+    }, [])
+
+    const onTextBlur = useCallback(() => {
+        setTimeout(() => {
+            const activeEl = document.activeElement
+            if (!sectionRef.current?.contains(activeEl) && !activeEl?.closest('[data-radix-portal]')) {
+                setActiveToolbarPos(null)
+            }
+        }, 150)
+    }, [])
 
     const handleSelect = (study: CaseStudy) => {
         setSelectedStudy(study)
@@ -33,11 +99,38 @@ export function CaseStudyGridClient({ caseStudies }: { caseStudies: CaseStudy[] 
     }
 
     return (
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4" ref={sectionRef}>
+            {/* Local Toolbar */}
+            {isEditMode && activeToolbarPos && (
+                <div
+                    className="absolute z-50 transition-all duration-100"
+                    style={{ top: activeToolbarPos.top, left: activeToolbarPos.left, transform: 'translateY(-10px)' }}
+                    onMouseDown={(e) => e.preventDefault()}
+                >
+                    <TextToolbar blockId={id} />
+                </div>
+            )}
+
             <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-8">
                 <div className="space-y-4 max-w-2xl">
-                    <h2 className="text-3xl md:text-5xl font-bold font-heading">Recent Case Studies</h2>
-                    <p className="text-muted-foreground text-lg">Real results from real deployments.</p>
+                    <EditableText
+                        tagName="h2"
+                        value={localSettings.title}
+                        onChange={(v) => handleTextChange('title', v)}
+                        isEditMode={isEditMode}
+                        onFocus={onTextFocus}
+                        onBlur={onTextBlur}
+                        className="text-3xl md:text-5xl font-bold font-heading"
+                    />
+                    <EditableText
+                        tagName="p"
+                        value={localSettings.tagline}
+                        onChange={(v) => handleTextChange('tagline', v)}
+                        isEditMode={isEditMode}
+                        onFocus={onTextFocus}
+                        onBlur={onTextBlur}
+                        className="text-muted-foreground text-lg"
+                    />
                 </div>
                 <Button variant="outline" className="border-white/20 hover:bg-white/10 text-white gap-2">
                     View All Work <ArrowRight className="w-4 h-4" />

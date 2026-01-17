@@ -2,23 +2,78 @@
 
 import { BlockProps } from './types'
 import { createClient } from '@/lib/supabase/client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { TestimonialCarousel } from './testimonials/testimonial-carousel'
+import { useEditorStore } from '@/lib/stores/editor-store'
+import { updateBlock as updateBlockAction } from '@/actions/block-actions'
+import { EditableText } from '@/components/editor/editable-text'
+import { TextToolbar } from '@/components/editor/text-toolbar'
 
-export function TestimonialsBlock({ id }: BlockProps) {
+export function TestimonialsBlock({ id, settings }: BlockProps) {
+    const { isEditMode, updateBlock } = useEditorStore()
+    const sectionRef = useRef<HTMLElement>(null)
+    const [activeToolbarPos, setActiveToolbarPos] = useState<{ top: number, left: number } | null>(null)
     const [testimonials, setTestimonials] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
 
+    // Local state for settings (title)
+    const [localSettings, setLocalSettings] = useState<any>({
+        title: 'Client Stories',
+        ...settings
+    })
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+    useEffect(() => {
+        if (settings) {
+            setLocalSettings((prev: any) => ({ ...prev, ...settings }))
+        }
+    }, [settings])
+
+    const saveSettings = useCallback((newSettings: any) => {
+        setLocalSettings(newSettings)
+        updateBlock(id, { settings: newSettings })
+
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+        saveTimeoutRef.current = setTimeout(async () => {
+            try {
+                await updateBlockAction(id, newSettings)
+            } catch (err) {
+                console.error("Failed to save testimonials settings:", err)
+            }
+        }, 800)
+    }, [id, updateBlock])
+
+    const handleTextChange = (key: string, value: string) => {
+        saveSettings({ ...localSettings, [key]: value })
+    }
+
+    const onTextFocus = useCallback((rect: DOMRect) => {
+        if (sectionRef.current) {
+            const sectionRect = sectionRef.current.getBoundingClientRect()
+            const relativeLeft = rect.left - sectionRect.left + (rect.width / 2)
+            const relativeTop = rect.bottom - sectionRect.top
+            setActiveToolbarPos({ top: relativeTop, left: relativeLeft })
+        }
+    }, [])
+
+    const onTextBlur = useCallback(() => {
+        setTimeout(() => {
+            const activeEl = document.activeElement
+            if (!sectionRef.current?.contains(activeEl) && !activeEl?.closest('[data-radix-portal]')) {
+                setActiveToolbarPos(null)
+            }
+        }, 150)
+    }, [])
+
     useEffect(() => {
         const fetchTestimonials = async () => {
-            // ... existing fetch logic
             const supabase = createClient()
             const { data } = await supabase
                 .from('website_testimonials')
                 .select('*')
                 .eq('is_enabled', true)
                 .order('created_at', { ascending: false })
-                .limit(5) // Increased limit for carousel
+                .limit(5)
 
             if (data) setTestimonials(data)
             setLoading(false)
@@ -30,13 +85,32 @@ export function TestimonialsBlock({ id }: BlockProps) {
     if (testimonials.length === 0) return null
 
     return (
-        <section id={id} className="py-24 bg-black relative overflow-hidden">
+        <section id={id} ref={sectionRef} className="py-24 bg-black relative overflow-hidden">
+            {/* Local Toolbar */}
+            {isEditMode && activeToolbarPos && (
+                <div
+                    className="absolute z-50 transition-all duration-100"
+                    style={{ top: activeToolbarPos.top, left: activeToolbarPos.left, transform: 'translateY(-10px)' }}
+                    onMouseDown={(e) => e.preventDefault()}
+                >
+                    <TextToolbar blockId={id} />
+                </div>
+            )}
+
             {/* Background Gradients */}
             <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(12,117,154,0.1),transparent_70%)] pointer-events-none"></div>
 
             <div className="container mx-auto px-4">
-                <div className="text-center mb-16">
-                    <h2 className="text-3xl md:text-5xl font-bold font-heading mb-4">Client Stories</h2>
+                <div className="text-center mb-16 relative">
+                    <EditableText
+                        tagName="h2"
+                        value={localSettings.title}
+                        onChange={(v) => handleTextChange('title', v)}
+                        isEditMode={isEditMode}
+                        onFocus={onTextFocus}
+                        onBlur={onTextBlur}
+                        className="text-3xl md:text-5xl font-bold font-heading mb-4"
+                    />
                 </div>
 
                 <TestimonialCarousel testimonials={testimonials} />

@@ -1,65 +1,183 @@
+'use client'
+
 import { BlockProps } from './types'
-import { Bot, Workflow, BarChart3, Database, Shield, Zap } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { useEditorStore } from '@/lib/stores/editor-store'
+import { updateBlock as updateBlockAction } from '@/actions/block-actions'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { ServiceFlipCard } from './service-flip-card'
+import { Eye, EyeOff } from 'lucide-react'
+import { TextToolbar } from '@/components/editor/text-toolbar'
+import { EditableText } from '@/components/editor/editable-text'
+import { AddButton, DeleteButton } from '@/components/editor/editable-list-controls'
 
-const SERVICES = [
-    {
-        title: 'AI Automation Agents',
-        icon: Bot,
-        desc: 'Autonomous agents that handle customer support, outreach, and scheduling 24/7.',
-        details: ['Multi-channel support (Email/Chat)', 'Natural Language Processing', 'Human-in-the-loop escalation']
-    },
-    {
-        title: 'Workflow Optimization',
-        icon: Workflow,
-        desc: 'Streamline operations by connecting your existing tools (Slack, HubSpot, Notion).',
-        details: ['Zapier/Make Integration', 'Custom API Connectors', 'Real-time Event Triggers']
-    },
-    {
-        title: 'Data Analytics',
-        icon: BarChart3,
-        desc: 'Turn raw data into actionable insights with predictive AI models.',
-        details: ['Predictive Forecasting', 'Sentiment Analysis', 'Automated Reporting Dashboards']
-    },
-    {
-        title: 'Knowledge Bases',
-        icon: Database,
-        desc: 'Centralize your company intelligence into a queryable AI brain.',
-        details: ['RAG Pipeline Implementation', 'Vector Database Setup', 'Slack/Discord Bots']
-    },
-    {
-        title: 'Enterprise Security',
-        icon: Shield,
-        desc: 'Bank-grade security protocols ensuring your data remains private and protected.',
-        details: ['SOC2 Compliance Ready', 'PII Redaction', 'On-premise LLM Deployment']
-    },
-    {
-        title: 'Rapid Prototyping',
-        icon: Zap,
-        desc: 'Go from idea to functional MVP in weeks, not months.',
-        details: ['Fast Iteration Cycles', 'Scalable Architecture', 'Production-ready Code']
-    },
-]
+export function ServicesBlock({ id, settings }: BlockProps) {
+    const { isEditMode, updateBlock } = useEditorStore()
+    const sectionRef = useRef<HTMLElement>(null)
+    const [activeToolbarPos, setActiveToolbarPos] = useState<{ top: number, left: number } | null>(null)
 
-export function ServicesBlock({ id }: BlockProps) {
+    // Default Data
+    const defaultData = {
+        title: 'Our Services',
+        tagline: 'Comprehensive AI solutions tailored for modern enterprises.',
+        services: [
+            { id: '1', title: 'AI Automation Agents', asset: { type: 'icon', value: 'Bot' }, desc: 'Autonomous agents that handle customer support, outreach, and scheduling 24/7.', details: ['Multi-channel support', 'Natural Language Processing', 'Human-in-the-loop'], isHidden: false },
+            { id: '2', title: 'Workflow Optimization', asset: { type: 'icon', value: 'Workflow' }, desc: 'Streamline operations by connecting your existing tools.', details: ['Zapier/Make Integration', 'Custom API Connectors', 'Real-time Event Triggers'], isHidden: false },
+            { id: '3', title: 'Data Analytics', asset: { type: 'icon', value: 'BarChart' }, desc: 'Turn raw data into actionable insights with predictive AI models.', details: ['Predictive Forecasting', 'Sentiment Analysis', 'Automated Dashboards'], isHidden: false },
+            { id: '4', title: 'Knowledge Bases', asset: { type: 'icon', value: 'Database' }, desc: 'Centralize your intelligence into a queryable AI brain.', details: ['RAG Implementation', 'Vector Database Setup', 'Slack/Discord Bots'], isHidden: false },
+        ]
+    }
+
+    // Local state
+    const [localSettings, setLocalSettings] = useState<any>({ ...defaultData, ...settings })
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+    // Sync from props
+    useEffect(() => {
+        if (settings) {
+            setLocalSettings((prev: any) => ({ ...prev, ...settings }))
+        }
+    }, [settings])
+
+    const saveSettings = useCallback((newSettings: any) => {
+        setLocalSettings(newSettings)
+        updateBlock(id, { settings: newSettings })
+
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+        saveTimeoutRef.current = setTimeout(async () => {
+            try {
+                await updateBlockAction(id, newSettings)
+            } catch (err) {
+                console.error("Failed to save services:", err)
+            }
+        }, 800)
+    }, [id, updateBlock])
+
+    const handleTextChange = useCallback((key: string, value: string) => {
+        saveSettings({ ...localSettings, [key]: value })
+    }, [localSettings, saveSettings])
+
+    const handleServiceUpdate = useCallback((index: number, data: any) => {
+        const services = [...(localSettings.services || [])]
+        services[index] = { ...services[index], ...data }
+        saveSettings({ ...localSettings, services })
+    }, [localSettings, saveSettings])
+
+    const handleAddService = () => {
+        const services = [...(localSettings.services || []), {
+            id: Math.random().toString(36).substr(2, 9),
+            title: 'New Service',
+            asset: { type: 'icon', value: 'Zap' },
+            desc: 'New service description.',
+            details: ['Feature 1', 'Feature 2'],
+            isHidden: false
+        }]
+        saveSettings({ ...localSettings, services })
+    }
+
+    const handleRemoveService = (index: number) => {
+        const services = [...(localSettings.services || [])]
+        services.splice(index, 1)
+        saveSettings({ ...localSettings, services })
+    }
+
+    const onTextFocus = useCallback((rect: DOMRect) => {
+        if (sectionRef.current) {
+            const sectionRect = sectionRef.current.getBoundingClientRect()
+            const relativeLeft = rect.left - sectionRect.left + (rect.width / 2)
+            const relativeTop = rect.bottom - sectionRect.top
+            setActiveToolbarPos({ top: relativeTop, left: relativeLeft })
+        }
+    }, [])
+
+    const onTextBlur = useCallback(() => {
+        setTimeout(() => {
+            const activeEl = document.activeElement
+            if (!sectionRef.current?.contains(activeEl) && !activeEl?.closest('[data-radix-portal]')) {
+                setActiveToolbarPos(null)
+            }
+        }, 150)
+    }, [])
+
     return (
-        <section id={id} className="py-24 bg-black relative">
+        <section id={id} ref={sectionRef} className="py-24 bg-black relative">
+            {/* Local Toolbar */}
+            {isEditMode && activeToolbarPos && (
+                <div
+                    className="absolute z-50 transition-all duration-100"
+                    style={{ top: activeToolbarPos.top, left: activeToolbarPos.left, transform: 'translateY(-10px)' }}
+                    onMouseDown={(e) => e.preventDefault()}
+                >
+                    <TextToolbar blockId={id} />
+                </div>
+            )}
+
             <div className="container mx-auto px-4">
                 <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-                    <h2 className="text-3xl md:text-5xl font-bold font-heading">Our Services</h2>
-                    <p className="text-muted-foreground text-lg">Comprehensive AI solutions tailored for modern enterprises.</p>
+                    <EditableText
+                        tagName="h2"
+                        value={localSettings.title}
+                        onChange={(v) => handleTextChange('title', v)}
+                        isEditMode={isEditMode}
+                        onFocus={onTextFocus}
+                        onBlur={onTextBlur}
+                        className="text-3xl md:text-5xl font-bold font-heading"
+                    />
+                    <EditableText
+                        tagName="p"
+                        value={localSettings.tagline}
+                        onChange={(v) => handleTextChange('tagline', v)}
+                        isEditMode={isEditMode}
+                        onFocus={onTextFocus}
+                        onBlur={onTextBlur}
+                        className="text-muted-foreground text-lg"
+                    />
                 </div>
 
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {SERVICES.map((service, idx) => (
-                        <ServiceFlipCard
-                            key={idx}
-                            title={service.title}
-                            desc={service.desc}
-                            details={service.details}
-                            icon={<service.icon className="w-6 h-6 text-accent" />}
-                        />
-                    ))}
+                <div className="flex flex-wrap justify-center gap-6">
+                    {localSettings.services?.map((service: any, i: number) => {
+                        if (service.isHidden && !isEditMode) return null
+
+                        return (
+                            <div
+                                key={service.id}
+                                className={cn(
+                                    "w-full sm:w-[calc(50%-12px)] lg:w-[calc(25%-18px)] min-w-[280px] max-w-[340px] relative",
+                                    service.isHidden && "opacity-50 grayscale"
+                                )}
+                            >
+                                {/* Admin Controls */}
+                                {isEditMode && (
+                                    <div className="absolute -top-4 right-2 z-20 flex gap-2">
+                                        <button
+                                            onClick={() => handleServiceUpdate(i, { isHidden: !service.isHidden })}
+                                            className="p-1.5 rounded-md bg-black/80 border border-white/10 text-white/50 hover:text-white transition-colors shadow-2xl"
+                                            title={service.isHidden ? 'Show service' : 'Hide service'}
+                                        >
+                                            {service.isHidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                                        </button>
+                                        <DeleteButton onClick={() => handleRemoveService(i)} isEditMode={isEditMode} />
+                                    </div>
+                                )}
+                                <ServiceFlipCard
+                                    title={service.title}
+                                    desc={service.desc}
+                                    details={service.details}
+                                    asset={service.asset}
+                                    isEditMode={isEditMode}
+                                    onUpdate={(data) => handleServiceUpdate(i, data)}
+                                    onTextFocus={onTextFocus}
+                                    onTextBlur={onTextBlur}
+                                />
+                            </div>
+                        )
+                    })}
+
+                    {isEditMode && (
+                        <div className="w-full flex justify-center mt-8">
+                            <AddButton onClick={handleAddService} isEditMode={isEditMode} title="Add Service" className="w-12 h-12" />
+                        </div>
+                    )}
                 </div>
             </div>
         </section>

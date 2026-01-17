@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { IconPicker } from './icon-picker'
 import { ColorControl } from './color-control'
 import { cn } from '@/lib/utils'
-import { ChevronDown, Smile, Link, Unlink, Trash, Check } from 'lucide-react'
+import { ChevronDown, Smile, Link, Unlink, Trash, Check, Maximize2, MoveRight, Eye, EyeOff } from 'lucide-react'
 import { useState, useMemo, lazy, Suspense } from 'react'
 import dynamicIconImports from 'lucide-react/dynamicIconImports'
 import { Input } from "@/components/ui/input"
@@ -36,6 +36,9 @@ interface IconToolbarProps {
         color?: string
         backgroundColor?: string
         linkUrl?: string
+        width?: string
+        height?: string
+        isHidden?: boolean
     }
     onUpdate: (updates: any) => void
     onDelete?: () => void
@@ -56,8 +59,12 @@ export function IconToolbar({ settings, onUpdate, onDelete }: IconToolbarProps) 
     const handleApplyLink = () => {
         let finalUrl = linkUrl.trim()
         if (finalUrl) {
+            // Normalize: If it doesn't start with /, #, or a protocol, but looks like a domain or localhost
             if (!finalUrl.startsWith('/') && !finalUrl.startsWith('#') && !finalUrl.startsWith('http://') && !finalUrl.startsWith('https://') && !finalUrl.startsWith('mailto:')) {
-                finalUrl = 'https://' + finalUrl
+                // If it contains a dot or is 'localhost', assume it's an external link
+                if (finalUrl.includes('.') || finalUrl === 'localhost') {
+                    finalUrl = 'https://' + finalUrl
+                }
             }
             onUpdate({ linkUrl: finalUrl })
         } else {
@@ -208,6 +215,62 @@ export function IconToolbar({ settings, onUpdate, onDelete }: IconToolbarProps) 
                     onChange={(v) => onUpdate({ color: v })}
                 />
             </div>
+
+            <Separator orientation="vertical" className="h-4 bg-white/10" />
+
+            {/* Visibility Toggle */}
+            <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onUpdate({ isHidden: !settings.isHidden })}
+                className={cn(
+                    "h-7 w-7 rounded-full transition-colors",
+                    settings.isHidden ? "text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20" : "text-zinc-500 hover:text-white hover:bg-white/10"
+                )}
+                title={settings.isHidden ? "Hidden (click to show)" : "Visible (click to hide)"}
+            >
+                {settings.isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            </Button>
+
+            <Separator orientation="vertical" className="h-4 bg-white/10" />
+
+            {/* Size Control */}
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-zinc-500 hover:text-white hover:bg-white/10">
+                        <Maximize2 className="w-3.5 h-3.5" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-3 w-48 bg-zinc-950 border-zinc-800 rounded-2xl shadow-2xl space-y-3">
+                    <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-zinc-500 uppercase tracking-widest font-bold">
+                            <span>Width</span>
+                            <span className="text-accent">{settings.width || 'auto'}</span>
+                        </div>
+                        <Input
+                            type="text"
+                            placeholder="e.g. 40px, 4rem"
+                            value={settings.width || ''}
+                            onChange={(e) => onUpdate({ width: e.target.value })}
+                            className="h-7 text-xs bg-white/5 border-white/10 text-white"
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-zinc-500 uppercase tracking-widest font-bold">
+                            <span>Height</span>
+                            <span className="text-accent">{settings.height || 'auto'}</span>
+                        </div>
+                        <Input
+                            type="text"
+                            placeholder="e.g. 40px, 4rem"
+                            value={settings.height || ''}
+                            onChange={(e) => onUpdate({ height: e.target.value })}
+                            className="h-7 text-xs bg-white/5 border-white/10 text-white"
+                        />
+                    </div>
+                    <p className="text-[9px] text-zinc-600">Use px, rem, or %.</p>
+                </PopoverContent>
+            </Popover>
 
             {onDelete && (
                 <>

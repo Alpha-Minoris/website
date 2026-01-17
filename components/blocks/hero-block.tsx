@@ -1,60 +1,287 @@
-'use client'
-
 import { BlockProps } from './types'
 import { Button } from '@/components/ui/button'
-import { LogoRibbon } from './hero/logo-ribbon'
-import { ArrowRight, CheckCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useEditorStore } from '@/lib/stores/editor-store'
+import { updateBlock as updateBlockAction } from '@/actions/block-actions'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { Plus } from 'lucide-react'
+import { TextToolbar } from '@/components/editor/text-toolbar'
+import { EditableText } from '@/components/editor/editable-text'
+import { AddButton, DeleteButton } from '@/components/editor/editable-list-controls'
+import { EditableAsset } from '@/components/editor/editable-asset'
+import { LogoRibbon } from './hero/logo-ribbon'
 
-export function HeroBlock({ content }: BlockProps) {
+export function HeroBlock({ id, settings }: BlockProps) {
+    const { isEditMode, updateBlock } = useEditorStore()
+    const sectionRef = useRef<HTMLElement>(null)
+    const [activeToolbarPos, setActiveToolbarPos] = useState<{ top: number, left: number } | null>(null)
+
+    // Default Data
+    const defaultData = {
+        eyebrow: "AI Automation Agency",
+        title: "Automate Your <br /> Future Today.",
+        tagline: "We build custom AI agents and automation workflows that scale your business. Stop trading time for money.",
+        primaryButton: { text: "Start Building", url: "#contact" },
+        secondaryButton: { text: "View Case Studies", url: "#case-studies" },
+        labels: [
+            { text: 'Proven Frameworks', asset: { type: 'icon', value: 'CheckCircle' } },
+            { text: 'Scalable Architecture', asset: { type: 'icon', value: 'CheckCircle' } },
+            { text: 'Fast Delivery', asset: { type: 'icon', value: 'CheckCircle' } }
+        ],
+        logos: [
+            { name: 'OpenAI', asset: { type: 'icon', value: 'Brain' } },
+            { name: 'Anthropic', asset: { type: 'icon', value: 'Sparkles' } },
+            { name: 'Zapier', asset: { type: 'icon', value: 'Zap' } },
+            { name: 'N8n', asset: { type: 'icon', value: 'Terminal' } },
+            { name: 'Midjourney', asset: { type: 'icon', value: 'Bot' } },
+            { name: 'Gemini', asset: { type: 'icon', value: 'Code' } },
+            { name: 'HuggingFace', asset: { type: 'icon', value: 'Cpu' } },
+            { name: 'Vercel', asset: { type: 'icon', value: 'Globe' } },
+        ]
+    }
+
+    // Local state
+    const [localSettings, setLocalSettings] = useState<any>({ ...defaultData, ...settings })
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+    // Sync from props
+    useEffect(() => {
+        if (settings) {
+            setLocalSettings((prev: any) => ({ ...prev, ...settings }))
+        }
+    }, [settings])
+
+    const saveSettings = useCallback((newSettings: any) => {
+        setLocalSettings(newSettings)
+        updateBlock(id, { settings: newSettings })
+
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+        saveTimeoutRef.current = setTimeout(async () => {
+            try {
+                await updateBlockAction(id, newSettings)
+            } catch (err) {
+                console.error("Failed to save hero:", err)
+            }
+        }, 800)
+    }, [id, updateBlock])
+
+    const handleTextChange = useCallback((key: string, value: string) => {
+        const newSettings = { ...localSettings, [key]: value }
+        saveSettings(newSettings)
+    }, [localSettings, saveSettings])
+
+    const handleLabelChange = useCallback((index: number, updates: any) => {
+        const labels = [...(localSettings.labels || [])]
+        labels[index] = { ...labels[index], ...updates }
+        saveSettings({ ...localSettings, labels })
+    }, [localSettings, saveSettings])
+
+    const handleAddLabel = () => {
+        const labels = [...(localSettings.labels || []), { text: "New Feature", asset: { type: 'icon', value: 'CheckCircle' } }]
+        saveSettings({ ...localSettings, labels })
+    }
+
+    const handleRemoveLabel = (index: number) => {
+        const labels = [...(localSettings.labels || [])]
+        labels.splice(index, 1)
+        saveSettings({ ...localSettings, labels })
+    }
+
+    const handleAddLogo = () => {
+        const logos = [...(localSettings.logos || []), { name: "New Partner", asset: { type: 'icon', value: 'Globe' } }]
+        saveSettings({ ...localSettings, logos })
+    }
+
+    const handleRemoveLogo = (index: number) => {
+        const logos = [...(localSettings.logos || [])]
+        logos.splice(index, 1)
+        saveSettings({ ...localSettings, logos })
+    }
+
+    const handleLogoUpdate = (index: number, updates: any) => {
+        const logos = [...(localSettings.logos || [])]
+        logos[index] = { ...logos[index], ...updates }
+        saveSettings({ ...localSettings, logos })
+    }
+
+    const onTextFocus = useCallback((rect: DOMRect) => {
+        if (sectionRef.current) {
+            const sectionRect = sectionRef.current.getBoundingClientRect()
+            const relativeLeft = rect.left - sectionRect.left + (rect.width / 2)
+            const relativeTop = rect.bottom - sectionRect.bottom // Position above text
+            setActiveToolbarPos({ top: relativeTop - 40, left: relativeLeft })
+        }
+    }, [])
+
+    const onTextBlur = useCallback(() => {
+        setTimeout(() => {
+            const activeEl = document.activeElement
+            const inPortal = activeEl?.closest('[data-radix-portal]') ||
+                activeEl?.closest('[role="dialog"]') ||
+                activeEl?.closest('[role="listbox"]')
+            if (!sectionRef.current?.contains(activeEl) && !inPortal) setActiveToolbarPos(null)
+        }, 150)
+    }, [])
+
     return (
-        <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black pt-20">
+        <section
+            ref={sectionRef}
+            className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black pt-20 pb-32"
+        >
             {/* Background Noise & Gradient */}
             <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-20 pointer-events-none"></div>
             <div className="absolute inset-0 bg-gradient-to-b from-black via-transparent to-black pointer-events-none"></div>
 
-            <div className="container mx-auto px-4 z-10 flex flex-col items-center justify-center text-center mb-32">
-                {/* Center Column: Text */}
-                <div className="space-y-8 max-w-4xl mx-auto">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-accent uppercase tracking-widest font-bold mx-auto">
-                        <span className="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
-                        AI Automation Agency
-                    </div>
+            {/* Flying Icons (Background) */}
+            <LogoRibbon logos={localSettings.logos} />
 
-                    <h1 className="text-5xl lg:text-7xl font-bold font-heading leading-[1.1] text-white">
-                        Automate Your <br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/40">
-                            Future Today.
-                        </span>
-                    </h1>
-
-                    <p className="text-xl text-muted-foreground leading-relaxed max-w-xl mx-auto">
-                        We build custom AI agents and automation workflows that scale your business. Stop trading time for money.
-                    </p>
-
-                    {/* Buttons */}
-                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                        <Button size="lg" className="h-12 px-8 text-base bg-white text-black hover:bg-white/90" asChild>
-                            <a href="#contact">Start Building</a>
-                        </Button>
-                        <Button variant="outline" size="lg" className="h-12 px-8 text-base border-white/20 text-white hover:bg-white/10">
-                            View Case Studies
-                        </Button>
-                    </div>
-
-                    <div className="flex flex-wrap gap-6 text-sm text-muted-foreground pt-4 justify-center">
-                        {['Proven Frameworks', 'Scalable Architecture', 'Fast Delivery'].map((item) => (
-                            <div key={item} className="flex items-center gap-2">
-                                <CheckCircle className="w-4 h-4 text-accent" />
-                                <span>{item}</span>
+            {/* Logo Admin Overlay */}
+            {isEditMode && (
+                <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-4 bg-black/80 p-4 rounded-3xl border border-white/10 backdrop-blur-2xl shadow-2xl scale-90 lg:scale-100 min-w-[320px]">
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Manage Partners & Tools</p>
+                    <div className="flex flex-wrap gap-3 justify-center">
+                        {localSettings.logos?.map((logo: any, idx: number) => (
+                            <div key={idx} className="relative group/logo flex flex-col items-center gap-1">
+                                <EditableAsset
+                                    type={logo.asset.type}
+                                    value={logo.asset.value}
+                                    onChange={(type, value) => handleLogoUpdate(idx, { asset: { type, value } })}
+                                    onUpdate={(updates) => handleLogoUpdate(idx, { asset: { ...logo.asset, ...updates } })}
+                                    isEditMode={isEditMode}
+                                    linkUrl={logo.asset.linkUrl}
+                                    isHidden={logo.asset.isHidden}
+                                    className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 p-2"
+                                />
+                                <input
+                                    type="text"
+                                    value={logo.name}
+                                    onChange={(e) => handleLogoUpdate(idx, { name: e.target.value })}
+                                    className="w-16 bg-transparent border-none text-[10px] text-center text-zinc-400 focus:text-white focus:outline-none"
+                                />
+                                <div className="absolute -top-2 -right-2 opacity-0 group-hover/logo:opacity-100 transition-opacity z-10">
+                                    <DeleteButton onClick={() => handleRemoveLogo(idx)} isEditMode={isEditMode} className="scale-75" />
+                                </div>
                             </div>
                         ))}
+                        <button
+                            onClick={handleAddLogo}
+                            className="w-12 h-12 flex flex-col items-center justify-center rounded-xl bg-white/5 border border-white/10 text-accent hover:bg-zinc-800 transition-all group/add"
+                        >
+                            <Plus size={20} className="group-hover/add:scale-110 transition-transform" />
+                            <span className="text-[8px] mt-1 opacity-0 group-hover/add:opacity-100">Add</span>
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Local Toolbar */}
+            {isEditMode && activeToolbarPos && (
+                <div
+                    className="absolute z-50 transition-all duration-100"
+                    style={{ top: activeToolbarPos.top, left: activeToolbarPos.left, transform: 'translateX(-50%)' }}
+                    onMouseDown={(e) => e.preventDefault()}
+                >
+                    <TextToolbar blockId={id} />
+                </div>
+            )}
+
+            <div className="container mx-auto px-4 z-10 flex flex-col items-center justify-center text-center">
+                <div className="space-y-8 max-w-4xl mx-auto">
+                    {/* Eyebrow */}
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-accent uppercase tracking-widest font-bold mx-auto">
+                        <span className="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
+                        <EditableText
+                            value={localSettings.eyebrow}
+                            onChange={(v) => handleTextChange('eyebrow', v)}
+                            isEditMode={isEditMode}
+                            onFocus={onTextFocus}
+                            onBlur={onTextBlur}
+                            className="bg-transparent"
+                        />
+                    </div>
+
+                    {/* Title */}
+                    <EditableText
+                        tagName="h1"
+                        value={localSettings.title}
+                        onChange={(v) => handleTextChange('title', v)}
+                        isEditMode={isEditMode}
+                        onFocus={onTextFocus}
+                        onBlur={onTextBlur}
+                        className="text-5xl lg:text-8xl font-bold font-heading leading-[1.05] text-white tracking-tight"
+                    />
+
+                    {/* Tagline */}
+                    <EditableText
+                        tagName="p"
+                        value={localSettings.tagline}
+                        onChange={(v) => handleTextChange('tagline', v)}
+                        isEditMode={isEditMode}
+                        onFocus={onTextFocus}
+                        onBlur={onTextBlur}
+                        className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto"
+                    />
+
+                    {/* Buttons */}
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                        <div className="relative group">
+                            <Button size="lg" className="h-14 px-10 text-lg bg-white text-black hover:bg-white/90 shadow-[0_0_30px_rgba(255,255,255,0.1)] rounded-full">
+                                <EditableText
+                                    value={localSettings.primaryButton?.text || "Button"}
+                                    onChange={(v) => handleTextChange('primaryButton', { ...localSettings.primaryButton, text: v })}
+                                    isEditMode={isEditMode}
+                                    onFocus={onTextFocus}
+                                    onBlur={onTextBlur}
+                                />
+                            </Button>
+                        </div>
+                        <div className="relative group">
+                            <Button variant="outline" size="lg" className="h-14 px-10 text-lg border-white/20 text-white hover:bg-white/10 rounded-full backdrop-blur-sm">
+                                <EditableText
+                                    value={localSettings.secondaryButton?.text || "Button"}
+                                    onChange={(v) => handleTextChange('secondaryButton', { ...localSettings.secondaryButton, text: v })}
+                                    isEditMode={isEditMode}
+                                    onFocus={onTextFocus}
+                                    onBlur={onTextBlur}
+                                />
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* Features/Labels */}
+                    <div className="flex flex-wrap gap-8 text-sm text-muted-foreground pt-8 justify-center items-center">
+                        {localSettings.labels?.map((item: any, i: number) => (
+                            <div key={i} className="flex items-center gap-3 group relative">
+                                <EditableAsset
+                                    type={item.asset?.type || 'icon'}
+                                    value={item.asset?.value || 'CheckCircle'}
+                                    onChange={(type, value) => handleLabelChange(i, { asset: { type, value } })}
+                                    onUpdate={(updates) => handleLabelChange(i, { asset: { ...item.asset, ...updates } })}
+                                    isEditMode={isEditMode}
+                                    linkUrl={item.asset?.linkUrl}
+                                    isHidden={item.asset?.isHidden}
+                                    className="w-7 h-7 opacity-60 group-hover:opacity-100"
+                                    iconClassName="w-full h-full"
+                                />
+                                <EditableText
+                                    value={typeof item === 'string' ? item : item.text}
+                                    onChange={(v) => handleLabelChange(i, { text: v })}
+                                    isEditMode={isEditMode}
+                                    onFocus={onTextFocus}
+                                    onBlur={onTextBlur}
+                                    className="font-medium tracking-wide"
+                                />
+                                <DeleteButton
+                                    onClick={() => handleRemoveLabel(i)}
+                                    isEditMode={isEditMode}
+                                    className="absolute -top-10 left-1/2 -translate-x-1/2"
+                                />
+                            </div>
+                        ))}
+                        <AddButton onClick={handleAddLabel} isEditMode={isEditMode} className="w-8 h-8" />
                     </div>
                 </div>
             </div>
-
-            {/* Logo Ribbon */}
-            <LogoRibbon />
         </section>
     )
 }

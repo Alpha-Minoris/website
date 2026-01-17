@@ -5,78 +5,94 @@ import { revalidatePath } from 'next/cache'
 
 // Update a block (can be nested deeply).
 // For recursive updates, we need to traverse the JSON.
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export async function updateBlock(blockId: string, updates: any) {
+    console.log(`[updateBlock] START blockId=${blockId}`)
     const supabase = await createAdminClient()
 
-    // 1. Find the section that contains this block (deep search)
-    // Query sections to find which one stores this block ID in its layout_json
-    // This is expensive if we don't have the sectionId from the client.
-    // Ideally, the client SHOULD pass sectionId.
-    // If blockId IS the sectionId, handle that.
+    // 1. Check if blockId is a UUID. If not, treat as a slug.
+    const isUuid = UUID_REGEX.test(blockId)
+    console.log(`[updateBlock] isUuid=${isUuid}`)
 
-    // Check if blockId is a section first
-    const { data: isSection } = await supabase.from('website_sections').select('id, published_version_id').eq('id', blockId).single()
+    // Check if blockId matches a section
+    let query = supabase.from('website_sections').select('id, published_version_id, slug')
+    if (isUuid) {
+        query = query.eq('id', blockId)
+    } else {
+        query = query.eq('slug', blockId)
+    }
 
-    if (isSection) {
+    const { data: sectionRow, error: sectionError } = await query.single()
+
+    if (sectionError && sectionError.code !== 'PGRST116') { // PGRST116 is "no rows found"
+        console.error(`[updateBlock] Section query error:`, sectionError)
+        // If we get 22P02 here, it means the query itself was invalid
+        if (sectionError.code === '22P02') {
+            console.error(`[updateBlock] 22P02 detected during section query for ${blockId}. Attempting fallback to search.`)
+        } else {
+            throw sectionError
+        }
+    }
+
+    if (sectionRow) {
+        console.log(`[updateBlock] Match found in website_sections: slug=${sectionRow.slug}, version_id=${sectionRow.published_version_id}`)
+
+        if (!sectionRow.published_version_id) {
+            console.error(`[updateBlock] Section found but has no published_version_id`)
+            throw new Error("Section has no published version")
+        }
+
         // Direct Section Update
-        const { data: version } = await supabase
+        const { data: version, error: versionFetchError } = await supabase
             .from('website_section_versions')
             .select('layout_json')
-            .eq('id', isSection.published_version_id)
+            .eq('id', sectionRow.published_version_id)
             .single()
+
+        if (versionFetchError) {
+            console.error(`[updateBlock] Error fetching version ${sectionRow.published_version_id}:`, versionFetchError)
+            throw versionFetchError
+        }
 
         const currentLayout = version?.layout_json || {}
         const newLayout = { ...currentLayout, ...updates }
 
-        const { error } = await supabase
+        const { error: updateError } = await supabase
             .from('website_section_versions')
             .update({ layout_json: newLayout })
-            .eq('id', isSection.published_version_id)
+            .eq('id', sectionRow.published_version_id)
 
-        if (error) throw error
+        if (updateError) {
+            console.error(`[updateBlock] Error updating version ${sectionRow.published_version_id}:`, updateError)
+            throw updateError
+        }
+
+        console.log(`[updateBlock] Success: Direct section update for ${blockId}`)
         revalidatePath('/')
         return { success: true }
     }
 
-    // If not a section, find the section containing the block
-    /* 
-      SQL based search for JSON containment is hard for deep nested.
-      We'll iterate common sections or assume client passes sectionId?
-      The tool call `updateBlock(blockId, updates)` unfortunately often lacks sectionId in generic signatures.
-      But `updateBlockContent` HAS sectionId.
-      Let's use `updateBlockContent` logic if we can find the section.
-      
-      For now, we'll try to find the section by checking all? 
-      Or better, let's update the actions to REQUIRE sectionId or fix the client to always use `updateBlockContent` for children.
-      The Error "Section not found" came from line 26 of original code which assumed blockId WAS sectionId.
-      
-      FIX: Convert `updateBlock` to support finding the parent section if not provided, OR fail gracefully.
-      But wait, the `CardToolbar` calls `updateBlock` with `blockId`. 
-      If `CardToolbar` is given `sectionId` prop, it should use a different action or pass it?
-      Actually `CardToolbar` calls `updateBlock` imported from `@/actions/block-actions`.
-      
-      The fix is to make `updateBlock` smarter:
-      If blockId matches a SECTION, update section.
-      If not, SEARCH for the section containing the block.
-    */
+    console.log(`[updateBlock] No direct section match for ${blockId}. Searching nested content...`)
 
-    // Search all published versions for this block ID
-    const { data: allVersions } = await supabase
+    // If not a section, find the section containing the block
+    const { data: allVersions, error: allVersionsError } = await supabase
         .from('website_section_versions')
         .select('id, section_id, layout_json')
         .eq('status', 'published')
 
-    let foundVersion = null
-    let foundBlockPath: any = null // Not used yet
+    if (allVersionsError) {
+        console.error(`[updateBlock] Error fetching all versions:`, allVersionsError)
+        throw allVersionsError
+    }
 
-    // Simple Recursive Finder
+    let foundVersion = null
     const findBlockInTree = (blocks: any[], targetId: string): boolean => {
         for (const b of blocks) {
             if (b.id === targetId) return true
             if (Array.isArray(b.content)) {
                 if (findBlockInTree(b.content, targetId)) return true
             }
-            // check back content if any
             if (b.settings && Array.isArray(b.settings.backContent)) {
                 if (findBlockInTree(b.settings.backContent, targetId)) return true
             }
@@ -94,13 +110,17 @@ export async function updateBlock(blockId: string, updates: any) {
         }
     }
 
-    if (!foundVersion) throw new Error("Block's container section not found")
+    if (!foundVersion) {
+        console.error(`[updateBlock] Block ${blockId} not found in any published section tree.`)
+        throw new Error("Block's container section not found")
+    }
 
-    // Now update recursively
+    console.log(`[updateBlock] Block found in version ${foundVersion.id} (section ID: ${foundVersion.section_id})`)
+
     const updateRecursive = (blocks: any[]): any[] => {
         return blocks.map(b => {
             if (b.id === blockId) {
-                return { ...b, ...updates, id: blockId } // Ensure ID persist
+                return { ...b, ...updates, id: blockId }
             }
             if (Array.isArray(b.content)) {
                 b.content = updateRecursive(b.content)
@@ -114,44 +134,50 @@ export async function updateBlock(blockId: string, updates: any) {
 
     const currentContent = Array.isArray(foundVersion.layout_json?.content) ? foundVersion.layout_json.content : []
     const newContent = updateRecursive(currentContent)
-
     const newLayout = { ...(foundVersion.layout_json || {}), content: newContent }
 
-    const { error } = await supabase
+    const { error: finalUpdateError } = await supabase
         .from('website_section_versions')
         .update({ layout_json: newLayout })
         .eq('id', foundVersion.id)
 
-    if (error) throw error
+    if (finalUpdateError) {
+        console.error(`[updateBlock] Error saving nested update to version ${foundVersion.id}:`, finalUpdateError)
+        throw finalUpdateError
+    }
+
+    console.log(`[updateBlock] Success: Recursive update for ${blockId}`)
     revalidatePath('/')
     return { success: true }
 }
 
 // Add a child block to a section OR nested container
 export async function addChildBlock(parentId: string, newBlock: any, targetField: 'content' | 'backContent' = 'content') {
+    console.log(`[addChildBlock] START parentId=${parentId}, targetField=${targetField}`)
     const supabase = await createAdminClient()
 
-    // 1. Search for the Section Version containing 'parentId' (either as section ID or block ID)
-    const { data: allVersions } = await supabase
+    // 1. Search for the Section Version containing 'parentId'
+    const { data: allVersions, error: fetchError } = await supabase
         .from('website_section_versions')
         .select('id, section_id, layout_json')
         .eq('status', 'published')
 
+    if (fetchError) {
+        console.error(`[addChildBlock] Error fetching versions:`, fetchError)
+        throw fetchError
+    }
+
     let targetVersion = null
     let targetIsRoot = false
 
-    // Check if parentId Is the section ID itself (simplified from version check)
     if (allVersions) {
-        // Optimization: Pre-check if parentId matches any section directly
-        // But we only have version IDs here. 
-        // Let's iterate
         for (const v of allVersions) {
             if (v.section_id === parentId) {
                 targetVersion = v
                 targetIsRoot = true
+                console.log(`[addChildBlock] Found target as root of section ${v.section_id}`)
                 break
             }
-            // Check content tree
             const content = Array.isArray(v.layout_json?.content) ? v.layout_json.content : []
             const matches = (blocks: any[]): boolean => {
                 for (const b of blocks) {
@@ -164,12 +190,16 @@ export async function addChildBlock(parentId: string, newBlock: any, targetField
             if (matches(content)) {
                 targetVersion = v
                 targetIsRoot = false
+                console.log(`[addChildBlock] Found target nested in section version ${v.id}`)
                 break
             }
         }
     }
 
-    if (!targetVersion) throw new Error("Target container not found")
+    if (!targetVersion) {
+        console.error(`[addChildBlock] Target container ${parentId} not found in any published section.`)
+        throw new Error("Target container not found")
+    }
 
     // 2. Insert Logic
     const currentLayout = targetVersion.layout_json || {}
@@ -224,22 +254,48 @@ export async function addChildBlock(parentId: string, newBlock: any, targetField
 
 // Update a specific child block within a section (Recursive)
 export async function updateBlockContent(sectionId: string, blockId: string, updates: any) {
+    console.log(`[updateBlockContent] START sectionId=${sectionId}, blockId=${blockId}`)
+    if (!sectionId || !blockId) {
+        console.error(`[updateBlockContent] Missing IDs: sectionId=${sectionId}, blockId=${blockId}`)
+        throw new Error("Section ID and Block ID are required")
+    }
     const supabase = await createAdminClient()
 
     // 1. Get current section version
-    const { data: section } = await supabase
-        .from('website_sections')
-        .select('published_version_id')
-        .eq('id', sectionId)
-        .single()
+    const isUuid = UUID_REGEX.test(sectionId)
+    console.log(`[updateBlockContent] isUuid(sectionId)=${isUuid}`)
 
-    if (!section || !section.published_version_id) throw new Error("Section or version not found")
+    let query = supabase.from('website_sections').select('published_version_id, slug')
+    if (isUuid) {
+        query = query.eq('id', sectionId)
+    } else {
+        query = query.eq('slug', sectionId)
+    }
 
-    const { data: version } = await supabase
+    const { data: sectionRow, error: sectionError } = await query.single()
+
+    if (sectionError) {
+        console.error(`[updateBlockContent] Section query error for ${sectionId}:`, sectionError)
+        throw sectionError
+    }
+
+    if (!sectionRow || !sectionRow.published_version_id) {
+        console.error(`[updateBlockContent] Section or version not found for ${sectionId}`)
+        throw new Error("Section or version not found")
+    }
+
+    console.log(`[updateBlockContent] Using version ${sectionRow.published_version_id} for section ${sectionRow.slug}`)
+
+    const { data: version, error: versionError } = await supabase
         .from('website_section_versions')
         .select('layout_json')
-        .eq('id', section.published_version_id)
+        .eq('id', sectionRow.published_version_id)
         .single()
+
+    if (versionError) {
+        console.error(`[updateBlockContent] Error fetching version ${sectionRow.published_version_id}:`, versionError)
+        throw versionError
+    }
 
     const currentLayout = version?.layout_json || {}
     const content = Array.isArray(currentLayout.content) ? currentLayout.content : []
@@ -292,7 +348,7 @@ export async function updateBlockContent(sectionId: string, blockId: string, upd
     const { error } = await supabase
         .from('website_section_versions')
         .update({ layout_json: newLayout })
-        .eq('id', section.published_version_id)
+        .eq('id', sectionRow.published_version_id)
 
     if (error) throw error
 
@@ -302,21 +358,46 @@ export async function updateBlockContent(sectionId: string, blockId: string, upd
 
 // Delete a child block from a section
 export async function deleteChildBlock(sectionId: string, blockId: string) {
+    console.log(`[deleteChildBlock] START sectionId=${sectionId}, blockId=${blockId}`)
+    if (!sectionId || !blockId) {
+        console.error(`[deleteChildBlock] Missing IDs: sectionId=${sectionId}, blockId=${blockId}`)
+        throw new Error("Section ID and Block ID are required")
+    }
     const supabase = await createAdminClient()
 
-    const { data: section } = await supabase
-        .from('website_sections')
-        .select('published_version_id')
-        .eq('id', sectionId)
-        .single()
+    const isUuid = UUID_REGEX.test(sectionId)
 
-    if (!section?.published_version_id) throw new Error("Section version not found")
+    let query = supabase.from('website_sections').select('published_version_id, slug')
+    if (isUuid) {
+        query = query.eq('id', sectionId)
+    } else {
+        query = query.eq('slug', sectionId)
+    }
 
-    const { data: version } = await supabase
+    const { data: sectionRow, error: sectionError } = await query.single()
+
+    if (sectionError) {
+        console.error(`[deleteChildBlock] Section query error for ${sectionId}:`, sectionError)
+        throw sectionError
+    }
+
+    if (!sectionRow?.published_version_id) {
+        console.error(`[deleteChildBlock] Published version not found for section ${sectionId}`)
+        throw new Error("Section version not found")
+    }
+
+    console.log(`[deleteChildBlock] Updating version ${sectionRow.published_version_id} for section ${sectionRow.slug}`)
+
+    const { data: version, error: versionError } = await supabase
         .from('website_section_versions')
         .select('layout_json')
-        .eq('id', section.published_version_id)
+        .eq('id', sectionRow.published_version_id)
         .single()
+
+    if (versionError) {
+        console.error(`[deleteChildBlock] Error fetching version ${sectionRow.published_version_id}:`, versionError)
+        throw versionError
+    }
 
     const currentLayout = version?.layout_json || {}
     const content = Array.isArray(currentLayout.content) ? currentLayout.content : []
@@ -331,7 +412,7 @@ export async function deleteChildBlock(sectionId: string, blockId: string) {
     const { error } = await supabase
         .from('website_section_versions')
         .update({ layout_json: newLayout })
-        .eq('id', section.published_version_id)
+        .eq('id', sectionRow.published_version_id)
 
     if (error) throw error
 
