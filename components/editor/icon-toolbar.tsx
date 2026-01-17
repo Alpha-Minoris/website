@@ -80,7 +80,7 @@ export function IconToolbar({ settings, onUpdate, onDelete }: IconToolbarProps) 
     }
 
     return (
-        <Card className="absolute top-full left-1/2 -translate-x-1/2 mt-3 z-50 flex items-center p-2 gap-2 bg-zinc-900/95 border-zinc-800 backdrop-blur-md shadow-2xl rounded-full animate-in fade-in zoom-in-95 duration-200">
+        <Card className="absolute top-full left-1/2 -translate-x-1/2 mt-3 z-50 flex items-center p-2 gap-2 bg-zinc-900/80 border-white/10 backdrop-blur-2xl shadow-2xl rounded-full animate-in fade-in zoom-in-95 duration-200">
             {/* Icon Picker Popover */}
             <Popover>
                 <PopoverTrigger asChild>
@@ -89,7 +89,7 @@ export function IconToolbar({ settings, onUpdate, onDelete }: IconToolbarProps) 
                         <ChevronDown className="w-3 h-3 opacity-50" />
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent className="p-0 w-auto bg-zinc-950 border-zinc-800" side="bottom" align="start">
+                <PopoverContent className="p-0 w-auto bg-zinc-900/80 border-white/10 backdrop-blur-2xl shadow-2xl rounded-2xl overflow-hidden" side="bottom" align="start">
                     <IconPicker
                         selectedIcon={iconName}
                         onSelect={(name) => onUpdate({ iconName: name })}
@@ -115,7 +115,7 @@ export function IconToolbar({ settings, onUpdate, onDelete }: IconToolbarProps) 
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent
-                        className="p-1.5 flex items-center gap-2 bg-zinc-900/95 border-zinc-800 backdrop-blur-md w-auto min-w-[320px] shadow-2xl rounded-2xl animate-in fade-in zoom-in-95 duration-200"
+                        className="p-1.5 flex items-center gap-2 bg-zinc-900/80 border-white/10 backdrop-blur-2xl w-auto min-w-[320px] shadow-2xl rounded-2xl animate-in fade-in zoom-in-95 duration-200"
                         side="bottom"
                         sideOffset={10}
                         align="center"
@@ -229,7 +229,7 @@ export function IconToolbar({ settings, onUpdate, onDelete }: IconToolbarProps) 
                             })()}
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="p-2 w-auto bg-zinc-950 border-white/10 shadow-2xl rounded-2xl" side="bottom">
+                    <PopoverContent className="p-2 w-auto bg-zinc-900/80 border-white/10 backdrop-blur-2xl shadow-2xl rounded-2xl" side="bottom">
                         <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-2 px-1">Icon Color</p>
                         <ColorPicker
                             value={settings.color}
@@ -264,7 +264,7 @@ export function IconToolbar({ settings, onUpdate, onDelete }: IconToolbarProps) 
                         <Maximize2 className="w-3.5 h-3.5" />
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent className="p-3 w-48 bg-zinc-950 border-zinc-800 rounded-2xl shadow-2xl space-y-3">
+                <PopoverContent className="p-3 w-48 bg-zinc-900/80 border-white/10 backdrop-blur-2xl rounded-2xl shadow-2xl space-y-3">
                     <div className="space-y-1">
                         <div className="flex justify-between text-[10px] text-zinc-500 uppercase tracking-widest font-bold">
                             <span>Width</span>

@@ -86,24 +86,38 @@ export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
         if (sectionRef.current) {
             const sectionRect = sectionRef.current.getBoundingClientRect()
             const relativeLeft = rect.left - sectionRect.left + (rect.width / 2)
-            const relativeTop = rect.bottom - sectionRect.top
-            setActiveToolbarPos({ top: relativeTop, left: relativeLeft })
+            const relativeTop = rect.top - sectionRect.top
+            setActiveToolbarPos({ top: relativeTop - 40, left: relativeLeft })
         }
     }, [])
 
     const onTextBlur = useCallback(() => {
         setTimeout(() => {
             const activeEl = document.activeElement
-            if (!sectionRef.current?.contains(activeEl) && !activeEl?.closest('[data-radix-portal]')) {
+            const inPortal = activeEl?.closest('[data-radix-portal]') ||
+                activeEl?.closest('[role="dialog"]') ||
+                activeEl?.closest('[role="listbox"]') ||
+                activeEl?.closest('[data-radix-popper-content-wrapper]')
+
+            if (!sectionRef.current?.contains(activeEl) && !inPortal) {
                 setActiveToolbarPos(null)
             }
-        }, 150)
+        }, 200)
     }, [])
+
+    const handleMissionClick = useCallback((e: React.MouseEvent) => {
+        if (isEditMode) {
+            if (e.target === e.currentTarget) {
+                setActiveToolbarPos(null)
+            }
+        }
+    }, [isEditMode])
 
     return (
         <section
             id={id}
             ref={sectionRef}
+            onClickCapture={handleMissionClick}
             className="py-24 bg-black relative overflow-hidden"
         >
             {/* Local Toolbar */}
@@ -119,7 +133,12 @@ export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
 
             <div className="container mx-auto px-4 grid lg:grid-cols-2 gap-16 items-center">
                 {/* Left: Text */}
-                <div className="space-y-8">
+                <div className={cn(
+                    "space-y-8",
+                    localSettings.align === 'left' ? "text-left items-start" :
+                        localSettings.align === 'right' ? "text-right items-end" :
+                            "text-center md:text-left items-center md:items-start"
+                )}>
                     <EditableText
                         tagName="h2"
                         value={localSettings.title}
@@ -130,7 +149,10 @@ export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                         className="text-4xl md:text-5xl font-bold font-heading"
                     />
 
-                    <div className="space-y-6 text-lg text-muted-foreground leading-relaxed">
+                    <div className={cn(
+                        "space-y-6 text-lg text-muted-foreground leading-relaxed",
+                        localSettings.align === 'center' ? "mx-auto" : ""
+                    )}>
                         <EditableText
                             tagName="p"
                             value={localSettings.description}

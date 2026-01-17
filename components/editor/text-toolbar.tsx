@@ -132,7 +132,7 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
     // We'd need to check anchorNode. But 'createLink' command usually doesn't need pre-fill to work.
 
     return (
-        <Card className="absolute top-full left-1/2 -translate-x-1/2 mt-3 z-50 flex items-center p-2 gap-2 bg-zinc-900/95 border-zinc-800 backdrop-blur-md shadow-2xl rounded-full animate-in fade-in zoom-in-95 duration-200">
+        <Card className="absolute top-full left-1/2 -translate-x-1/2 mt-3 z-50 flex items-center p-2 gap-2 bg-zinc-900/80 border-white/10 backdrop-blur-2xl shadow-2xl rounded-full animate-in fade-in zoom-in-95 duration-200">
 
             {/* Font Family */}
             <Select
@@ -295,7 +295,7 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
 
                     {/* Position: Bottom, Align: Center, FORCE BOTTOM even if offscreen (user request) */}
                     <PopoverContent
-                        className="p-1.5 flex items-center gap-2 bg-zinc-900/95 border-zinc-800 backdrop-blur-md w-auto min-w-[320px] shadow-2xl rounded-2xl animate-in fade-in zoom-in-95 duration-200"
+                        className="p-1.5 flex items-center gap-2 bg-zinc-900/80 border-white/10 backdrop-blur-2xl w-auto min-w-[320px] shadow-2xl rounded-2xl animate-in fade-in zoom-in-95 duration-200"
                         side="bottom"
                         sideOffset={10}
                         align="center"

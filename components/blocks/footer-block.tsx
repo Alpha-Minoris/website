@@ -10,6 +10,7 @@ import { TextToolbar } from '@/components/editor/text-toolbar'
 
 import { EditableText } from '@/components/editor/editable-text'
 import { AddButton, DeleteButton } from '@/components/editor/editable-list-controls'
+import { EditableAsset } from '@/components/editor/editable-asset'
 
 export function FooterBlock({ id, settings, sectionId }: BlockProps) {
     const { isEditMode, updateBlock } = useEditorStore()
@@ -102,6 +103,17 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
         saveSettings({ ...localSettings, [listKey]: list })
     }
 
+    const handleLogoUpdate = (type: 'icon' | 'image', value: string) => {
+        const newSettings = { ...localSettings, logoType: type, logoValue: value }
+        setLocalSettings(newSettings)
+        updateBlock(id, { settings: newSettings })
+
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+        saveTimeoutRef.current = setTimeout(async () => {
+            await updateBlockAction(id, newSettings)
+        }, 800)
+    }
+
     // Initialize defaults
     useEffect(() => {
         const updates: any = {}
@@ -110,6 +122,10 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
         if (!localSettings.companyLines) updates.companyLines = defaultCompany
         if (!localSettings.socialLinks) updates.socialLinks = defaultSocial
         if (!localSettings.brandTitle) updates.brandTitle = "Alpha Minoris"
+        if (!localSettings.logoType) {
+            updates.logoType = 'image'
+            updates.logoValue = ''
+        }
 
         if (Object.keys(updates).length > 0) {
             // Only apply if missing keys
@@ -136,8 +152,8 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
         if (footerRef.current) {
             const footerRect = footerRef.current.getBoundingClientRect()
             const relativeLeft = rect.left - footerRect.left + (rect.width / 2)
-            const relativeTop = rect.bottom - footerRect.top
-            setActiveToolbarPos({ top: relativeTop, left: relativeLeft })
+            const relativeTop = rect.top - footerRect.top
+            setActiveToolbarPos({ top: relativeTop - 40, left: relativeLeft })
         }
     }, [])
 
@@ -149,16 +165,16 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
             const inFooter = footerRef.current?.contains(activeEl)
 
             // Check if focus is in a known portal/overlay (Radix UI, Select, Popover)
-            // We check for common roles or data attributes used by Radix/Popper
             const inPortal = activeEl?.closest('[data-radix-portal]') ||
                 activeEl?.closest('[role="dialog"]') ||
                 activeEl?.closest('[role="listbox"]') ||
-                activeEl?.closest('[role="menu"]')
+                activeEl?.closest('[role="menu"]') ||
+                activeEl?.closest('[data-radix-popper-content-wrapper]')
 
             if (!inFooter && !inPortal) {
                 setActiveToolbarPos(null)
             }
-        }, 150)
+        }, 200)
     }, [])
 
     return (
@@ -183,27 +199,49 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
                 </div>
             )}
 
-            <div className="container mx-auto px-4 grid md:grid-cols-4 gap-12 mb-16">
+            <div className={cn(
+                "container mx-auto px-4 grid md:grid-cols-4 gap-12 mb-16",
+                localSettings.align === 'left' ? "text-left" :
+                    localSettings.align === 'right' ? "text-right" :
+                        "text-center md:text-left" // Default footer behavior
+            )}>
 
                 {/* Column 1: Brand & Tagline */}
-                <div className="space-y-4">
-                    <EditableText
-                        tagName="h3"
-                        value={localSettings.brandTitle || "Alpha Minoris"}
-                        onChange={(v) => handleTextChange('brandTitle', v)}
-                        className="text-xl font-bold text-white font-heading"
-                        isEditMode={isEditMode}
-                        onFocus={onTextFocus}
-                        onBlur={onTextBlur}
-                    />
-                    <EditableText
-                        value={localSettings.tagline || "Building the automated future, one agent at a time."}
-                        onChange={(v) => handleTextChange('tagline', v)}
-                        className="leading-relaxed focus:text-white block"
-                        isEditMode={isEditMode}
-                        onFocus={onTextFocus}
-                        onBlur={onTextBlur}
-                    />
+                <div className={cn(
+                    "space-y-6",
+                    localSettings.align === 'left' ? "flex flex-col items-start" :
+                        localSettings.align === 'right' ? "flex flex-col items-end" :
+                            "flex flex-col items-center md:items-start"
+                )}>
+                    <div className="w-32 h-32 relative">
+                        <EditableAsset
+                            type={localSettings.logoType || 'image'}
+                            value={localSettings.logoValue || ''}
+                            onChange={handleLogoUpdate}
+                            isEditMode={isEditMode}
+                            placeholderText="LOGO"
+                            className="bg-zinc-900/50 rounded-lg hover:bg-zinc-800/50 transition-colors"
+                        />
+                    </div>
+                    <div className="space-y-4">
+                        <EditableText
+                            tagName="h3"
+                            value={localSettings.brandTitle || "Alpha Minoris"}
+                            onChange={(v) => handleTextChange('brandTitle', v)}
+                            className="text-xl font-bold text-white font-heading"
+                            isEditMode={isEditMode}
+                            onFocus={onTextFocus}
+                            onBlur={onTextBlur}
+                        />
+                        <EditableText
+                            value={localSettings.tagline || "Building the automated future, one agent at a time."}
+                            onChange={(v) => handleTextChange('tagline', v)}
+                            className="leading-relaxed focus:text-white block"
+                            isEditMode={isEditMode}
+                            onFocus={onTextFocus}
+                            onBlur={onTextBlur}
+                        />
+                    </div>
                 </div>
 
                 {/* Column 2: Legal */}

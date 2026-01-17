@@ -118,24 +118,37 @@ export function TeamBlock({ id, settings, sectionSlug, slug }: BlockProps) {
         if (sectionRef.current) {
             const sectionRect = sectionRef.current.getBoundingClientRect()
             const relativeLeft = rect.left - sectionRect.left + (rect.width / 2)
-            const relativeTop = rect.bottom - sectionRect.top
-            setActiveToolbarPos({ top: relativeTop, left: relativeLeft })
+            const relativeTop = rect.top - sectionRect.top
+            setActiveToolbarPos({ top: relativeTop - 40, left: relativeLeft })
         }
     }, [])
 
     const onTextBlur = useCallback(() => {
         setTimeout(() => {
             const activeEl = document.activeElement
-            if (!sectionRef.current?.contains(activeEl) && !activeEl?.closest('[data-radix-portal]')) {
+            const inPortal = activeEl?.closest('[data-radix-portal]') ||
+                activeEl?.closest('[role="dialog"]') ||
+                activeEl?.closest('[role="listbox"]') ||
+                activeEl?.closest('[data-radix-popper-content-wrapper]')
+
+            if (!sectionRef.current?.contains(activeEl) && !inPortal) {
                 setActiveToolbarPos(null)
             }
-        }, 150)
+        }, 200)
     }, [])
+
+    const handleTeamClick = useCallback((e: React.MouseEvent) => {
+        if (isEditMode) {
+            if (e.target === e.currentTarget) {
+                setActiveToolbarPos(null)
+            }
+        }
+    }, [isEditMode])
 
     const visibleMembersCount = localSettings.members?.filter((m: any) => !m.isHidden || isEditMode).length || 0
 
     return (
-        <section id={id} ref={sectionRef} className="py-24 bg-black relative">
+        <section id={id} ref={sectionRef} onClickCapture={handleTeamClick} className="py-24 bg-black relative">
             {/* Local Toolbar */}
             {isEditMode && activeToolbarPos && (
                 <div
@@ -148,7 +161,12 @@ export function TeamBlock({ id, settings, sectionSlug, slug }: BlockProps) {
             )}
 
             <div className="container mx-auto px-4">
-                <div className="text-center mb-16 relative">
+                <div className={cn(
+                    "mb-16 relative",
+                    localSettings.align === 'left' ? "text-left" :
+                        localSettings.align === 'right' ? "text-right" :
+                            "text-center"
+                )}>
                     <EditableText
                         tagName="h2"
                         value={localSettings.title}

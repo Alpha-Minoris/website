@@ -10,6 +10,7 @@ import {
 import { useEditorStore } from '@/lib/stores/editor-store'
 import { updateBlock as updateBlockAction } from '@/actions/block-actions'
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { cn } from '@/lib/utils'
 import { TextToolbar } from '@/components/editor/text-toolbar'
 import { EditableText } from '@/components/editor/editable-text'
 import { AddButton, DeleteButton } from '@/components/editor/editable-list-controls'
@@ -83,22 +84,35 @@ export function FAQBlock({ id, settings, sectionSlug, slug }: BlockProps) {
         if (sectionRef.current) {
             const sectionRect = sectionRef.current.getBoundingClientRect()
             const relativeLeft = rect.left - sectionRect.left + (rect.width / 2)
-            const relativeTop = rect.bottom - sectionRect.top
-            setActiveToolbarPos({ top: relativeTop, left: relativeLeft })
+            const relativeTop = rect.top - sectionRect.top
+            setActiveToolbarPos({ top: relativeTop - 40, left: relativeLeft })
         }
     }, [])
 
     const onTextBlur = useCallback(() => {
         setTimeout(() => {
             const activeEl = document.activeElement
-            if (!sectionRef.current?.contains(activeEl) && !activeEl?.closest('[data-radix-portal]')) {
+            const inPortal = activeEl?.closest('[data-radix-portal]') ||
+                activeEl?.closest('[role="dialog"]') ||
+                activeEl?.closest('[role="listbox"]') ||
+                activeEl?.closest('[data-radix-popper-content-wrapper]')
+
+            if (!sectionRef.current?.contains(activeEl) && !inPortal) {
                 setActiveToolbarPos(null)
             }
-        }, 150)
+        }, 200)
     }, [])
 
+    const handleFAQClick = useCallback((e: React.MouseEvent) => {
+        if (isEditMode) {
+            if (e.target === e.currentTarget) {
+                setActiveToolbarPos(null)
+            }
+        }
+    }, [isEditMode])
+
     return (
-        <section id={id} ref={sectionRef} className="py-24 bg-black relative">
+        <section id={id} ref={sectionRef} onClickCapture={handleFAQClick} className="py-24 bg-black relative">
             {/* Local Toolbar */}
             {isEditMode && activeToolbarPos && (
                 <div
@@ -111,7 +125,12 @@ export function FAQBlock({ id, settings, sectionSlug, slug }: BlockProps) {
             )}
 
             <div className="container mx-auto px-4 max-w-3xl">
-                <div className="text-center mb-12 relative">
+                <div className={cn(
+                    "mb-12 relative",
+                    localSettings.align === 'left' ? "text-left" :
+                        localSettings.align === 'right' ? "text-right" :
+                            "text-center"
+                )}>
                     <EditableText
                         tagName="h2"
                         value={localSettings.title}

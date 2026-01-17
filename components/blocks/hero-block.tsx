@@ -109,7 +109,7 @@ export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
         if (sectionRef.current) {
             const sectionRect = sectionRef.current.getBoundingClientRect()
             const relativeLeft = rect.left - sectionRect.left + (rect.width / 2)
-            const relativeTop = rect.bottom - sectionRect.bottom // Position above text
+            const relativeTop = rect.top - sectionRect.top
             setActiveToolbarPos({ top: relativeTop - 40, left: relativeLeft })
         }
     }, [])
@@ -119,14 +119,24 @@ export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
             const activeEl = document.activeElement
             const inPortal = activeEl?.closest('[data-radix-portal]') ||
                 activeEl?.closest('[role="dialog"]') ||
-                activeEl?.closest('[role="listbox"]')
+                activeEl?.closest('[role="listbox"]') ||
+                activeEl?.closest('[data-radix-popper-content-wrapper]')
             if (!sectionRef.current?.contains(activeEl) && !inPortal) setActiveToolbarPos(null)
-        }, 150)
+        }, 200)
     }, [])
+
+    const handleHeroClick = useCallback((e: React.MouseEvent) => {
+        if (isEditMode) {
+            if (e.target === e.currentTarget || (e.target as HTMLElement).id === 'hero-content-container') {
+                setActiveToolbarPos(null)
+            }
+        }
+    }, [isEditMode])
 
     return (
         <section
             ref={sectionRef}
+            onClickCapture={handleHeroClick}
             className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black pt-20 pb-32"
         >
             {/* Background Noise & Gradient */}
@@ -189,10 +199,28 @@ export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                 </div>
             )}
 
-            <div className="container mx-auto px-4 z-10 flex flex-col items-center justify-center text-center">
-                <div className="space-y-8 max-w-4xl mx-auto">
+            <div
+                id="hero-content-container"
+                className={cn(
+                    "container mx-auto px-4 z-10 flex flex-col justify-center",
+                    localSettings.align === 'left' ? "items-start text-left" :
+                        localSettings.align === 'right' ? "items-end text-right" :
+                            "items-center text-center"
+                )}
+            >
+                <div className={cn(
+                    "space-y-8 max-w-4xl",
+                    localSettings.align === 'left' ? "mx-0" :
+                        localSettings.align === 'right' ? "mx-0 ml-auto" :
+                            "mx-auto"
+                )}>
                     {/* Eyebrow */}
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-accent uppercase tracking-widest font-bold mx-auto">
+                    <div className={cn(
+                        "inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-accent uppercase tracking-widest font-bold",
+                        localSettings.align === 'left' ? "mr-auto" :
+                            localSettings.align === 'right' ? "ml-auto" :
+                                "mx-auto"
+                    )}>
                         <span className="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
                         <EditableText
                             value={localSettings.eyebrow}
@@ -227,7 +255,12 @@ export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                     />
 
                     {/* Buttons */}
-                    <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                    <div className={cn(
+                        "flex flex-col sm:flex-row gap-4 items-center",
+                        localSettings.align === 'left' ? "justify-start" :
+                            localSettings.align === 'right' ? "justify-end" :
+                                "justify-center"
+                    )}>
                         <div className="relative group">
                             <Button size="lg" className="h-14 px-10 text-lg bg-white text-black hover:bg-white/90 shadow-[0_0_30px_rgba(255,255,255,0.1)] rounded-full">
                                 <EditableText
@@ -253,7 +286,12 @@ export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                     </div>
 
                     {/* Features/Labels */}
-                    <div className="flex flex-wrap gap-8 text-sm text-muted-foreground pt-8 justify-center items-center">
+                    <div className={cn(
+                        "flex flex-wrap gap-8 text-sm text-muted-foreground pt-8 items-center",
+                        localSettings.align === 'left' ? "justify-start" :
+                            localSettings.align === 'right' ? "justify-end" :
+                                "justify-center"
+                    )}>
                         {localSettings.labels?.map((item: any, i: number) => (
                             <div key={i} className="flex items-center gap-3 group relative">
                                 <EditableAsset

@@ -4,7 +4,7 @@ import * as React from "react"
 import { Check, Pipette } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-const THEME_COLORS = [
+const TEXT_PRESETS = [
     { name: "Accent", class: "bg-accent border-accent/20", value: "text-accent" },
     { name: "White", class: "bg-white border-white/20", value: "text-white" },
     { name: "Zinc-400", class: "bg-zinc-400 border-zinc-500/20", value: "text-zinc-400" },
@@ -13,12 +13,26 @@ const THEME_COLORS = [
     { name: "Emerald", class: "bg-emerald-500 border-emerald-600/20", value: "text-emerald-500" },
 ]
 
+const BG_PRESETS = [
+    { name: 'Transparent', class: 'bg-transparent border-white/10', value: 'transparent' },
+    { name: 'White / Low', class: 'bg-white/10 border-white/20', value: 'rgba(255,255,255,0.1)' },
+    { name: 'White', class: 'bg-white border-white/20', value: '#ffffff' },
+    { name: 'Black', class: 'bg-black border-white/10', value: '#000000' },
+    { name: 'Dark Blue', class: 'bg-[#0f172a] border-zinc-800', value: '#0f172a' },
+    { name: 'Blue', class: 'bg-[#3b82f6] border-blue-400/20', value: '#3b82f6' },
+    { name: 'Purple', class: 'bg-[#8b5cf6] border-purple-400/20', value: '#8b5cf6' },
+]
+
 interface ColorPickerProps {
     value?: string
     onChange: (value: string) => void
+    type?: 'text' | 'background'
+    customPresets?: { name: string, class: string, value: string }[]
 }
 
-export function ColorPicker({ value, onChange }: ColorPickerProps) {
+export function ColorPicker({ value, onChange, type = 'text', customPresets }: ColorPickerProps) {
+    const presets = customPresets || (type === 'text' ? TEXT_PRESETS : BG_PRESETS)
+
     // Check if current value is a hex color
     const isHex = value?.startsWith('#')
 
@@ -34,20 +48,29 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
 
     return (
         <div className="flex flex-wrap items-center gap-1.5 p-1">
-            {THEME_COLORS.map((color) => (
-                <button
-                    key={color.value}
-                    onClick={() => onChange(color.value)}
-                    className={cn(
-                        "w-6 h-6 rounded-full border transition-all hover:scale-110 active:scale-95 flex items-center justify-center",
-                        color.class,
-                        value === color.value && "ring-2 ring-white ring-offset-2 ring-offset-zinc-950"
-                    )}
-                    title={color.name}
-                >
-                    {value === color.value && <Check className="w-3 h-3 text-zinc-950" />}
-                </button>
-            ))}
+            {presets.map((color) => {
+                const isActive = value === color.value
+                return (
+                    <button
+                        key={color.value}
+                        onClick={() => onChange(color.value)}
+                        className={cn(
+                            "w-6 h-6 rounded-full border transition-all hover:scale-110 active:scale-95 flex items-center justify-center relative overflow-hidden",
+                            color.class,
+                            isActive && "ring-2 ring-white ring-offset-2 ring-offset-zinc-950 scale-110 z-10"
+                        )}
+                        title={color.name}
+                    >
+                        {color.value === 'transparent' && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <div className="w-full h-px bg-red-500/50 rotate-45" />
+                                <div className="absolute inset-0 bg-[url('https://transparenttextures.com/patterns/checkerboard-cross-light.png')] opacity-10" />
+                            </div>
+                        )}
+                        {isActive && <Check className={cn("w-3 h-3 z-20", (color.value === '#ffffff' || color.value === 'transparent') ? "text-zinc-950" : "text-white")} />}
+                    </button>
+                )
+            })}
 
             <div className="h-6 w-px bg-white/10 mx-0.5" />
 
@@ -72,7 +95,7 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
                     "w-full h-full border border-white/10 flex items-center justify-center transition-all group-hover:scale-110",
                     isHex ? "ring-2 ring-white ring-offset-2 ring-offset-zinc-950" : "bg-gradient-to-tr from-red-500 via-green-500 to-blue-500"
                 )} style={isHex ? { backgroundColor: localHex } : {}}>
-                    <Pipette className={cn("w-3 h-3", isHex ? "text-white mix-blend-difference" : "text-white")} />
+                    <Pipette className={cn("w-3 h-3 z-10", isHex ? "text-white mix-blend-difference" : "text-white")} />
                 </div>
             </div>
         </div>

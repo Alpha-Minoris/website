@@ -28,17 +28,18 @@ interface EditableAssetProps {
     maskSettings?: { x: number, y: number, scale: number, shape?: 'circle' | 'square' }
     color?: string
     folder?: string
+    placeholderText?: string
 }
 
 export function EditableAsset({
-    type, value, onChange, onUpdate, isEditMode, className, iconClassName, linkUrl, isHidden, maskSettings, color, folder
+    type, value, onChange, onUpdate, isEditMode, className, iconClassName, linkUrl, isHidden, maskSettings, color, folder, placeholderText
 }: EditableAssetProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [isMediaManagerOpen, setIsMediaManagerOpen] = useState(false)
 
     // Remember last values to avoid resetting to defaults on switch
     const [lastIcon, setLastIcon] = useState(type === 'icon' ? value : 'user')
-    const [lastImage, setLastImage] = useState(type === 'image' ? value : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&h=400&fit=crop')
+    const [lastImage, setLastImage] = useState(type === 'image' ? value : '')
 
     // Update the memory when values change externaly or internally
     React.useEffect(() => {
@@ -67,12 +68,19 @@ export function EditableAsset({
                 />
             ) : (
                 <div
-                    className="w-full h-full bg-cover bg-no-repeat bg-center transition-all duration-200"
+                    className="w-full h-full bg-cover bg-no-repeat bg-center transition-all duration-200 flex items-center justify-center overflow-hidden"
                     style={{
-                        backgroundImage: `url(${value})`,
+                        backgroundImage: value ? `url(${value})` : 'none',
                         ...maskStyle
                     }}
-                />
+                >
+                    {!value && placeholderText && (
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">{placeholderText}</span>
+                    )}
+                    {!value && !placeholderText && (
+                        <ImageIcon className="w-1/2 h-1/2 text-zinc-800" />
+                    )}
+                </div>
             )}
         </>
     )
@@ -114,7 +122,7 @@ export function EditableAsset({
                         )}
                     </div>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 p-4 bg-zinc-950 border-white/10 shadow-2xl">
+                <PopoverContent className="w-80 p-4 bg-zinc-900/80 border-white/10 backdrop-blur-2xl shadow-2xl rounded-2xl">
                     <div className="space-y-4">
                         <div className="flex bg-white/5 p-1 rounded-lg">
                             <button
