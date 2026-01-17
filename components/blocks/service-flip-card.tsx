@@ -12,7 +12,7 @@ type ServiceCardProps = {
     title: string
     desc: string
     details: string[]
-    asset: { type: 'icon' | 'image', value: string }
+    asset: { type: 'icon' | 'image', value: string, color?: string, maskSettings?: any }
     isEditMode: boolean
     onUpdate: (data: any) => void
     onTextFocus: (rect: DOMRect) => void
@@ -59,8 +59,11 @@ export function ServiceFlipCard({ title, desc, details, asset, isEditMode, onUpd
                         <EditableAsset
                             type={asset?.type || 'icon'}
                             value={asset?.value || 'bot'}
-                            onChange={(type, value) => onUpdate({ asset: { type, value } })}
+                            onChange={(type, value) => onUpdate({ asset: { ...asset, type, value } })}
+                            onUpdate={(updates) => onUpdate({ asset: { ...asset, ...updates } })}
                             isEditMode={isEditMode}
+                            color={asset?.color}
+                            maskSettings={asset?.maskSettings}
                             className="w-32 h-32 rounded-3xl"
                         />
                     </div>

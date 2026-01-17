@@ -258,11 +258,13 @@ export function PackagesBlock({ id, settings }: BlockProps) {
                                                     <EditableAsset
                                                         type={featObj.asset?.type || 'icon'}
                                                         value={featObj.asset?.value || 'Check'}
-                                                        onChange={(type: 'icon' | 'image', value: string) => handleFeatureChange(idx, i, { asset: { type, value } })}
+                                                        onChange={(type: 'icon' | 'image', value: string) => handleFeatureChange(idx, i, { asset: { ...featObj.asset, type, value } })}
                                                         onUpdate={(updates) => handleFeatureChange(idx, i, { asset: { ...featObj.asset, ...updates } })}
                                                         isEditMode={isEditMode}
                                                         linkUrl={featObj.asset?.linkUrl}
                                                         isHidden={featObj.asset?.isHidden}
+                                                        color={featObj.asset?.color}
+                                                        maskSettings={featObj.asset?.maskSettings}
                                                         className="w-5 h-5 shrink-0"
                                                         iconClassName="w-full h-full text-accent"
                                                     />

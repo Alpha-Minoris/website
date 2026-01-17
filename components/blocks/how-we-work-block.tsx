@@ -152,11 +152,13 @@ export function HowWeWorkBlock({ id, settings }: BlockProps) {
                                         <EditableAsset
                                             type={step.asset?.type || 'icon'}
                                             value={step.asset?.value || 'CheckCircle'}
-                                            onChange={(type: 'icon' | 'image', value: string) => handleStepChange(idx, { asset: { type, value } })}
+                                            onChange={(type: 'icon' | 'image', value: string) => handleStepChange(idx, { asset: { ...step.asset, type, value } })}
                                             onUpdate={(updates) => handleStepChange(idx, { asset: { ...step.asset, ...updates } })}
                                             isEditMode={isEditMode}
                                             linkUrl={step.asset?.linkUrl}
                                             isHidden={step.asset?.isHidden}
+                                            color={step.asset?.color}
+                                            maskSettings={step.asset?.maskSettings}
                                             className="w-8 h-8 rounded-lg bg-accent/10 border-none shrink-0"
                                             iconClassName="w-full h-full text-accent"
                                         />

@@ -5,7 +5,7 @@ import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { IconPicker } from './icon-picker'
-import { ColorControl } from './color-control'
+import { ColorPicker } from './color-picker'
 import { cn } from '@/lib/utils'
 import { ChevronDown, Smile, Link, Unlink, Trash, Check, Maximize2, MoveRight, Eye, EyeOff } from 'lucide-react'
 import { useState, useMemo, lazy, Suspense } from 'react'
@@ -208,12 +208,35 @@ export function IconToolbar({ settings, onUpdate, onDelete }: IconToolbarProps) 
             <Separator orientation="vertical" className="h-4 bg-white/10" />
 
             <div className="flex items-center gap-1.5 px-1">
-                <ColorControl
-                    label="Icon Color"
-                    value={settings.color}
-                    defaultHex="#ffffff"
-                    onChange={(v) => onUpdate({ color: v })}
-                />
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 rounded-full text-zinc-500 hover:text-white hover:bg-white/10 p-0 overflow-hidden relative group"
+                        >
+                            {(() => {
+                                const isHex = settings.color?.startsWith('#')
+                                const colorClass = settings.color || "text-accent"
+                                return (
+                                    <div
+                                        className={cn("w-4 h-4 rounded-full border border-white/20 shadow-sm transition-transform group-hover:scale-110",
+                                            !isHex ? colorClass.replace('text-', 'bg-') : ""
+                                        )}
+                                        style={isHex ? { backgroundColor: settings.color } : {}}
+                                    />
+                                )
+                            })()}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-2 w-auto bg-zinc-950 border-white/10 shadow-2xl rounded-2xl" side="bottom">
+                        <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-2 px-1">Icon Color</p>
+                        <ColorPicker
+                            value={settings.color}
+                            onChange={(v) => onUpdate({ color: v })}
+                        />
+                    </PopoverContent>
+                </Popover>
             </div>
 
             <Separator orientation="vertical" className="h-4 bg-white/10" />

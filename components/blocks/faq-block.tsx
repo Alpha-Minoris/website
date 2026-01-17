@@ -137,11 +137,13 @@ export function FAQBlock({ id, settings }: BlockProps) {
                                     <EditableAsset
                                         type={item.asset?.type || 'icon'}
                                         value={item.asset?.value || 'HelpCircle'}
-                                        onChange={(type: 'icon' | 'image', value: string) => handleItemChange(i, { asset: { type, value } })}
+                                        onChange={(type: 'icon' | 'image', value: string) => handleItemChange(i, { asset: { ...item.asset, type, value } })}
                                         onUpdate={(updates) => handleItemChange(i, { asset: { ...item.asset, ...updates } })}
                                         isEditMode={isEditMode}
                                         linkUrl={item.asset?.linkUrl}
                                         isHidden={item.asset?.isHidden}
+                                        color={item.asset?.color}
+                                        maskSettings={item.asset?.maskSettings}
                                         className="w-10 h-10 rounded-lg bg-accent/5 border-none shrink-0"
                                         iconClassName="w-full h-full text-accent/60 group-data-[state=open]:text-accent"
                                     />

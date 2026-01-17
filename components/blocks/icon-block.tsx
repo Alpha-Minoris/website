@@ -6,8 +6,9 @@ import { cn } from '@/lib/utils'
 import * as Icons from 'lucide-react'
 import dynamicIconImports from 'lucide-react/dynamicIconImports'
 import { useMemo, lazy, Suspense } from 'react'
+import { EditableAsset } from '@/components/editor/editable-asset'
 
-export function IconDisplay({ name, className, style }: { name: string, className?: string, style?: React.CSSProperties }) {
+export function IconDisplay({ name, className, style, color }: { name: string, className?: string, style?: React.CSSProperties, color?: string }) {
     const LucideIcon = useMemo(() => {
         // 1. Try dynamic import (kebab-case/lowercase from IconPicker)
         const dynamicIcon = dynamicIconImports[name as keyof typeof dynamicIconImports]
@@ -21,61 +22,61 @@ export function IconDisplay({ name, className, style }: { name: string, classNam
         return Icons.HelpCircle
     }, [name])
 
+    const isHexColor = color?.startsWith('#')
+
     return (
         <Suspense fallback={<div className={cn("bg-accent/10 animate-pulse rounded", className)} />}>
-            <LucideIcon className={className} style={style} />
+            <LucideIcon
+                className={cn(className, !isHexColor && (color || "text-accent"))}
+                style={{ ...style, color: isHexColor ? color : style?.color }}
+            />
         </Suspense>
     )
 }
 
 export function IconBlock({ id, settings }: BlockProps) {
-    const { isEditMode } = useEditorStore()
+    const { isEditMode, updateBlock } = useEditorStore()
 
-    const iconName = settings?.iconName || 'sparkles'
+    const iconName = settings?.iconName || settings?.icon || 'sparkles'
+    const assetType = settings?.type || 'icon'
+    const assetValue = settings?.value || iconName
     const color = settings?.color
     const linkUrl = settings?.linkUrl
     const isHidden = settings?.isHidden
+    const maskSettings = settings?.maskSettings
 
     if (isHidden && !isEditMode) return null
 
-    const handleIconClick = (e: React.MouseEvent) => {
-        if (!isEditMode && linkUrl) {
-            // Anchor tag handles default navigation, but we can ensure behavior here if needed
-            // For now, let the anchor do its job.
-        }
+    const handleUpdate = (updates: any) => {
+        updateBlock(id, { settings: { ...settings, ...updates } })
     }
 
-    const content = (
+    const handleChange = (type: 'icon' | 'image', value: string) => {
+        updateBlock(id, { settings: { ...settings, type, value, iconName: type === 'icon' ? value : undefined } })
+    }
+
+    return (
         <div className={cn(
-            "flex justify-center items-center w-full h-full",
+            "flex justify-center items-center w-full h-full relative group",
             isEditMode && "cursor-pointer",
             isEditMode && isHidden && "opacity-30 grayscale"
         )}>
-            <IconDisplay
-                name={iconName}
+            <EditableAsset
+                type={assetType}
+                value={assetValue}
+                onChange={handleChange}
+                onUpdate={handleUpdate}
+                isEditMode={isEditMode}
+                linkUrl={linkUrl}
+                isHidden={isHidden}
+                color={color}
+                maskSettings={maskSettings}
                 className="w-full h-full transition-all group-hover:scale-110"
-                style={{ color }}
+                iconClassName="w-full h-full"
             />
             {isEditMode && isHidden && (
-                <Icons.EyeOff className="absolute w-4 h-4 text-white/50" />
+                <Icons.EyeOff className="absolute w-4 h-4 text-white/50 top-1 right-1" />
             )}
         </div>
     )
-
-    if (linkUrl && !isEditMode) {
-        const isExternal = !linkUrl.startsWith('/') && !linkUrl.startsWith('#')
-        return (
-            <a
-                href={linkUrl}
-                target={isExternal ? "_blank" : undefined}
-                rel={isExternal ? "noopener noreferrer" : undefined}
-                className="block w-full h-full group"
-                onClick={handleIconClick}
-            >
-                {content}
-            </a>
-        )
-    }
-
-    return content
 }

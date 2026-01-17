@@ -198,8 +198,11 @@ export function TeamBlock({ id, settings }: BlockProps) {
                                     <EditableAsset
                                         type={member.asset?.type || 'icon'}
                                         value={member.asset?.value || 'user'}
-                                        onChange={(type: 'icon' | 'image', value: string) => handleMemberChange(i, 'asset', { type, value })}
+                                        onChange={(type: 'icon' | 'image', value: string) => handleMemberChange(i, 'asset', { ...member.asset, type, value })}
+                                        onUpdate={(updates: any) => handleMemberChange(i, 'asset', { ...member.asset, ...updates })}
                                         isEditMode={isEditMode}
+                                        color={member.asset?.color}
+                                        maskSettings={member.asset?.maskSettings}
                                         className="w-32 h-32 rounded-full"
                                         iconClassName="w-full h-full text-accent"
                                     />
@@ -239,11 +242,12 @@ export function TeamBlock({ id, settings }: BlockProps) {
                                             <EditableAsset
                                                 type={social.type || 'icon'}
                                                 value={social.value}
-                                                onChange={(type, value) => handleSocialChange(i, sIdx, { type, value })}
-                                                onUpdate={(updates) => handleSocialChange(i, sIdx, { url: updates.linkUrl, isHidden: updates.isHidden })}
+                                                onChange={(type, value) => handleSocialChange(i, sIdx, { ...social, type, value })}
+                                                onUpdate={(updates) => handleSocialChange(i, sIdx, { ...social, url: updates.linkUrl, isHidden: updates.isHidden, color: updates.color })}
                                                 isEditMode={isEditMode}
                                                 linkUrl={social.url}
                                                 isHidden={social.isHidden}
+                                                color={social.color}
                                                 className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white transition-all shadow-lg"
                                                 iconClassName="w-4 h-4"
                                             />

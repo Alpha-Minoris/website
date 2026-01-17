@@ -145,11 +145,13 @@ export function MissionBlock({ id, settings }: BlockProps) {
                                     <EditableAsset
                                         type={feature.asset?.type || 'icon'}
                                         value={feature.asset?.value || 'CheckCircle'}
-                                        onChange={(type: 'icon' | 'image', value: string) => handleFeatureChange(i, { asset: { type, value } })}
+                                        onChange={(type: 'icon' | 'image', value: string) => handleFeatureChange(i, { asset: { ...feature.asset, type, value } })}
                                         onUpdate={(updates) => handleFeatureChange(i, { asset: { ...feature.asset, ...updates } })}
                                         isEditMode={isEditMode}
                                         linkUrl={feature.asset?.linkUrl}
                                         isHidden={feature.asset?.isHidden}
+                                        color={feature.asset?.color}
+                                        maskSettings={feature.asset?.maskSettings}
                                         className="w-10 h-10 border-none shrink-0"
                                         iconClassName="w-full h-full text-accent"
                                     />

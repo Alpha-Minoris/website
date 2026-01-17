@@ -145,11 +145,13 @@ export function HeroBlock({ id, settings }: BlockProps) {
                                 <EditableAsset
                                     type={logo.asset.type}
                                     value={logo.asset.value}
-                                    onChange={(type, value) => handleLogoUpdate(idx, { asset: { type, value } })}
+                                    onChange={(type, value) => handleLogoUpdate(idx, { asset: { ...logo.asset, type, value } })}
                                     onUpdate={(updates) => handleLogoUpdate(idx, { asset: { ...logo.asset, ...updates } })}
                                     isEditMode={isEditMode}
                                     linkUrl={logo.asset.linkUrl}
                                     isHidden={logo.asset.isHidden}
+                                    color={logo.asset.color}
+                                    maskSettings={logo.asset.maskSettings}
                                     className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 p-2"
                                 />
                                 <input
@@ -255,11 +257,13 @@ export function HeroBlock({ id, settings }: BlockProps) {
                                 <EditableAsset
                                     type={item.asset?.type || 'icon'}
                                     value={item.asset?.value || 'CheckCircle'}
-                                    onChange={(type, value) => handleLabelChange(i, { asset: { type, value } })}
+                                    onChange={(type, value) => handleLabelChange(i, { asset: { ...item.asset, type, value } })}
                                     onUpdate={(updates) => handleLabelChange(i, { asset: { ...item.asset, ...updates } })}
                                     isEditMode={isEditMode}
                                     linkUrl={item.asset?.linkUrl}
                                     isHidden={item.asset?.isHidden}
+                                    color={item.asset?.color}
+                                    maskSettings={item.asset?.maskSettings}
                                     className="w-7 h-7 opacity-60 group-hover:opacity-100"
                                     iconClassName="w-full h-full"
                                 />
