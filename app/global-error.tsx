@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { RefreshCcw } from 'lucide-react'
-import '@/app/globals.css' // Ensure styles load
+import './globals.css' // Ensure styles load
 
 export default function GlobalError({
     error,

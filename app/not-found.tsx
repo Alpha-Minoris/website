@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Home, Search } from 'lucide-react'
+import { SpaceDodgeGame } from '@/components/minigames/space-dodge'
 
 export default function NotFound() {
     return (
-        <div className="min-h-screen w-full flex items-center justify-center bg-black relative overflow-hidden font-heading text-white selection:bg-white/20">
+        <div className="min-h-screen w-full flex flex-col items-center bg-black relative overflow-hidden font-heading text-white selection:bg-white/20 pt-20">
 
             {/* Background Ambience */}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-zinc-900/50 via-black to-black z-0 pointer-events-none" />
@@ -37,8 +38,8 @@ export default function NotFound() {
                 </div>
 
                 {/* Action Card */}
-                <div className="mt-12 p-1 bg-gradient-to-b from-primary/20 to-transparent rounded-2xl mx-auto w-fit">
-                    <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl p-8 shadow-2xl flex flex-col items-center gap-6">
+                <div className="mt-8 p-1 bg-gradient-to-b from-primary/20 to-transparent rounded-2xl mx-auto w-fit">
+                    <div className="bg-zinc-950/80 backdrop-blur-[20px] border border-white/10 rounded-xl p-6 shadow-2xl flex flex-col items-center gap-4">
 
                         <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
                             <Link href="/" className="w-full sm:w-auto">
@@ -48,13 +49,6 @@ export default function NotFound() {
                                 </Button>
                             </Link>
                         </div>
-
-                        <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-
-                        <Link href="#" className="text-xs text-zinc-500 hover:text-primary transition-colors flex items-center gap-1 group">
-                            <ArrowLeft className="w-3 h-3 group-hover:-translate-x-1 transition-transform" />
-                            Re-align Navigation (Back)
-                        </Link>
                     </div>
                 </div>
 
@@ -62,6 +56,11 @@ export default function NotFound() {
                     <div>System ID: NORTHERN_STAR_V9</div>
                     <div>Status: Trajectory_Error // Code: 404</div>
                 </div>
+            </div>
+
+            {/* Minigame Footer */}
+            <div className="w-full mt-12 mb-12 px-4 relative z-20">
+                <SpaceDodgeGame />
             </div>
         </div>
     )
