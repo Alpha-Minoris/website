@@ -316,26 +316,77 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
                         </div>
 
                         {/* Preview Thumbnail (Mini, expands on hover) */}
-                        {linkUrl && !linkUrl.startsWith('/') && !linkUrl.startsWith('#') && (
+                        {linkUrl && (
                             <div className="relative group/preview">
                                 {/* Trigger / Mini Thumb */}
-                                <div className="relative w-8 h-8 shrink-0 rounded-md overflow-hidden border border-white/10 bg-black/50 cursor-help">
-                                    <img
-                                        src={`https://api.microlink.io?url=${encodeURIComponent(linkUrl.startsWith('http') ? linkUrl : 'https://' + linkUrl)}&screenshot=true&meta=false&embed=screenshot.url`}
-                                        alt="Preview"
-                                        className="w-full h-full object-cover opacity-70 transition-opacity"
-                                    />
+                                <div className="relative w-8 h-8 shrink-0 rounded-md overflow-hidden border border-white/10 bg-black/50 cursor-help flex items-center justify-center">
+                                    {/* Smart Preview Logic */}
+                                    {(() => {
+                                        const isInternal = linkUrl.startsWith('/') || linkUrl.startsWith('#')
+                                        const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+
+                                        // If internal OR localhost, don't use Microlink (it fails on localhost)
+                                        if (isInternal || isLocalhost) {
+                                            return (
+                                                <div className="text-[8px] text-zinc-400 font-mono tracking-tighter text-center leading-none px-0.5">
+                                                    {isInternal ? 'INT' : 'EXT'}
+                                                </div>
+                                            )
+                                        }
+
+                                        return (
+                                            <img
+                                                src={`https://api.microlink.io?url=${encodeURIComponent(linkUrl.startsWith('http') ? linkUrl : 'https://' + linkUrl)}&screenshot=true&meta=false&embed=screenshot.url`}
+                                                onError={(e) => {
+                                                    (e.target as HTMLImageElement).style.display = 'none';
+                                                    (e.target as HTMLImageElement).parentElement!.innerText = '?'
+                                                }}
+                                                alt="Preview"
+                                                className="w-full h-full object-cover opacity-70 transition-opacity"
+                                            />
+                                        )
+                                    })()}
                                 </div>
 
                                 {/* Expanded Hover Card */}
                                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-[480px] aspect-video bg-zinc-950 border border-white/10 shadow-2xl rounded-lg overflow-hidden opacity-0 invisible group-hover/preview:opacity-100 group-hover/preview:visible transition-all duration-200 z-50 pointer-events-none origin-bottom scale-95 group-hover/preview:scale-100">
-                                    <div className="absolute inset-0 bg-zinc-900/50 animate-pulse" /> {/* Loading skeleton bg */}
-                                    <img
-                                        src={`https://api.microlink.io?url=${encodeURIComponent(linkUrl.startsWith('http') ? linkUrl : 'https://' + linkUrl)}&screenshot=true&meta=false&embed=screenshot.url`}
-                                        alt="Large Preview"
-                                        className="relative z-10 w-full h-full object-cover"
-                                    />
-                                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
+
+                                    {(() => {
+                                        const isInternal = linkUrl.startsWith('/') || linkUrl.startsWith('#')
+                                        const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+
+                                        if (isInternal || (isLocalhost && !linkUrl.startsWith('http'))) {
+                                            // Internal Link / Localhost Preview Placeholder
+                                            return (
+                                                <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900/90 p-6 space-y-2">
+                                                    <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center mb-2">
+                                                        {linkUrl.startsWith('#') ? <span className="text-xl text-zinc-400">#</span> : <Link className="w-6 h-6 text-zinc-400" />}
+                                                    </div>
+                                                    <p className="text-sm font-medium text-white">Internal Link</p>
+                                                    <p className="text-xs text-zinc-500 font-mono bg-black/50 px-2 py-1 rounded">{linkUrl}</p>
+                                                    <p className="text-[10px] text-zinc-600 mt-4 max-w-[200px] text-center">
+                                                        Preview unavailable in local environment or for internal routes.
+                                                    </p>
+                                                </div>
+                                            )
+                                        }
+
+                                        // External Link (Production or Public)
+                                        const targetUrl = linkUrl.startsWith('http') ? linkUrl : 'https://' + linkUrl
+
+                                        return (
+                                            <>
+                                                <div className="absolute inset-0 bg-zinc-900/50 animate-pulse" />
+                                                <img
+                                                    src={`https://api.microlink.io?url=${encodeURIComponent(targetUrl)}&screenshot=true&meta=false&embed=screenshot.url`}
+                                                    alt="Large Preview"
+                                                    className="relative z-10 w-full h-full object-cover"
+                                                />
+                                            </>
+                                        )
+                                    })()}
+
+                                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent z-20">
                                         <p className="text-[10px] text-zinc-300 truncate font-mono">{linkUrl}</p>
                                     </div>
                                 </div>
