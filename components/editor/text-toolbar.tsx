@@ -323,13 +323,13 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
                                     {/* Smart Preview Logic */}
                                     {(() => {
                                         const isInternal = linkUrl.startsWith('/') || linkUrl.startsWith('#')
-                                        const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+                                        const isLocalTarget = linkUrl.includes('localhost') || linkUrl.includes('127.0.0.1')
 
-                                        // If internal OR localhost, don't use Microlink (it fails on localhost)
-                                        if (isInternal || isLocalhost) {
+                                        // If internal OR targeting a local address, don't use Microlink (it can't reach them)
+                                        if (isInternal || isLocalTarget) {
                                             return (
                                                 <div className="text-[8px] text-zinc-400 font-mono tracking-tighter text-center leading-none px-0.5">
-                                                    {isInternal ? 'INT' : 'EXT'}
+                                                    {isInternal ? 'INT' : 'LOC'}
                                                 </div>
                                             )
                                         }
@@ -353,19 +353,19 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
 
                                     {(() => {
                                         const isInternal = linkUrl.startsWith('/') || linkUrl.startsWith('#')
-                                        const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+                                        const isLocalTarget = linkUrl.includes('localhost') || linkUrl.includes('127.0.0.1')
 
-                                        if (isInternal || (isLocalhost && !linkUrl.startsWith('http'))) {
+                                        if (isInternal || isLocalTarget) {
                                             // Internal Link / Localhost Preview Placeholder
                                             return (
                                                 <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900/90 p-6 space-y-2">
                                                     <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center mb-2">
                                                         {linkUrl.startsWith('#') ? <span className="text-xl text-zinc-400">#</span> : <Link className="w-6 h-6 text-zinc-400" />}
                                                     </div>
-                                                    <p className="text-sm font-medium text-white">Internal Link</p>
+                                                    <p className="text-sm font-medium text-white">{isInternal ? 'Internal Link' : 'Local Target'}</p>
                                                     <p className="text-xs text-zinc-500 font-mono bg-black/50 px-2 py-1 rounded">{linkUrl}</p>
                                                     <p className="text-[10px] text-zinc-600 mt-4 max-w-[200px] text-center">
-                                                        Preview unavailable in local environment or for internal routes.
+                                                        Preview unavailable for internal routes or local development targets.
                                                     </p>
                                                 </div>
                                             )

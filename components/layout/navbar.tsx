@@ -21,8 +21,8 @@ export function Navbar({ sections }: NavbarProps) {
     const [activeSection, setActiveSection] = useState<string>('')
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
-    // Filter enabled sections
-    const navItems = sections.filter(s => s.is_enabled)
+    // Filter enabled sections and those not prefixed with '_'
+    const navItems = sections.filter(s => s.is_enabled && !s.title.startsWith('_'))
 
     // Handle scroll spy
     useEffect(() => {

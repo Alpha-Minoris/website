@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { IconPicker } from './icon-picker'
 import { ColorControl } from './color-control'
-import { ChevronDown, Smile } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { ChevronDown, Smile, Link, Unlink, Trash, Check } from 'lucide-react'
 import { useState, useMemo, lazy, Suspense } from 'react'
 import dynamicIconImports from 'lucide-react/dynamicIconImports'
+import { Input } from "@/components/ui/input"
 
 // Helper for icon preview
 const IconWrapper = ({ name }: { name: string }) => {
@@ -33,20 +35,49 @@ interface IconToolbarProps {
         iconName?: string
         color?: string
         backgroundColor?: string
+        linkUrl?: string
     }
     onUpdate: (updates: any) => void
     onDelete?: () => void
 }
 
 export function IconToolbar({ settings, onUpdate, onDelete }: IconToolbarProps) {
-    const iconName = settings.iconName || 'sparkles' // Default icon?
+    const iconName = settings.iconName || 'sparkles'
+    const [linkUrl, setLinkUrl] = useState(settings.linkUrl || '')
+    const [isLinkPopoverOpen, setIsLinkPopoverOpen] = useState(false)
+
+    // Sync local linkUrl when settings change externally
+    useMemo(() => {
+        if (settings.linkUrl !== undefined) {
+            setLinkUrl(settings.linkUrl || '')
+        }
+    }, [settings.linkUrl])
+
+    const handleApplyLink = () => {
+        let finalUrl = linkUrl.trim()
+        if (finalUrl) {
+            if (!finalUrl.startsWith('/') && !finalUrl.startsWith('#') && !finalUrl.startsWith('http://') && !finalUrl.startsWith('https://') && !finalUrl.startsWith('mailto:')) {
+                finalUrl = 'https://' + finalUrl
+            }
+            onUpdate({ linkUrl: finalUrl })
+        } else {
+            onUpdate({ linkUrl: null })
+        }
+        setIsLinkPopoverOpen(false)
+    }
+
+    const handleRemoveLink = () => {
+        onUpdate({ linkUrl: null })
+        setLinkUrl('')
+        setIsLinkPopoverOpen(false)
+    }
 
     return (
         <Card className="absolute top-full left-1/2 -translate-x-1/2 mt-3 z-50 flex items-center p-2 gap-2 bg-zinc-900/95 border-zinc-800 backdrop-blur-md shadow-2xl rounded-full animate-in fade-in zoom-in-95 duration-200">
             {/* Icon Picker Popover */}
             <Popover>
                 <PopoverTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-7 px-2 gap-1.5 text-xs text-zinc-300 hover:text-white hover:bg-white/10 rounded-full">
+                    <Button variant="ghost" size="sm" className="h-7 px-2 gap-1.5 text-xs text-zinc-300 hover:text-white hover:bg-white/10 rounded-full focus:ring-0 focus-visible:ring-0">
                         <IconWrapper name={iconName} />
                         <ChevronDown className="w-3 h-3 opacity-50" />
                     </Button>
@@ -61,6 +92,114 @@ export function IconToolbar({ settings, onUpdate, onDelete }: IconToolbarProps) 
 
             <Separator orientation="vertical" className="h-4 bg-white/10" />
 
+            {/* Link Editor */}
+            <div className="flex bg-white/5 rounded-full p-0.5">
+                <Popover open={isLinkPopoverOpen} onOpenChange={setIsLinkPopoverOpen}>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn(
+                                "h-7 w-7 rounded-full hover:text-white hover:bg-white/10",
+                                (isLinkPopoverOpen || settings.linkUrl) ? "text-white bg-white/20" : "text-zinc-500"
+                            )}
+                        >
+                            {settings.linkUrl ? <Unlink className="w-3.5 h-3.5" /> : <Link className="w-3.5 h-3.5" />}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                        className="p-1.5 flex items-center gap-2 bg-zinc-900/95 border-zinc-800 backdrop-blur-md w-auto min-w-[320px] shadow-2xl rounded-2xl animate-in fade-in zoom-in-95 duration-200"
+                        side="bottom"
+                        sideOffset={10}
+                        align="center"
+                        avoidCollisions={false}
+                    >
+                        <div className="relative flex-1 group pl-2">
+                            <Link className="absolute left-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 group-focus-within:text-white transition-colors" />
+                            <Input
+                                placeholder="Paste link..."
+                                value={linkUrl}
+                                onChange={(e) => setLinkUrl(e.target.value)}
+                                className="h-8 pl-6 text-xs bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-white placeholder:text-zinc-600 w-full"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleApplyLink()
+                                }}
+                            />
+                        </div>
+
+                        {linkUrl && (
+                            <div className="relative group/preview">
+                                <div className="relative w-8 h-8 shrink-0 rounded-md overflow-hidden border border-white/10 bg-black/50 cursor-help flex items-center justify-center">
+                                    {(() => {
+                                        const isInternal = linkUrl.startsWith('/') || linkUrl.startsWith('#')
+                                        const isLocalTarget = linkUrl.includes('localhost') || linkUrl.includes('127.0.0.1')
+                                        if (isInternal || isLocalTarget) {
+                                            return <div className="text-[8px] text-zinc-400 font-mono tracking-tighter text-center leading-none px-0.5">{isInternal ? 'INT' : 'LOC'}</div>
+                                        }
+                                        return (
+                                            <img
+                                                src={`https://api.microlink.io?url=${encodeURIComponent(linkUrl.startsWith('http') ? linkUrl : 'https://' + linkUrl)}&screenshot=true&meta=false&embed=screenshot.url`}
+                                                onError={(e) => {
+                                                    (e.target as HTMLImageElement).style.display = 'none';
+                                                    (e.target as HTMLImageElement).parentElement!.innerText = '?'
+                                                }}
+                                                alt="Preview"
+                                                className="w-full h-full object-cover opacity-70 transition-opacity"
+                                            />
+                                        )
+                                    })()}
+                                </div>
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-[480px] aspect-video bg-zinc-950 border border-white/10 shadow-2xl rounded-lg overflow-hidden opacity-0 invisible group-hover/preview:opacity-100 group-hover/preview:visible transition-all duration-200 z-50 pointer-events-none origin-bottom scale-95 group-hover/preview:scale-100">
+                                    {(() => {
+                                        const isInternal = linkUrl.startsWith('/') || linkUrl.startsWith('#')
+                                        const isLocalTarget = linkUrl.includes('localhost') || linkUrl.includes('127.0.0.1')
+                                        if (isInternal || isLocalTarget) {
+                                            return (
+                                                <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900/90 p-6 space-y-2">
+                                                    <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center mb-2">
+                                                        {linkUrl.startsWith('#') ? <span className="text-xl text-zinc-400">#</span> : <Link className="w-6 h-6 text-zinc-400" />}
+                                                    </div>
+                                                    <p className="text-sm font-medium text-white">{isInternal ? 'Internal Link' : 'Local Target'}</p>
+                                                    <p className="text-xs text-zinc-500 font-mono bg-black/50 px-2 py-1 rounded">{linkUrl}</p>
+                                                </div>
+                                            )
+                                        }
+                                        const targetUrl = linkUrl.startsWith('http') ? linkUrl : 'https://' + linkUrl
+                                        return <img src={`https://api.microlink.io?url=${encodeURIComponent(targetUrl)}&screenshot=true&meta=false&embed=screenshot.url`} alt="Large Preview" className="relative z-10 w-full h-full object-cover" />
+                                    })()}
+                                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent z-20">
+                                        <p className="text-[10px] text-zinc-300 truncate font-mono">{linkUrl}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <Separator orientation="vertical" className="h-5 bg-white/10" />
+
+                        <div className="flex items-center gap-1">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={handleRemoveLink}
+                                className="h-7 w-7 rounded-full text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                            >
+                                <Trash className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={handleApplyLink}
+                                className="h-7 w-7 rounded-full text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                            >
+                                <Check className="w-3.5 h-3.5" />
+                            </Button>
+                        </div>
+                    </PopoverContent>
+                </Popover>
+            </div>
+
+            <Separator orientation="vertical" className="h-4 bg-white/10" />
+
             <div className="flex items-center gap-1.5 px-1">
                 <ColorControl
                     label="Icon Color"
@@ -68,12 +207,6 @@ export function IconToolbar({ settings, onUpdate, onDelete }: IconToolbarProps) 
                     defaultHex="#ffffff"
                     onChange={(v) => onUpdate({ color: v })}
                 />
-                {/* <ColorControl
-                    label="Background"
-                    value={settings.backgroundColor}
-                    defaultHex="transparent"
-                    onChange={(v) => onUpdate({ backgroundColor: v })}
-                /> */}
             </div>
 
             {onDelete && (
@@ -85,7 +218,7 @@ export function IconToolbar({ settings, onUpdate, onDelete }: IconToolbarProps) 
                         className="h-7 w-7 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-full"
                         onClick={onDelete}
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
+                        <Trash className="w-3.5 h-3.5" />
                     </Button>
                 </>
             )}
