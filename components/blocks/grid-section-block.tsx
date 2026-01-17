@@ -23,7 +23,7 @@ interface GridSectionSettings {
     minHeight?: number
 }
 
-export function GridSectionBlock({ id, content, settings }: BlockProps) {
+export function GridSectionBlock({ id, content, settings, slug }: BlockProps) {
     const { isEditMode, selectedBlockId, updateBlock: localUpdate } = useEditorStore()
     const containerRef = useRef<HTMLDivElement>(null)
 
@@ -117,7 +117,7 @@ export function GridSectionBlock({ id, content, settings }: BlockProps) {
 
                         return (
                             <div key={block.id} style={style} className={cn("min-h-[50px] relative", isDragging && "opacity-50")}>
-                                <BlockRenderer blocks={[block]} sectionId={id} layoutMode="canvas" /> {/* Canvas mode removes internal wrappers */}
+                                <BlockRenderer blocks={[block]} sectionId={id} sectionSlug={slug} layoutMode="canvas" /> {/* Canvas mode removes internal wrappers */}
 
                                 {isEditMode && (
                                     <div className="absolute inset-0 ring-1 ring-blue-500/0 hover:ring-blue-500/50 transition-all pointer-events-none rounded" />

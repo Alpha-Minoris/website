@@ -8,10 +8,11 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 interface BlockRendererProps {
     blocks: BlockProps[]
     sectionId?: string
+    sectionSlug?: string
     layoutMode?: 'flow' | 'canvas'
 }
 
-export function BlockRenderer({ blocks, sectionId, layoutMode = 'flow' }: BlockRendererProps) {
+export function BlockRenderer({ blocks, sectionId, sectionSlug, layoutMode = 'flow' }: BlockRendererProps) {
     if (!blocks || !Array.isArray(blocks)) {
         return null
     }
@@ -51,7 +52,7 @@ export function BlockRenderer({ blocks, sectionId, layoutMode = 'flow' }: BlockR
                         sectionId={sectionId}
                         layoutMode={layoutMode}
                     >
-                        <Component {...block} sectionId={sectionId} />
+                        <Component {...block} sectionId={sectionId} sectionSlug={sectionSlug || block.sectionSlug || block.slug} />
                     </EditorBlockWrapper>
                 </Wrapper>
             )

@@ -33,7 +33,7 @@ interface DeleteButtonProps {
     title?: string
 }
 
-export function DeleteButton({ onClick, isEditMode, className, title = "Remove item" }: DeleteButtonProps) {
+export function DeleteButton({ onClick, isEditMode, className, title = "Remove item", size = 12, strokeWidth = 2 }: DeleteButtonProps & { size?: number, strokeWidth?: number }) {
     if (!isEditMode) return null
     return (
         <button
@@ -45,7 +45,7 @@ export function DeleteButton({ onClick, isEditMode, className, title = "Remove i
             )}
             title={title}
         >
-            <Trash2 size={12} />
+            <Trash2 size={size} strokeWidth={strokeWidth} />
         </button>
     )
 }

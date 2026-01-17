@@ -15,7 +15,8 @@ import { EditableText } from '@/components/editor/editable-text'
 import { AddButton, DeleteButton } from '@/components/editor/editable-list-controls'
 import { EditableAsset } from '@/components/editor/editable-asset'
 
-export function FAQBlock({ id, settings }: BlockProps) {
+export function FAQBlock({ id, settings, sectionSlug, slug }: BlockProps) {
+    const folder = sectionSlug || slug
     const { isEditMode, updateBlock } = useEditorStore()
     const sectionRef = useRef<HTMLElement>(null)
     const [activeToolbarPos, setActiveToolbarPos] = useState<{ top: number, left: number } | null>(null)
@@ -144,6 +145,7 @@ export function FAQBlock({ id, settings }: BlockProps) {
                                         isHidden={item.asset?.isHidden}
                                         color={item.asset?.color}
                                         maskSettings={item.asset?.maskSettings}
+                                        folder={folder}
                                         className="w-10 h-10 rounded-lg bg-accent/5 border-none shrink-0"
                                         iconClassName="w-full h-full text-accent/60 group-data-[state=open]:text-accent"
                                     />

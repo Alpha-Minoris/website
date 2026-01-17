@@ -25,12 +25,13 @@ interface EditableAssetProps {
     iconClassName?: string
     linkUrl?: string
     isHidden?: boolean
-    maskSettings?: { x: number, y: number, scale: number }
+    maskSettings?: { x: number, y: number, scale: number, shape?: 'circle' | 'square' }
     color?: string
+    folder?: string
 }
 
 export function EditableAsset({
-    type, value, onChange, onUpdate, isEditMode, className, iconClassName, linkUrl, isHidden, maskSettings, color
+    type, value, onChange, onUpdate, isEditMode, className, iconClassName, linkUrl, isHidden, maskSettings, color, folder
 }: EditableAssetProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [isMediaManagerOpen, setIsMediaManagerOpen] = useState(false)
@@ -48,7 +49,8 @@ export function EditableAsset({
     // Mask Styles
     const maskStyle: React.CSSProperties = type === 'image' && maskSettings ? {
         backgroundPosition: `${maskSettings.x}% ${maskSettings.y}%`,
-        backgroundSize: `${maskSettings.scale}%`
+        backgroundSize: `${maskSettings.scale}%`,
+        borderRadius: maskSettings.shape === 'circle' ? '9999px' : undefined
     } : {
         objectFit: 'cover'
     }
@@ -233,8 +235,9 @@ export function EditableAsset({
 
                                     {onUpdate && (
                                         <div className="flex justify-between items-center border-t border-white/10 pt-3">
-                                            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Position</p>
+                                            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Mask Editor</p>
                                             <ImageMaskControl
+                                                imageUrl={value}
                                                 settings={maskSettings}
                                                 onChange={(s) => onUpdate({ maskSettings: s })}
                                             />
@@ -256,6 +259,7 @@ export function EditableAsset({
                     setIsMediaManagerOpen(v)
                     if (!v) setIsOpen(true) // Re-open settings when closed
                 }}
+                folder={folder}
                 onSelect={(asset) => {
                     onChange('image', asset.value)
                 }}

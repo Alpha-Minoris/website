@@ -11,7 +11,8 @@ import { AddButton, DeleteButton } from '@/components/editor/editable-list-contr
 import { EditableAsset } from '@/components/editor/editable-asset'
 import { LogoRibbon } from './hero/logo-ribbon'
 
-export function HeroBlock({ id, settings }: BlockProps) {
+export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
+    const folder = sectionSlug || slug
     const { isEditMode, updateBlock } = useEditorStore()
     const sectionRef = useRef<HTMLElement>(null)
     const [activeToolbarPos, setActiveToolbarPos] = useState<{ top: number, left: number } | null>(null)
@@ -152,6 +153,7 @@ export function HeroBlock({ id, settings }: BlockProps) {
                                     isHidden={logo.asset.isHidden}
                                     color={logo.asset.color}
                                     maskSettings={logo.asset.maskSettings}
+                                    folder={folder}
                                     className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 p-2"
                                 />
                                 <input
@@ -264,6 +266,7 @@ export function HeroBlock({ id, settings }: BlockProps) {
                                     isHidden={item.asset?.isHidden}
                                     color={item.asset?.color}
                                     maskSettings={item.asset?.maskSettings}
+                                    folder={folder}
                                     className="w-7 h-7 opacity-60 group-hover:opacity-100"
                                     iconClassName="w-full h-full"
                                 />

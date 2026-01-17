@@ -17,9 +17,10 @@ type ServiceCardProps = {
     onUpdate: (data: any) => void
     onTextFocus: (rect: DOMRect) => void
     onTextBlur: () => void
+    folder?: string
 }
 
-export function ServiceFlipCard({ title, desc, details, asset, isEditMode, onUpdate, onTextFocus, onTextBlur }: ServiceCardProps) {
+export function ServiceFlipCard({ title, desc, details, asset, isEditMode, onUpdate, onTextFocus, onTextBlur, folder }: ServiceCardProps) {
     const [isFlipped, setIsFlipped] = useState(false)
     const [isAnimating, setIsAnimating] = useState(false)
 
@@ -64,6 +65,7 @@ export function ServiceFlipCard({ title, desc, details, asset, isEditMode, onUpd
                             isEditMode={isEditMode}
                             color={asset?.color}
                             maskSettings={asset?.maskSettings}
+                            folder={folder}
                             className="w-32 h-32 rounded-3xl"
                         />
                     </div>

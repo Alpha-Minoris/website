@@ -34,7 +34,8 @@ export function IconDisplay({ name, className, style, color }: { name: string, c
     )
 }
 
-export function IconBlock({ id, settings }: BlockProps) {
+export function IconBlock({ id, settings, sectionSlug, slug }: BlockProps) {
+    const folder = sectionSlug || slug
     const { isEditMode, updateBlock } = useEditorStore()
 
     const iconName = settings?.iconName || settings?.icon || 'sparkles'
@@ -71,6 +72,7 @@ export function IconBlock({ id, settings }: BlockProps) {
                 isHidden={isHidden}
                 color={color}
                 maskSettings={maskSettings}
+                folder={folder}
                 className="w-full h-full transition-all group-hover:scale-110"
                 iconClassName="w-full h-full"
             />

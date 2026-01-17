@@ -14,7 +14,8 @@ import { EditableText } from '@/components/editor/editable-text'
 import { AddButton, DeleteButton } from '@/components/editor/editable-list-controls'
 import { EditableAsset } from '@/components/editor/editable-asset'
 
-export function TeamBlock({ id, settings }: BlockProps) {
+export function TeamBlock({ id, settings, sectionSlug, slug }: BlockProps) {
+    const folder = sectionSlug || slug
     const { isEditMode, updateBlock } = useEditorStore()
     const sectionRef = useRef<HTMLElement>(null)
     const [activeToolbarPos, setActiveToolbarPos] = useState<{ top: number, left: number } | null>(null)
@@ -203,6 +204,7 @@ export function TeamBlock({ id, settings }: BlockProps) {
                                         isEditMode={isEditMode}
                                         color={member.asset?.color}
                                         maskSettings={member.asset?.maskSettings}
+                                        folder={folder}
                                         className="w-32 h-32 rounded-full"
                                         iconClassName="w-full h-full text-accent"
                                     />
@@ -248,6 +250,7 @@ export function TeamBlock({ id, settings }: BlockProps) {
                                                 linkUrl={social.url}
                                                 isHidden={social.isHidden}
                                                 color={social.color}
+                                                folder={folder}
                                                 className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white transition-all shadow-lg"
                                                 iconClassName="w-4 h-4"
                                             />

@@ -14,7 +14,8 @@ import { EditableText } from '@/components/editor/editable-text'
 import { AddButton, DeleteButton } from '@/components/editor/editable-list-controls'
 import { EditableAsset } from '@/components/editor/editable-asset'
 
-export function PackagesBlock({ id, settings }: BlockProps) {
+export function PackagesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
+    const folder = sectionSlug || slug
     const { isEditMode, updateBlock } = useEditorStore()
     const sectionRef = useRef<HTMLElement>(null)
     const [activeToolbarPos, setActiveToolbarPos] = useState<{ top: number, left: number } | null>(null)
@@ -265,6 +266,7 @@ export function PackagesBlock({ id, settings }: BlockProps) {
                                                         isHidden={featObj.asset?.isHidden}
                                                         color={featObj.asset?.color}
                                                         maskSettings={featObj.asset?.maskSettings}
+                                                        folder={folder}
                                                         className="w-5 h-5 shrink-0"
                                                         iconClassName="w-full h-full text-accent"
                                                     />

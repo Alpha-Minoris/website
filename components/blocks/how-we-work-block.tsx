@@ -10,7 +10,8 @@ import { EditableText } from '@/components/editor/editable-text'
 import { AddButton, DeleteButton } from '@/components/editor/editable-list-controls'
 import { EditableAsset } from '@/components/editor/editable-asset'
 
-export function HowWeWorkBlock({ id, settings }: BlockProps) {
+export function HowWeWorkBlock({ id, settings, sectionSlug, slug }: BlockProps) {
+    const folder = sectionSlug || slug
     const { isEditMode, updateBlock } = useEditorStore()
     const sectionRef = useRef<HTMLElement>(null)
     const [activeToolbarPos, setActiveToolbarPos] = useState<{ top: number, left: number } | null>(null)
@@ -159,6 +160,7 @@ export function HowWeWorkBlock({ id, settings }: BlockProps) {
                                             isHidden={step.asset?.isHidden}
                                             color={step.asset?.color}
                                             maskSettings={step.asset?.maskSettings}
+                                            folder={folder}
                                             className="w-8 h-8 rounded-lg bg-accent/10 border-none shrink-0"
                                             iconClassName="w-full h-full text-accent"
                                         />

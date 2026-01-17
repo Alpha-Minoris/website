@@ -11,7 +11,8 @@ import { TextToolbar } from '@/components/editor/text-toolbar'
 import { EditableText } from '@/components/editor/editable-text'
 import { AddButton, DeleteButton } from '@/components/editor/editable-list-controls'
 
-export function ServicesBlock({ id, settings }: BlockProps) {
+export function ServicesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
+    const folder = sectionSlug || slug
     const { isEditMode, updateBlock } = useEditorStore()
     const sectionRef = useRef<HTMLElement>(null)
     const [activeToolbarPos, setActiveToolbarPos] = useState<{ top: number, left: number } | null>(null)
@@ -168,6 +169,7 @@ export function ServicesBlock({ id, settings }: BlockProps) {
                                     onUpdate={(data) => handleServiceUpdate(i, data)}
                                     onTextFocus={onTextFocus}
                                     onTextBlur={onTextBlur}
+                                    folder={folder}
                                 />
                             </div>
                         )

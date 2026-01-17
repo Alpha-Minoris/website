@@ -18,7 +18,7 @@ interface GenericSectionSettings {
     gridSnapSize?: number
 }
 
-export function GenericSectionBlock({ id, content, settings }: BlockProps) {
+export function GenericSectionBlock({ id, content, settings, slug }: BlockProps) {
     const { isEditMode, updateBlock: updateBlockLocal, blocks, setActiveDragId, selectedBlockId, setSelectedBlockId } = useEditorStore()
     const blockFromStore = blocks.find(b => b.id === id)
     const s = (blockFromStore?.settings || settings) as GenericSectionSettings || {}
@@ -276,7 +276,7 @@ export function GenericSectionBlock({ id, content, settings }: BlockProps) {
                 onDragEnd={handleDragEnd}
             >
                 <div className="w-full h-full relative">
-                    <BlockRenderer blocks={content} sectionId={id} layoutMode="canvas" />
+                    <BlockRenderer blocks={content} sectionId={id} sectionSlug={slug} layoutMode="canvas" />
                 </div>
             </DndContext>
 

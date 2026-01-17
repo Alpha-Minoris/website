@@ -11,7 +11,8 @@ import { EditableText } from '@/components/editor/editable-text'
 import { AddButton, DeleteButton } from '@/components/editor/editable-list-controls'
 import { EditableAsset } from '@/components/editor/editable-asset'
 
-export function MissionBlock({ id, settings }: BlockProps) {
+export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
+    const folder = sectionSlug || slug
     const { isEditMode, updateBlock } = useEditorStore()
     const sectionRef = useRef<HTMLElement>(null)
     const [activeToolbarPos, setActiveToolbarPos] = useState<{ top: number, left: number } | null>(null)
@@ -152,6 +153,7 @@ export function MissionBlock({ id, settings }: BlockProps) {
                                         isHidden={feature.asset?.isHidden}
                                         color={feature.asset?.color}
                                         maskSettings={feature.asset?.maskSettings}
+                                        folder={folder}
                                         className="w-10 h-10 border-none shrink-0"
                                         iconClassName="w-full h-full text-accent"
                                     />

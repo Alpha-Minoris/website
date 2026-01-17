@@ -163,6 +163,7 @@ export function FloatingToolbar({ id }: FloatingToolbarProps) {
     }
 
     const isSectionEnabled = block?.is_enabled ?? true
+    const isPreDefined = ['hero', 'mission', 'team', 'services', 'packages', 'how-we-work', 'testimonials', 'case-studies', 'faq', 'contact'].includes(block?.slug || '')
 
     const displayColor = settings?.backgroundColor || 'transparent'
     const currentGridSize = settings?.gridSnapSize || 0
@@ -338,35 +339,37 @@ export function FloatingToolbar({ id }: FloatingToolbarProps) {
 
             <div className="w-px h-4 bg-white/20 mx-1" />
 
-            <AlertDialog>
-                <AlertDialogTrigger asChild>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 hover:bg-red-500/20 text-red-400 hover:text-red-300"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <Trash2 className="w-4 h-4" />
-                    </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete this section from the website.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={(e) => { e.stopPropagation(); handleDelete() }}
-                            className="bg-red-600 hover:bg-red-700 text-white focus:ring-red-600"
+            {!isPreDefined && (
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 hover:bg-red-500/20 text-red-400 hover:text-red-300"
+                            onClick={(e) => e.stopPropagation()}
                         >
-                            Delete
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+                            <Trash2 className="w-4 h-4" />
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete this section from the website.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                                onClick={(e) => { e.stopPropagation(); handleDelete() }}
+                                className="bg-red-600 hover:bg-red-700 text-white focus:ring-red-600"
+                            >
+                                Delete
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            )}
         </div>
     )
 }

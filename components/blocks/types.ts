@@ -27,4 +27,5 @@ export interface BlockProps {
     title?: string // Section/Block display name
     sectionId?: string
     slug?: string
+    sectionSlug?: string
 }

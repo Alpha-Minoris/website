@@ -1,10 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { Check } from "lucide-react"
+import { Check, Pipette } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-import { Pipette } from "lucide-react"
 
 const THEME_COLORS = [
     { name: "Accent", class: "bg-accent border-accent/20", value: "text-accent" },
@@ -23,6 +21,16 @@ interface ColorPickerProps {
 export function ColorPicker({ value, onChange }: ColorPickerProps) {
     // Check if current value is a hex color
     const isHex = value?.startsWith('#')
+
+    // Local state for the input to make it smooth
+    const [localHex, setLocalHex] = React.useState(isHex ? value : "#ffffff")
+
+    // Synchronize local state when incoming value changes (but not when we're the ones changing it)
+    React.useEffect(() => {
+        if (isHex && value !== localHex) {
+            setLocalHex(value)
+        }
+    }, [value, isHex])
 
     return (
         <div className="flex flex-wrap items-center gap-1.5 p-1">
@@ -47,14 +55,23 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
             <div className="relative w-6 h-6 group overflow-hidden rounded-full">
                 <input
                     type="color"
-                    value={isHex ? value : "#ffffff"}
-                    onChange={(e) => onChange(e.target.value)}
+                    value={localHex}
+                    onChange={(e) => {
+                        const newVal = e.target.value
+                        setLocalHex(newVal)
+                    }}
+                    onBlur={() => {
+                        // Commit the final value on blur
+                        if (localHex && localHex !== value) {
+                            onChange(localHex)
+                        }
+                    }}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 />
                 <div className={cn(
                     "w-full h-full border border-white/10 flex items-center justify-center transition-all group-hover:scale-110",
                     isHex ? "ring-2 ring-white ring-offset-2 ring-offset-zinc-950" : "bg-gradient-to-tr from-red-500 via-green-500 to-blue-500"
-                )} style={isHex ? { backgroundColor: value } : {}}>
+                )} style={isHex ? { backgroundColor: localHex } : {}}>
                     <Pipette className={cn("w-3 h-3", isHex ? "text-white mix-blend-difference" : "text-white")} />
                 </div>
             </div>
