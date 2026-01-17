@@ -6,20 +6,45 @@ import { deleteChildBlock } from '@/actions/block-actions'
 import { deleteSection } from '@/actions/section-actions'
 
 export function KeyboardShortcuts() {
-    const { isEditMode, selectedBlockId, blocks, removeBlock, setSelectedBlockId } = useEditorStore()
+    const { isEditMode, selectedBlockId, blocks, removeBlock, setSelectedBlockId, undo, redo } = useEditorStore()
 
     useEffect(() => {
-        if (!isEditMode || !selectedBlockId) return
+        if (!isEditMode) return
 
         const handleKeyDown = async (e: KeyboardEvent) => {
-            // Ignore if user is typing in an input or contentEditable
+            const isMod = e.ctrlKey || e.metaKey
             const target = e.target as HTMLElement
-            if (target.isContentEditable || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+            const isTyping = target.isContentEditable || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA'
+
+            // --- UNDO / REDO (Global) ---
+            if (isMod && e.key === 'z') {
+                if (e.shiftKey) {
+                    e.preventDefault()
+                    redo()
+                } else {
+                    // Only undo if NOT typing, OR if the user specifically wants store-level undo?
+                    // Browser has its own undo for text. If we're typing, we let browser handle it.
+                    if (!isTyping) {
+                        e.preventDefault()
+                        undo()
+                    }
+                }
+                return
+            }
+            if (isMod && e.key === 'y') {
+                e.preventDefault()
+                redo()
                 return
             }
 
+            if (!selectedBlockId) return
+
+            // Ignore deletion if typing
+            if (isTyping) return
+
             if (e.key === 'Delete' || e.key === 'Backspace') {
                 e.preventDefault()
+                // ... (existing logic)
 
                 // Identify target type
                 // 1. Is it a Section?

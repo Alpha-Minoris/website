@@ -16,6 +16,14 @@ interface EditorState {
     removeBlock: (id: string) => void
     updateBlock: (id: string, updates: Partial<BlockProps>) => void
     moveBlock: (id: string, direction: 'up' | 'down') => void
+
+    // History
+    history: BlockProps[][]
+    historyIndex: number
+    saveTimeout: NodeJS.Timeout | null
+    undo: () => void
+    redo: () => void
+    pushToHistory: (blocks: BlockProps[]) => void
 }
 
 export const useEditorStore = create<EditorState>((set) => ({
@@ -27,7 +35,10 @@ export const useEditorStore = create<EditorState>((set) => ({
     toggleEditMode: () => set((state) => ({ isEditMode: !state.isEditMode })),
     setSelectedBlockId: (id) => set({ selectedBlockId: id }),
     setActiveDragId: (id) => set({ activeDragId: id }),
-    setBlocks: (blocks) => set({ blocks }),
+    setBlocks: (blocks) => set((state) => {
+        state.pushToHistory(blocks)
+        return { blocks }
+    }),
 
     addBlock: (block: BlockProps) => set((state) => ({
         blocks: [...state.blocks, block]
@@ -57,7 +68,9 @@ export const useEditorStore = create<EditorState>((set) => ({
                 return block
             })
         }
-        return { blocks: updateRecursive(state.blocks) }
+        const newBlocks = updateRecursive(state.blocks)
+        state.pushToHistory(newBlocks)
+        return { blocks: newBlocks }
     }),
     moveBlock: (id: string, direction: 'up' | 'down') => set((state) => {
         const index = state.blocks.findIndex((b) => b.id === id)
@@ -71,5 +84,63 @@ export const useEditorStore = create<EditorState>((set) => ({
         }
 
         return { blocks: newBlocks }
+    }),
+
+    // History Implementation
+    history: [],
+    historyIndex: -1,
+    saveTimeout: null,
+
+    pushToHistory: (blocks) => set((state) => {
+        // Clear any pending snapshot
+        if (state.saveTimeout) clearTimeout(state.saveTimeout)
+
+        const timeout = setTimeout(() => {
+            const currentState = useEditorStore.getState()
+
+            // Deep equality check before pushing
+            const lastSnapshot = currentState.history[currentState.historyIndex]
+            const blocksJson = JSON.stringify(blocks)
+            const lastJson = lastSnapshot ? JSON.stringify(lastSnapshot) : ''
+
+            if (blocksJson === lastJson) {
+                set({ saveTimeout: null })
+                return
+            }
+
+            set((nextState) => {
+                const newHistory = nextState.history.slice(0, nextState.historyIndex + 1)
+                newHistory.push(JSON.parse(blocksJson))
+
+                // Limit history to 50 items
+                if (newHistory.length > 50) newHistory.shift()
+
+                return {
+                    history: newHistory,
+                    historyIndex: newHistory.length - 1,
+                    saveTimeout: null
+                }
+            })
+        }, 1000) // 1s debounce - long enough to avoid typing lag
+
+        return { saveTimeout: timeout }
+    }),
+
+    undo: () => set((state) => {
+        if (state.historyIndex <= 0) return state
+        const prevIndex = state.historyIndex - 1
+        return {
+            blocks: JSON.parse(JSON.stringify(state.history[prevIndex])),
+            historyIndex: prevIndex
+        }
+    }),
+
+    redo: () => set((state) => {
+        if (state.historyIndex >= state.history.length - 1) return state
+        const nextIndex = state.historyIndex + 1
+        return {
+            blocks: JSON.parse(JSON.stringify(state.history[nextIndex])),
+            historyIndex: nextIndex
+        }
     }),
 }))

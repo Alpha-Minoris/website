@@ -40,7 +40,13 @@ interface TextToolbarUIProps {
 }
 
 export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: TextToolbarUIProps) {
-    const [localFormatState, setLocalFormatState] = useState(formatState || { bold: false, italic: false, isLink: false })
+    const [localFormatState, setLocalFormatState] = useState<{
+        bold: boolean;
+        italic: boolean;
+        isLink?: boolean;
+        fontSize?: string;
+        color?: string;
+    }>(formatState || { bold: false, italic: false, isLink: false })
 
     // Link State
     const [linkUrl, setLinkUrl] = useState('')
@@ -50,24 +56,88 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
     const updateUIFormatState = useCallback(() => {
         if (typeof document === 'undefined') return
 
+        const sel = window.getSelection()
+
         // Check for link
         let isLink = false
-        const sel = window.getSelection()
+        let detectedFontSize: string | undefined
+        let detectedColor: string | undefined
+
         if (sel && sel.rangeCount > 0) {
             let node = sel.anchorNode
-            while (node && node !== document.body) {
-                if (node.nodeName === 'A') {
-                    isLink = true
-                    break
+
+            // If selection is not collapsed, check all nodes in the range
+            if (!sel.isCollapsed && sel.rangeCount > 0) {
+                const range = sel.getRangeAt(0);
+                const container = range.commonAncestorContainer;
+
+                // Walk through all nodes in the selection to find font-size
+                const walker = document.createTreeWalker(
+                    container.nodeType === Node.TEXT_NODE ? container.parentElement! : container,
+                    NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+                    null
+                );
+
+                let currentNode: Node | null = walker.currentNode;
+                while (currentNode) {
+                    if (currentNode instanceof HTMLElement) {
+                        const fontSize = currentNode.style.fontSize;
+                        const color = currentNode.style.color;
+
+                        if (fontSize && !detectedFontSize) {
+                            detectedFontSize = fontSize;
+                        }
+                        if (color && !detectedColor) {
+                            detectedColor = color;
+                        }
+
+                        // Check for link
+                        if (currentNode.nodeName === 'A') {
+                            isLink = true;
+                        }
+
+                        // Break early if we found both
+                        if (detectedFontSize && detectedColor && isLink) break;
+                    }
+                    currentNode = walker.nextNode();
                 }
-                node = node.parentNode
+            }
+
+            // Fallback: Walk up the DOM tree from anchor node
+            if (!detectedFontSize || !detectedColor || !isLink) {
+                let current = node;
+                while (current && current !== document.body) {
+                    if (current.nodeName === 'A') {
+                        isLink = true;
+                    }
+
+                    if (current instanceof HTMLElement) {
+                        const fontSize = current.style.fontSize;
+                        const color = current.style.color;
+
+                        if (fontSize && !detectedFontSize) {
+                            detectedFontSize = fontSize;
+                        }
+                        if (color && !detectedColor) {
+                            detectedColor = color;
+                        }
+                    }
+
+                    current = current.parentNode;
+                }
             }
         }
+
+        // Fallback to queryCommandValue if we didn't detect from inline styles
+        const fallbackFontSize = document.queryCommandValue('fontSize')
+        const fallbackColor = document.queryCommandValue('foreColor')
 
         setLocalFormatState({
             bold: document.queryCommandState('bold'),
             italic: document.queryCommandState('italic'),
-            isLink // Add this property to state
+            isLink,
+            fontSize: detectedFontSize || (fallbackFontSize && fallbackFontSize !== '3' ? fallbackFontSize : undefined),
+            color: detectedColor || fallbackColor
         })
     }, [])
 
@@ -82,10 +152,61 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
     }, [formatState, updateUIFormatState])
 
     const handleExec = (cmd: string, val?: string) => {
-        document.execCommand(cmd, false, val)
-        updateUIFormatState()
-        // If it's a color change, we might want to persist it to settings too?
-        // But for Bold/Italic, it's just HTML modification.
+        // Use CSS instead of HTML tags for formatting
+        document.execCommand('styleWithCSS', false, 'true')
+
+        if (cmd === 'fontSize' && val) {
+            const selection = window.getSelection();
+            if (selection && selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+
+                // If text is selected
+                if (!selection.isCollapsed) {
+                    // Extract the selected content
+                    const fragment = range.extractContents();
+
+                    // Create a new span with the font size
+                    const span = document.createElement('span');
+                    span.style.fontSize = val;
+
+                    // Helper function to remove existing font-size from elements
+                    const removeFontSize = (node: Node) => {
+                        if (node instanceof HTMLElement && node.style.fontSize) {
+                            node.style.removeProperty('font-size');
+                        }
+                        node.childNodes.forEach(child => removeFontSize(child));
+                    };
+
+                    // Remove existing font-size styles from the fragment
+                    removeFontSize(fragment);
+
+                    // Append the cleaned fragment to the new span
+                    span.appendChild(fragment);
+
+                    // Insert the span at the selection
+                    range.insertNode(span);
+
+                    // Re-select the span's content
+                    const newRange = document.createRange();
+                    newRange.selectNodeContents(span);
+                    selection.removeAllRanges();
+                    selection.addRange(newRange);
+                } else {
+                    // No selection (cursor only) - Block level update
+                    const active = document.activeElement as HTMLElement;
+                    if (active && active.contentEditable === 'true') {
+                        active.style.fontSize = val;
+                    }
+                }
+            }
+        } else if (cmd === 'foreColor') {
+            document.execCommand('foreColor', false, val)
+        } else {
+            document.execCommand(cmd, false, val)
+        }
+
+        // Force immediate update of the UI state
+        setTimeout(() => updateUIFormatState(), 0)
     }
 
     const saveSelection = () => {
@@ -137,7 +258,14 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
             {/* Font Family */}
             <Select
                 value={settings.fontFamily || 'Inter, sans-serif'}
-                onValueChange={(val) => onUpdate({ fontFamily: val })}
+                onValueChange={(val) => {
+                    const selection = window.getSelection();
+                    if (selection && selection.toString().trim().length > 0) {
+                        handleExec('fontName', val)
+                    } else {
+                        onUpdate({ fontFamily: val })
+                    }
+                }}
             >
                 <SelectTrigger className="h-7 w-[90px] text-[10px] bg-transparent border-0 text-zinc-400 hover:text-white hover:bg-white/10 p-0 px-2 gap-1 rounded-full focus:ring-0 focus:ring-offset-0">
                     <SelectValue placeholder="Font" />
@@ -180,8 +308,26 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
                     className="h-7 w-7 rounded-full text-zinc-400 hover:text-white hover:bg-white/10"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => {
-                        const current = parseInt(settings.fontSize || '16')
-                        onUpdate({ fontSize: (current - 1) + 'px' })
+                        const selection = window.getSelection();
+                        const hasSelection = selection && selection.toString().trim().length > 0;
+
+                        // Get current font size more reliably
+                        let currentVal = settings.fontSize || '16px';
+                        if (hasSelection && (localFormatState as any).fontSize) {
+                            currentVal = (localFormatState as any).fontSize;
+                        }
+
+                        // Parse current value (handle both 'px' and plain numbers)
+                        const currentStr = String(currentVal).replace('px', '').trim();
+                        const current = parseInt(currentStr) || 16;
+                        // Ensure minimum of 8px when decrementing
+                        const newVal = Math.max(8, current - 1) + 'px';
+
+                        if (hasSelection) {
+                            handleExec('fontSize', newVal)
+                        } else {
+                            onUpdate({ fontSize: newVal })
+                        }
                     }}
                 >
                     <Minus className="w-3.5 h-3.5" />
@@ -189,10 +335,29 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
                 <input
                     type="text"
                     className="w-8 h-7 bg-transparent text-white text-xs text-center border-none focus:outline-none"
-                    value={parseInt(settings.fontSize || '16')}
+                    value={(() => {
+                        const selection = window.getSelection();
+                        const hasSelection = selection && selection.toString().trim().length > 0;
+
+                        let currentVal = settings.fontSize || '16px';
+                        if (hasSelection && (localFormatState as any).fontSize) {
+                            currentVal = (localFormatState as any).fontSize;
+                        }
+
+                        // Parse and return just the numeric value
+                        const currentStr = String(currentVal).replace('px', '').trim();
+                        return parseInt(currentStr) || 16;
+                    })()}
                     onChange={(e) => {
                         const val = parseInt(e.target.value)
-                        if (!isNaN(val)) onUpdate({ fontSize: val + 'px' })
+                        if (!isNaN(val) && val > 0) {
+                            const selection = window.getSelection();
+                            if (selection && selection.toString().trim().length > 0) {
+                                handleExec('fontSize', val + 'px')
+                            } else {
+                                onUpdate({ fontSize: val + 'px' })
+                            }
+                        }
                     }}
                 />
                 <Button
@@ -201,8 +366,26 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
                     className="h-7 w-7 rounded-full text-zinc-400 hover:text-white hover:bg-white/10"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => {
-                        const current = parseInt(settings.fontSize || '16')
-                        onUpdate({ fontSize: (current + 1) + 'px' })
+                        const selection = window.getSelection();
+                        const hasSelection = selection && selection.toString().trim().length > 0;
+
+                        // Get current font size more reliably
+                        let currentVal = settings.fontSize || '16px';
+                        if (hasSelection && (localFormatState as any).fontSize) {
+                            currentVal = (localFormatState as any).fontSize;
+                        }
+
+                        // Parse current value (handle both 'px' and plain numbers)
+                        const currentStr = String(currentVal).replace('px', '').trim();
+                        const current = parseInt(currentStr) || 16;
+                        // Simply increment: no upper limit, but ensure never below 8px
+                        const newVal = (current + 1) + 'px';
+
+                        if (hasSelection) {
+                            handleExec('fontSize', newVal)
+                        } else {
+                            onUpdate({ fontSize: newVal })
+                        }
                     }}
                 >
                     <Plus className="w-3.5 h-3.5" />
@@ -237,13 +420,13 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
 
             {/* Alignment */}
             <div className="flex bg-white/5 rounded-full p-0.5">
-                <Button variant="ghost" size="icon" onClick={() => onUpdate({ align: 'left' })} className={cn("h-7 w-7 rounded-full hover:text-white hover:bg-white/10", settings.align === 'left' ? "text-white bg-white/20" : "text-zinc-500")}>
+                <Button variant="ghost" size="icon" onClick={() => handleExec('justifyLeft')} className={cn("h-7 w-7 rounded-full hover:text-white hover:bg-white/10", "text-zinc-500")}>
                     <AlignLeft className="w-3.5 h-3.5" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => onUpdate({ align: 'center' })} className={cn("h-7 w-7 rounded-full hover:text-white hover:bg-white/10", (!settings.align || settings.align === 'center') ? "text-white bg-white/20" : "text-zinc-500")}>
+                <Button variant="ghost" size="icon" onClick={() => handleExec('justifyCenter')} className={cn("h-7 w-7 rounded-full hover:text-white hover:bg-white/10", "text-zinc-500")}>
                     <AlignCenter className="w-3.5 h-3.5" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => onUpdate({ align: 'right' })} className={cn("h-7 w-7 rounded-full hover:text-white hover:bg-white/10", settings.align === 'right' ? "text-white bg-white/20" : "text-zinc-500")}>
+                <Button variant="ghost" size="icon" onClick={() => handleExec('justifyRight')} className={cn("h-7 w-7 rounded-full hover:text-white hover:bg-white/10", "text-zinc-500")}>
                     <AlignRight className="w-3.5 h-3.5" />
                 </Button>
             </div>
@@ -428,8 +611,12 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
                     isExecCommand={true}
                     defaultHex="#000000"
                     onChange={(v) => {
-                        handleExec('foreColor', v)
-                        onUpdate({ color: v })
+                        const selection = window.getSelection();
+                        if (selection && selection.toString().trim().length > 0) {
+                            handleExec('foreColor', v)
+                        } else {
+                            onUpdate({ color: v })
+                        }
                     }}
                 />
 

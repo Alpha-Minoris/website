@@ -168,13 +168,18 @@ export function TeamBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                             "text-center"
                 )}>
                     <EditableText
-                        tagName="h2"
+                        tagName={localSettings.level || 'h2'}
                         value={localSettings.title}
                         onChange={(v) => handleTextChange('title', v)}
                         isEditMode={isEditMode}
                         onFocus={onTextFocus}
                         onBlur={onTextBlur}
                         className="text-3xl md:text-5xl font-bold font-heading mb-4"
+                        style={{
+                            fontFamily: localSettings.fontFamily,
+                            fontSize: localSettings.fontSize,
+                            color: localSettings.color
+                        }}
                     />
                     <EditableText
                         tagName="p"
@@ -184,6 +189,11 @@ export function TeamBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                         onFocus={onTextFocus}
                         onBlur={onTextBlur}
                         className="text-muted-foreground text-lg"
+                        style={{
+                            fontFamily: localSettings.fontFamily,
+                            fontSize: localSettings.fontSize,
+                            color: localSettings.color
+                        }}
                     />
                 </div>
 
@@ -236,6 +246,11 @@ export function TeamBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                         onFocus={onTextFocus}
                                         onBlur={onTextBlur}
                                         className="text-xl font-bold font-heading text-white"
+                                        style={{
+                                            fontFamily: localSettings.fontFamily,
+                                            fontSize: localSettings.fontSize,
+                                            color: localSettings.color
+                                        }}
                                     />
                                     <EditableText
                                         tagName="p"
@@ -245,6 +260,11 @@ export function TeamBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                         onFocus={onTextFocus}
                                         onBlur={onTextBlur}
                                         className="text-accent text-sm font-medium uppercase tracking-wider"
+                                        style={{
+                                            fontFamily: localSettings.fontFamily,
+                                            fontSize: localSettings.fontSize,
+                                            color: localSettings.color
+                                        }}
                                     />
                                     <EditableText
                                         tagName="p"
@@ -254,6 +274,11 @@ export function TeamBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                         onFocus={onTextFocus}
                                         onBlur={onTextBlur}
                                         className="text-muted-foreground text-sm leading-relaxed"
+                                        style={{
+                                            fontFamily: localSettings.fontFamily,
+                                            fontSize: localSettings.fontSize,
+                                            color: localSettings.color
+                                        }}
                                     />
                                 </CardContent>
                                 <CardFooter className="justify-center flex-wrap gap-4 pb-6 min-h-[64px]">

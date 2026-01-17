@@ -41,11 +41,17 @@ function LogoRow({ direction = 'left', speed = 60, row, logos }: LogoRowProps) {
                             {logo.asset.type === 'icon' ? (
                                 <IconDisplay name={logo.asset.value} className="w-8 h-8 text-white group-hover:text-accent transition-colors" />
                             ) : (
-                                <img
-                                    src={logo.asset.value}
-                                    alt={logo.name}
-                                    className="w-8 h-8 object-contain"
-                                />
+                                logo.asset.value ? (
+                                    <img
+                                        src={logo.asset.value}
+                                        alt={logo.name}
+                                        className="w-8 h-8 object-contain"
+                                    />
+                                ) : (
+                                    <div className="w-8 h-8 flex items-center justify-center bg-white/5 rounded border border-white/10">
+                                        <IconDisplay name="Image" className="w-4 h-4 text-zinc-600" />
+                                    </div>
+                                )
                             )}
                         </div>
                         <span className="text-xl font-heading font-bold text-transparent group-hover:text-white transition-colors uppercase tracking-[0.2em] bg-clip-text bg-gradient-to-r from-white/40 to-white/10 select-none">

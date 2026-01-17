@@ -549,20 +549,23 @@ export function MediaManager({ open, onOpenChange, onSelect, folder }: MediaMana
                                         />
                                         <Button
                                             className="bg-accent text-white hover:bg-accent/90 rounded-xl px-6 h-10 font-bold"
-                                            onClick={() => externalUrl && onSelect({ type: 'image', value: externalUrl })}
-                                            disabled={!externalUrl}
+                                            onClick={() => {
+                                                const trimmed = externalUrl.trim()
+                                                if (trimmed) onSelect({ type: 'image', value: trimmed })
+                                            }}
+                                            disabled={!externalUrl || !externalUrl.trim()}
                                         >
                                             Fetch
                                         </Button>
                                     </div>
                                 </div>
 
-                                {externalUrl && (
+                                {externalUrl && externalUrl.trim() && (
                                     <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
                                         <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold px-1">Live Preview</p>
                                         <div className="w-full aspect-[16/9] rounded-3xl border border-white/10 bg-black/50 overflow-hidden relative shadow-2xl">
                                             <img
-                                                src={externalUrl}
+                                                src={externalUrl.trim()}
                                                 alt="External Preview"
                                                 className="w-full h-full object-contain p-4"
                                                 onError={(e) => {

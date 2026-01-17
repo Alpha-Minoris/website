@@ -197,13 +197,18 @@ export function PackagesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                             "text-center items-center"
                 )}>
                     <EditableText
-                        tagName="h2"
+                        tagName={localSettings.level || 'h2'}
                         value={localSettings.title}
                         onChange={(v) => handleTextChange('title', v)}
                         isEditMode={isEditMode}
                         onFocus={onTextFocus}
                         onBlur={onTextBlur}
                         className="text-3xl md:text-5xl font-bold font-heading"
+                        style={{
+                            fontFamily: localSettings.fontFamily,
+                            fontSize: localSettings.fontSize,
+                            color: localSettings.color
+                        }}
                     />
                     <EditableText
                         tagName="p"
@@ -213,6 +218,11 @@ export function PackagesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                         onFocus={onTextFocus}
                         onBlur={onTextBlur}
                         className="text-muted-foreground text-lg"
+                        style={{
+                            fontFamily: localSettings.fontFamily,
+                            fontSize: localSettings.fontSize,
+                            color: localSettings.color
+                        }}
                     />
                 </div>
 
@@ -253,6 +263,11 @@ export function PackagesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                             isEditMode={isEditMode}
                                             onFocus={onTextFocus}
                                             onBlur={onTextBlur}
+                                            style={{
+                                                fontFamily: localSettings.fontFamily,
+                                                fontSize: localSettings.fontSize,
+                                                color: localSettings.color
+                                            }}
                                         />
                                     </CardTitle>
                                     <CardDescription className="text-white/60">
@@ -262,6 +277,11 @@ export function PackagesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                             isEditMode={isEditMode}
                                             onFocus={onTextFocus}
                                             onBlur={onTextBlur}
+                                            style={{
+                                                fontFamily: localSettings.fontFamily,
+                                                fontSize: localSettings.fontSize,
+                                                color: localSettings.color
+                                            }}
                                         />
                                     </CardDescription>
                                 </CardHeader>
@@ -295,6 +315,11 @@ export function PackagesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                                         onFocus={onTextFocus}
                                                         onBlur={onTextBlur}
                                                         className="flex-1"
+                                                        style={{
+                                                            fontFamily: localSettings.fontFamily,
+                                                            fontSize: localSettings.fontSize,
+                                                            color: localSettings.color
+                                                        }}
                                                     />
                                                     <button
                                                         onClick={() => handleRemoveFeature(idx, i)}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, Suspense, lazy } from 'react'
+import { useState, useMemo, Suspense, lazy, memo } from 'react'
 import { Search, Smile, Type } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -37,7 +37,7 @@ interface IconSymbolPickerProps {
     onInsertIcon: (iconName: string) => void
 }
 
-export function IconSymbolPicker({ onInsertSymbol, onInsertIcon }: IconSymbolPickerProps) {
+export const IconSymbolPicker = memo(({ onInsertSymbol, onInsertIcon }: IconSymbolPickerProps) => {
     const [search, setSearch] = useState('')
     const [limit, setLimit] = useState(60)
 
@@ -149,4 +149,6 @@ export function IconSymbolPicker({ onInsertSymbol, onInsertIcon }: IconSymbolPic
             </Tabs>
         </div>
     )
-}
+})
+
+IconSymbolPicker.displayName = 'IconSymbolPicker'

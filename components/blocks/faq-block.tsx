@@ -132,13 +132,18 @@ export function FAQBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                             "text-center"
                 )}>
                     <EditableText
-                        tagName="h2"
+                        tagName={localSettings.level || 'h2'}
                         value={localSettings.title}
                         onChange={(v) => handleTextChange('title', v)}
                         isEditMode={isEditMode}
                         onFocus={onTextFocus}
                         onBlur={onTextBlur}
                         className="text-3xl md:text-5xl font-bold font-heading mb-4"
+                        style={{
+                            fontFamily: localSettings.fontFamily,
+                            fontSize: localSettings.fontSize,
+                            color: localSettings.color
+                        }}
                     />
                 </div>
 
@@ -175,6 +180,11 @@ export function FAQBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                         onFocus={onTextFocus}
                                         onBlur={onTextBlur}
                                         className="w-full"
+                                        style={{
+                                            fontFamily: localSettings.fontFamily,
+                                            fontSize: localSettings.fontSize,
+                                            color: localSettings.color
+                                        }}
                                     />
                                 </div>
                             </AccordionTrigger>
@@ -186,6 +196,11 @@ export function FAQBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                     isEditMode={isEditMode}
                                     onFocus={onTextFocus}
                                     onBlur={onTextBlur}
+                                    style={{
+                                        fontFamily: localSettings.fontFamily,
+                                        fontSize: localSettings.fontSize,
+                                        color: localSettings.color
+                                    }}
                                 />
                             </AccordionContent>
                         </AccordionItem>

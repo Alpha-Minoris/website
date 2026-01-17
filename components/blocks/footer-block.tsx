@@ -225,13 +225,18 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
                     </div>
                     <div className="space-y-4">
                         <EditableText
-                            tagName="h3"
+                            tagName={localSettings.level || 'h3'}
                             value={localSettings.brandTitle || "Alpha Minoris"}
                             onChange={(v) => handleTextChange('brandTitle', v)}
                             className="text-xl font-bold text-white font-heading"
                             isEditMode={isEditMode}
                             onFocus={onTextFocus}
                             onBlur={onTextBlur}
+                            style={{
+                                fontFamily: localSettings.fontFamily,
+                                fontSize: localSettings.fontSize,
+                                color: localSettings.color
+                            }}
                         />
                         <EditableText
                             value={localSettings.tagline || "Building the automated future, one agent at a time."}
@@ -240,6 +245,11 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
                             isEditMode={isEditMode}
                             onFocus={onTextFocus}
                             onBlur={onTextBlur}
+                            style={{
+                                fontFamily: localSettings.fontFamily,
+                                fontSize: localSettings.fontSize,
+                                color: localSettings.color
+                            }}
                         />
                     </div>
                 </div>
@@ -255,6 +265,11 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
                             isEditMode={isEditMode}
                             onFocus={onTextFocus}
                             onBlur={onTextBlur}
+                            style={{
+                                fontFamily: localSettings.fontFamily,
+                                fontSize: localSettings.fontSize,
+                                color: localSettings.color
+                            }}
                         />
                         <AddButton onClick={() => handleAddItem('legalLinks')} isEditMode={isEditMode} />
                     </div>
@@ -267,6 +282,11 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
                                 isEditMode={isEditMode}
                                 onFocus={onTextFocus}
                                 onBlur={onTextBlur}
+                                style={{
+                                    fontFamily: localSettings.fontFamily,
+                                    fontSize: localSettings.fontSize,
+                                    color: localSettings.color
+                                }}
                             />
                             <DeleteButton onClick={() => handleRemoveItem('legalLinks', i)} isEditMode={isEditMode} />
                         </div>
@@ -284,6 +304,11 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
                             isEditMode={isEditMode}
                             onFocus={onTextFocus}
                             onBlur={onTextBlur}
+                            style={{
+                                fontFamily: localSettings.fontFamily,
+                                fontSize: localSettings.fontSize,
+                                color: localSettings.color
+                            }}
                         />
                         <AddButton onClick={() => handleAddItem('companyLines')} isEditMode={isEditMode} />
                     </div>
@@ -296,6 +321,11 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
                                 isEditMode={isEditMode}
                                 onFocus={onTextFocus}
                                 onBlur={onTextBlur}
+                                style={{
+                                    fontFamily: localSettings.fontFamily,
+                                    fontSize: localSettings.fontSize,
+                                    color: localSettings.color
+                                }}
                             />
                             <DeleteButton onClick={() => handleRemoveItem('companyLines', i)} isEditMode={isEditMode} />
                         </div>
@@ -317,6 +347,11 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
                                 isEditMode={isEditMode}
                                 onFocus={onTextFocus}
                                 onBlur={onTextBlur}
+                                style={{
+                                    fontFamily: localSettings.fontFamily,
+                                    fontSize: localSettings.fontSize,
+                                    color: localSettings.color
+                                }}
                             />
                             <DeleteButton onClick={() => handleRemoveItem('sitemapLinks', i)} isEditMode={isEditMode} />
                         </div>
@@ -336,6 +371,11 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
                                 isEditMode={isEditMode}
                                 onFocus={onTextFocus}
                                 onBlur={onTextBlur}
+                                style={{
+                                    fontFamily: localSettings.fontFamily,
+                                    fontSize: localSettings.fontSize,
+                                    color: localSettings.color
+                                }}
                             />
                             <DeleteButton onClick={() => handleRemoveItem('socialLinks', i)} isEditMode={isEditMode} />
                         </div>

@@ -12,6 +12,9 @@ interface EditableTextProps {
     onFocus?: (rect: DOMRect) => void
     onBlur?: () => void
     placeholder?: string
+    style?: React.CSSProperties
+    align?: 'left' | 'center' | 'right' | 'justify'
+    color?: string
 }
 
 export const EditableText = memo(({
@@ -22,7 +25,10 @@ export const EditableText = memo(({
     isEditMode,
     onFocus,
     onBlur,
-    placeholder = '...'
+    placeholder = '...',
+    style,
+    align,
+    color
 }: EditableTextProps) => {
     const Tag = tagName as any
     const ref = useRef<HTMLElement>(null)
@@ -98,6 +104,11 @@ export const EditableText = memo(({
             onInput={handleInput}
             onFocus={handleFocus}
             onBlur={handleBlur}
+            style={{
+                ...style,
+                textAlign: align || (style?.textAlign as any),
+                color: color || style?.color
+            }}
             className={cn(
                 "outline-none transition-all duration-200",
                 `empty:before:content-['${placeholder}'] empty:before:text-muted-foreground/50`,
@@ -112,7 +123,10 @@ export const EditableText = memo(({
         prev.className === next.className &&
         prev.value === next.value &&
         prev.tagName === next.tagName &&
-        prev.placeholder === next.placeholder
+        prev.placeholder === next.placeholder &&
+        prev.align === next.align &&
+        prev.color === next.color &&
+        JSON.stringify(prev.style) === JSON.stringify(next.style)
     )
 })
 

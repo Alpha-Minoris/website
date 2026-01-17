@@ -229,18 +229,28 @@ export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                             onFocus={onTextFocus}
                             onBlur={onTextBlur}
                             className="bg-transparent"
+                            style={{
+                                fontFamily: localSettings.fontFamily,
+                                fontSize: localSettings.fontSize,
+                                color: localSettings.color
+                            }}
                         />
                     </div>
 
                     {/* Title */}
                     <EditableText
-                        tagName="h1"
+                        tagName={localSettings.level || 'h1'}
                         value={localSettings.title}
                         onChange={(v) => handleTextChange('title', v)}
                         isEditMode={isEditMode}
                         onFocus={onTextFocus}
                         onBlur={onTextBlur}
                         className="text-5xl lg:text-8xl font-bold font-heading leading-[1.05] text-white tracking-tight"
+                        style={{
+                            fontFamily: localSettings.fontFamily,
+                            fontSize: localSettings.fontSize,
+                            color: localSettings.color
+                        }}
                     />
 
                     {/* Tagline */}
@@ -252,6 +262,11 @@ export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                         onFocus={onTextFocus}
                         onBlur={onTextBlur}
                         className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto"
+                        style={{
+                            fontFamily: localSettings.fontFamily,
+                            fontSize: localSettings.fontSize,
+                            color: localSettings.color
+                        }}
                     />
 
                     {/* Buttons */}

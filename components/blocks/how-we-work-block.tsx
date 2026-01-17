@@ -133,13 +133,18 @@ export function HowWeWorkBlock({ id, settings, sectionSlug, slug }: BlockProps) 
                             "text-center"
                 )}>
                     <EditableText
-                        tagName="h2"
+                        tagName={localSettings.level || 'h2'}
                         value={localSettings.title}
                         onChange={(v) => handleTextChange('title', v)}
                         isEditMode={isEditMode}
                         onFocus={onTextFocus}
                         onBlur={onTextBlur}
                         className="text-3xl md:text-5xl font-bold font-heading mb-4"
+                        style={{
+                            fontFamily: localSettings.fontFamily,
+                            fontSize: localSettings.fontSize,
+                            color: localSettings.color
+                        }}
                     />
                     <EditableText
                         tagName="p"
@@ -149,6 +154,11 @@ export function HowWeWorkBlock({ id, settings, sectionSlug, slug }: BlockProps) 
                         onFocus={onTextFocus}
                         onBlur={onTextBlur}
                         className="text-muted-foreground text-lg max-w-xl"
+                        style={{
+                            fontFamily: localSettings.fontFamily,
+                            fontSize: localSettings.fontSize,
+                            color: localSettings.color
+                        }}
                     />
                 </div>
 
@@ -192,6 +202,11 @@ export function HowWeWorkBlock({ id, settings, sectionSlug, slug }: BlockProps) 
                                         onFocus={onTextFocus}
                                         onBlur={onTextBlur}
                                         className="text-xl font-bold font-heading mb-3"
+                                        style={{
+                                            fontFamily: localSettings.fontFamily,
+                                            fontSize: localSettings.fontSize,
+                                            color: localSettings.color
+                                        }}
                                     />
                                     <EditableText
                                         tagName="p"
@@ -201,6 +216,11 @@ export function HowWeWorkBlock({ id, settings, sectionSlug, slug }: BlockProps) 
                                         onFocus={onTextFocus}
                                         onBlur={onTextBlur}
                                         className="text-sm text-muted-foreground leading-relaxed flex-1"
+                                        style={{
+                                            fontFamily: localSettings.fontFamily,
+                                            fontSize: localSettings.fontSize,
+                                            color: localSettings.color
+                                        }}
                                     />
                                     {isEditMode && (
                                         <div className="absolute -top-3 -right-3 z-20">

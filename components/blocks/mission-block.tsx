@@ -140,13 +140,18 @@ export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                             "text-center md:text-left items-center md:items-start"
                 )}>
                     <EditableText
-                        tagName="h2"
+                        tagName={localSettings.level || 'h2'}
                         value={localSettings.title}
                         onChange={(v) => handleTextChange('title', v)}
                         isEditMode={isEditMode}
                         onFocus={onTextFocus}
                         onBlur={onTextBlur}
                         className="text-4xl md:text-5xl font-bold font-heading"
+                        style={{
+                            fontFamily: localSettings.fontFamily,
+                            fontSize: localSettings.fontSize,
+                            color: localSettings.color
+                        }}
                     />
 
                     <div className={cn(
@@ -160,6 +165,11 @@ export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                             isEditMode={isEditMode}
                             onFocus={onTextFocus}
                             onBlur={onTextBlur}
+                            style={{
+                                fontFamily: localSettings.fontFamily,
+                                fontSize: localSettings.fontSize,
+                                color: localSettings.color
+                            }}
                         />
 
                         <div className="grid gap-4 pt-4">
@@ -188,6 +198,11 @@ export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                             onFocus={onTextFocus}
                                             onBlur={onTextBlur}
                                             className="text-white font-semibold"
+                                            style={{
+                                                fontFamily: localSettings.fontFamily,
+                                                fontSize: localSettings.fontSize,
+                                                color: localSettings.color
+                                            }}
                                         />
                                         <EditableText
                                             tagName="p"
@@ -197,6 +212,11 @@ export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                             onFocus={onTextFocus}
                                             onBlur={onTextBlur}
                                             className="text-sm"
+                                            style={{
+                                                fontFamily: localSettings.fontFamily,
+                                                fontSize: localSettings.fontSize,
+                                                color: localSettings.color
+                                            }}
                                         />
                                     </div>
                                     <DeleteButton
@@ -227,6 +247,11 @@ export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                     onFocus={onTextFocus}
                                     onBlur={onTextBlur}
                                     className="text-6xl font-bold text-white/5 font-heading text-center"
+                                    style={{
+                                        fontFamily: localSettings.fontFamily,
+                                        fontSize: localSettings.fontSize,
+                                        color: localSettings.color
+                                    }}
                                 />
                             </div>
                         </div>
