@@ -45,6 +45,7 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
         italic: boolean;
         isLink?: boolean;
         fontSize?: string;
+        fontFamily?: string;
         color?: string;
     }>(formatState || { bold: false, italic: false, isLink: false })
 
@@ -52,6 +53,10 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
     const [linkUrl, setLinkUrl] = useState('')
     const savedRange = useRef<Range | null>(null)
     const [isLinkPopoverOpen, setIsLinkPopoverOpen] = useState(false)
+
+    // Font Size Input State
+    const [fontSizeInput, setFontSizeInput] = useState('')
+    const [isFontSizeEditing, setIsFontSizeEditing] = useState(false)
 
     const updateUIFormatState = useCallback(() => {
         if (typeof document === 'undefined') return
@@ -61,6 +66,7 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
         // Check for link
         let isLink = false
         let detectedFontSize: string | undefined
+        let detectedFontFamily: string | undefined
         let detectedColor: string | undefined
 
         if (sel && sel.rangeCount > 0) {
@@ -71,7 +77,7 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
                 const range = sel.getRangeAt(0);
                 const container = range.commonAncestorContainer;
 
-                // Walk through all nodes in the selection to find font-size
+                // Walk through all nodes in the selection to find formatting
                 const walker = document.createTreeWalker(
                     container.nodeType === Node.TEXT_NODE ? container.parentElement! : container,
                     NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
@@ -82,10 +88,14 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
                 while (currentNode) {
                     if (currentNode instanceof HTMLElement) {
                         const fontSize = currentNode.style.fontSize;
+                        const fontFamily = currentNode.style.fontFamily;
                         const color = currentNode.style.color;
 
                         if (fontSize && !detectedFontSize) {
                             detectedFontSize = fontSize;
+                        }
+                        if (fontFamily && !detectedFontFamily) {
+                            detectedFontFamily = fontFamily;
                         }
                         if (color && !detectedColor) {
                             detectedColor = color;
@@ -96,15 +106,15 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
                             isLink = true;
                         }
 
-                        // Break early if we found both
-                        if (detectedFontSize && detectedColor && isLink) break;
+                        // Break early if we found everything
+                        if (detectedFontSize && detectedFontFamily && detectedColor && isLink) break;
                     }
                     currentNode = walker.nextNode();
                 }
             }
 
             // Fallback: Walk up the DOM tree from anchor node
-            if (!detectedFontSize || !detectedColor || !isLink) {
+            if (!detectedFontSize || !detectedFontFamily || !detectedColor || !isLink) {
                 let current = node;
                 while (current && current !== document.body) {
                     if (current.nodeName === 'A') {
@@ -113,10 +123,14 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
 
                     if (current instanceof HTMLElement) {
                         const fontSize = current.style.fontSize;
+                        const fontFamily = current.style.fontFamily;
                         const color = current.style.color;
 
                         if (fontSize && !detectedFontSize) {
                             detectedFontSize = fontSize;
+                        }
+                        if (fontFamily && !detectedFontFamily) {
+                            detectedFontFamily = fontFamily;
                         }
                         if (color && !detectedColor) {
                             detectedColor = color;
@@ -137,6 +151,7 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
             italic: document.queryCommandState('italic'),
             isLink,
             fontSize: detectedFontSize || (fallbackFontSize && fallbackFontSize !== '3' ? fallbackFontSize : undefined),
+            fontFamily: detectedFontFamily,
             color: detectedColor || fallbackColor
         })
     }, [])
@@ -199,8 +214,95 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
                     }
                 }
             }
-        } else if (cmd === 'foreColor') {
-            document.execCommand('foreColor', false, val)
+        } else if (cmd === 'foreColor' && val) {
+            const selection = window.getSelection();
+            if (selection && selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+
+                // If text is selected
+                if (!selection.isCollapsed) {
+                    // Extract the selected content
+                    const fragment = range.extractContents();
+
+                    // Create a new span with the text color
+                    const span = document.createElement('span');
+                    span.style.color = val;
+
+                    // Helper function to remove existing color from elements
+                    const removeColor = (node: Node) => {
+                        if (node instanceof HTMLElement && node.style.color) {
+                            node.style.removeProperty('color');
+                        }
+                        node.childNodes.forEach(child => removeColor(child));
+                    };
+
+                    // Remove existing color styles from the fragment
+                    removeColor(fragment);
+
+                    // Append the cleaned fragment to the new span
+                    span.appendChild(fragment);
+
+                    // Insert the span at the selection
+                    range.insertNode(span);
+
+                    // Re-select the span's content
+                    const newRange = document.createRange();
+                    newRange.selectNodeContents(span);
+                    selection.removeAllRanges();
+                    selection.addRange(newRange);
+                } else {
+                    // No selection (cursor only) - fallback to execCommand
+                    document.execCommand('foreColor', false, val);
+                }
+            }
+        } else if (cmd === 'backColor' && val) {
+            const selection = window.getSelection();
+            if (selection && selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+
+                // If text is selected
+                if (!selection.isCollapsed) {
+                    // First, remove background from all parent spans
+                    let node = range.commonAncestorContainer;
+                    while (node && node !== document.body) {
+                        if (node instanceof HTMLElement && node.style.backgroundColor) {
+                            node.style.removeProperty('background-color');
+                        }
+                        node = node.parentNode as Node;
+                    }
+
+                    // Now extract and process the fragment
+                    const fragment = range.extractContents();
+
+                    // Helper to recursively remove background from fragment
+                    const removeBackgroundColor = (node: Node) => {
+                        if (node instanceof HTMLElement && node.style.backgroundColor) {
+                            node.style.removeProperty('background-color');
+                        }
+                        node.childNodes.forEach(child => removeBackgroundColor(child));
+                    };
+
+                    removeBackgroundColor(fragment);
+
+                    // Special handling for transparent: don't wrap
+                    if (val === 'transparent') {
+                        range.insertNode(fragment);
+                    } else {
+                        const span = document.createElement('span');
+                        span.style.backgroundColor = val;
+                        span.appendChild(fragment);
+                        range.insertNode(span);
+
+                        // Re-select
+                        const newRange = document.createRange();
+                        newRange.selectNodeContents(span);
+                        selection.removeAllRanges();
+                        selection.addRange(newRange);
+                    }
+                } else {
+                    document.execCommand('backColor', false, val);
+                }
+            }
         } else {
             document.execCommand(cmd, false, val)
         }
@@ -257,7 +359,13 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
 
             {/* Font Family */}
             <Select
-                value={settings.fontFamily || 'Inter, sans-serif'}
+                value={(() => {
+                    // Normalize the font family value
+                    let font = (localFormatState as any).fontFamily || settings.fontFamily || 'Inter, sans-serif';
+                    // Remove quotes if present
+                    font = font.replace(/['"]/g, '');
+                    return font;
+                })()}
                 onValueChange={(val) => {
                     const selection = window.getSelection();
                     if (selection && selection.toString().trim().length > 0) {
@@ -278,27 +386,6 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
                     <SelectItem value="Courier New, monospace" className="text-zinc-400 hover:text-white text-xs cursor-pointer font-mono">Courier New</SelectItem>
                 </SelectContent>
             </Select>
-
-            <Separator orientation="vertical" className="h-4 bg-white/10" />
-
-            {/* Level */}
-            <Select
-                value={settings.level || 'h2'}
-                onValueChange={(val) => onUpdate({ level: val })}
-            >
-                <SelectTrigger className="h-8 w-[110px] text-xs bg-transparent border-0 text-zinc-300 hover:text-white hover:bg-white/10 p-0 px-3 gap-1 rounded-full focus:ring-0 focus:ring-offset-0 font-medium">
-                    <SelectValue placeholder="Label" />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-zinc-800">
-                    <SelectItem value="h1" className="text-zinc-400 hover:text-white text-xs cursor-pointer font-bold">Heading 1</SelectItem>
-                    <SelectItem value="h2" className="text-zinc-400 hover:text-white text-xs cursor-pointer font-bold">Heading 2</SelectItem>
-                    <SelectItem value="h3" className="text-zinc-400 hover:text-white text-xs cursor-pointer font-semibold">Heading 3</SelectItem>
-                    <SelectItem value="p" className="text-zinc-400 hover:text-white text-xs cursor-pointer font-normal">Normal Text</SelectItem>
-                    <SelectItem value="label" className="text-zinc-400 hover:text-white text-xs cursor-pointer font-light uppercase tracking-wider">Textbox</SelectItem>
-                </SelectContent>
-            </Select>
-
-            <Separator orientation="vertical" className="h-4 bg-white/10" />
 
             {/* Font Size - Immediate! */}
             <div className="flex items-center gap-1 bg-white/5 rounded-full p-0.5">
@@ -334,8 +421,11 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
                 </Button>
                 <input
                     type="text"
-                    className="w-8 h-7 bg-transparent text-white text-xs text-center border-none focus:outline-none"
-                    value={(() => {
+                    className={cn(
+                        "w-9 h-7 bg-transparent text-xs text-center border-none focus:outline-none focus:ring-1 focus:ring-white/30 rounded transition-all",
+                        isFontSizeEditing ? "text-white" : "text-zinc-400"
+                    )}
+                    value={isFontSizeEditing ? fontSizeInput : (() => {
                         const selection = window.getSelection();
                         const hasSelection = selection && selection.toString().trim().length > 0;
 
@@ -344,21 +434,77 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
                             currentVal = (localFormatState as any).fontSize;
                         }
 
-                        // Parse and return just the numeric value
                         const currentStr = String(currentVal).replace('px', '').trim();
                         return parseInt(currentStr) || 16;
                     })()}
+                    onFocus={(e) => {
+                        // Save the current selection before focusing input
+                        const sel = window.getSelection();
+                        if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+                            savedRange.current = sel.getRangeAt(0);
+                        }
+
+                        setIsFontSizeEditing(true);
+                        setFontSizeInput(e.target.value);
+                        e.target.select();
+                    }}
                     onChange={(e) => {
-                        const val = parseInt(e.target.value)
-                        if (!isNaN(val) && val > 0) {
-                            const selection = window.getSelection();
-                            if (selection && selection.toString().trim().length > 0) {
-                                handleExec('fontSize', val + 'px')
-                            } else {
-                                onUpdate({ fontSize: val + 'px' })
-                            }
+                        const val = e.target.value;
+                        // Only allow digits
+                        if (/^\d*$/.test(val)) {
+                            setFontSizeInput(val);
                         }
                     }}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            const size = parseInt(fontSizeInput);
+                            if (size >= 8 && size <= 200) {
+                                // Restore selection if we saved one
+                                if (savedRange.current) {
+                                    const sel = window.getSelection();
+                                    if (sel) {
+                                        sel.removeAllRanges();
+                                        sel.addRange(savedRange.current);
+                                        handleExec('fontSize', size + 'px');
+                                        savedRange.current = null;
+                                    }
+                                } else {
+                                    onUpdate({ fontSize: size + 'px' });
+                                }
+                            }
+                            setIsFontSizeEditing(false);
+                            (e.target as HTMLInputElement).blur();
+                        } else if (e.key === 'Escape') {
+                            savedRange.current = null;
+                            setIsFontSizeEditing(false);
+                            (e.target as HTMLInputElement).blur();
+                        }
+                    }}
+                    onBlur={() => {
+                        if (isFontSizeEditing && fontSizeInput) {
+                            const size = parseInt(fontSizeInput);
+                            if (size >= 8 && size <= 200) {
+                                // Restore selection if we saved one
+                                if (savedRange.current) {
+                                    const sel = window.getSelection();
+                                    if (sel) {
+                                        sel.removeAllRanges();
+                                        sel.addRange(savedRange.current);
+                                        handleExec('fontSize', size + 'px');
+                                        savedRange.current = null;
+                                    }
+                                } else {
+                                    onUpdate({ fontSize: size + 'px' });
+                                }
+                            }
+                        }
+                        setIsFontSizeEditing(false);
+                    }}
+                    onMouseDown={(e) => {
+                        // Don't prevent default - allow focus
+                        e.stopPropagation();
+                    }}
+                    placeholder="16"
                 />
                 <Button
                     variant="ghost"
@@ -624,7 +770,14 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
                     label="Background"
                     value={settings.backgroundColor}
                     defaultHex="transparent"
-                    onChange={(v) => onUpdate({ backgroundColor: v })}
+                    onChange={(v) => {
+                        const selection = window.getSelection();
+                        if (selection && selection.toString().trim().length > 0) {
+                            handleExec('backColor', v)
+                        } else {
+                            onUpdate({ backgroundColor: v })
+                        }
+                    }}
                 />
             </div>
 

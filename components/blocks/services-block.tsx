@@ -86,8 +86,9 @@ export function ServicesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
         if (sectionRef.current) {
             const sectionRect = sectionRef.current.getBoundingClientRect()
             const relativeLeft = rect.left - sectionRect.left + (rect.width / 2)
-            const relativeTop = rect.top - sectionRect.top
-            setActiveToolbarPos({ top: relativeTop - 40, left: relativeLeft })
+            // Position toolbar below the text block (using rect.bottom)
+            const relativeTop = rect.bottom - sectionRect.top
+            setActiveToolbarPos({ top: relativeTop, left: relativeLeft })
         }
     }, [])
 

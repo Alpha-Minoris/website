@@ -5,12 +5,12 @@ import { Check, Pipette } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const TEXT_PRESETS = [
-    { name: "Accent", class: "bg-accent border-accent/20", value: "text-accent" },
-    { name: "White", class: "bg-white border-white/20", value: "text-white" },
-    { name: "Zinc-400", class: "bg-zinc-400 border-zinc-500/20", value: "text-zinc-400" },
-    { name: "Red", class: "bg-red-500 border-red-600/20", value: "text-red-500" },
-    { name: "Blue", class: "bg-blue-500 border-blue-600/20", value: "text-blue-500" },
-    { name: "Emerald", class: "bg-emerald-500 border-emerald-600/20", value: "text-emerald-500" },
+    { name: "Accent", class: "bg-accent border-accent/20", value: "#0c759a" }, // Accent color from theme
+    { name: "White", class: "bg-white border-white/20", value: "#ffffff" },
+    { name: "Zinc-400", class: "bg-zinc-400 border-zinc-500/20", value: "#a1a1aa" },
+    { name: "Red", class: "bg-red-500 border-red-600/20", value: "#ef4444" },
+    { name: "Blue", class: "bg-blue-500 border-blue-600/20", value: "#3b82f6" },
+    { name: "Emerald", class: "bg-emerald-500 border-emerald-600/20", value: "#10b981" },
 ]
 
 const BG_PRESETS = [
@@ -82,12 +82,8 @@ export function ColorPicker({ value, onChange, type = 'text', customPresets }: C
                     onChange={(e) => {
                         const newVal = e.target.value
                         setLocalHex(newVal)
-                    }}
-                    onBlur={() => {
-                        // Commit the final value on blur
-                        if (localHex && localHex !== value) {
-                            onChange(localHex)
-                        }
+                        // Apply immediately instead of waiting for blur
+                        onChange(newVal)
                     }}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 />
