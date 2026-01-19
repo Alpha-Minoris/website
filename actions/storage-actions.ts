@@ -2,8 +2,12 @@
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { v4 as uuidv4 } from 'uuid'
+import { checkEditRights } from '@/lib/auth-utils'
 
 export async function uploadAsset(formData: FormData) {
+    if (!(await checkEditRights({ actionType: 'create' }))) {
+        throw new Error('Unauthorized')
+    }
     try {
         const file = formData.get('file') as File
         const folder = formData.get('folder') as string || '' // e.g. "hero-section"
@@ -56,6 +60,9 @@ export async function uploadAsset(formData: FormData) {
 }
 
 export async function deleteAsset(fileName: string) {
+    if (!(await checkEditRights({ actionType: 'delete' }))) {
+        throw new Error('Unauthorized')
+    }
     try {
         const supabase = await createAdminClient()
 
@@ -106,6 +113,9 @@ export async function listAssets(path: string = '') {
 }
 
 export async function renameAsset(oldPath: string, newName: string) {
+    if (!(await checkEditRights({ actionType: 'update' }))) {
+        throw new Error('Unauthorized')
+    }
     try {
         const supabase = await createAdminClient()
 

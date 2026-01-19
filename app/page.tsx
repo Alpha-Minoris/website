@@ -2,17 +2,19 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { BlockProps, BlockType } from '@/components/blocks/types'
 import { PageBuilder } from '@/components/editor/page-builder'
 import { Navbar } from '@/components/layout/navbar'
+import { checkEditRights } from '@/lib/auth-utils'
 
 export const revalidate = 0 // Disable caching for active editing
 
 export default async function Home() {
-  const isDev = process.env.NODE_ENV === 'development'
-  // In Dev, use Admin client to bypass RLS so Anon users (Editor) can see hidden sections
-  // In Prod, use standard User client which respects RLS (Public=Visible only, Auth=All)
-  const supabase = isDev ? await createAdminClient() : await createClient()
+  const canEdit = await checkEditRights({ actionType: 'update', path: '/' })
+
+  // Use Admin client if edit rights are present (e.g. localhost) to see hidden sections
+  // Otherwise use standard Client which respects RLS (Public=Visible only)
+  const supabase = canEdit ? await createAdminClient() : await createClient()
 
   const user = await supabase.auth.getUser()
-  const isAdmin = user.data.user?.role === 'authenticated' // Verify role properly if needed, simpler check for now if authenticated users are admins
+  const isAdmin = canEdit || user.data.user?.role === 'authenticated'
 
   // 1. Fetch Sections
   // usage of AdminClient in dev ensures we get ALL sections (ignoring RLS 'enabled only' for anon).

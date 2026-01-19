@@ -3,8 +3,13 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { v4 as uuidv4 } from 'uuid'
+import { checkEditRights } from '@/lib/auth-utils'
 
 export async function createGenericSection() {
+    if (!(await checkEditRights({ actionType: 'create' }))) {
+        throw new Error('Unauthorized')
+    }
+
     const supabase = await createAdminClient()
     const authClient = await createClient()
     const { data: { user } } = await authClient.auth.getUser()
@@ -66,6 +71,10 @@ export async function createGenericSection() {
 }
 
 export async function deleteSection(sectionId: string) {
+    if (!(await checkEditRights({ sectionId, actionType: 'delete' }))) {
+        throw new Error('Unauthorized')
+    }
+
     const supabase = await createAdminClient()
     // const authClient = await createClient()
     // const { data: { user } } = await authClient.auth.getUser()
@@ -92,6 +101,10 @@ export async function deleteSection(sectionId: string) {
 }
 
 export async function updateSectionOrder(items: { id: string; sort_order: number }[]) {
+    if (!(await checkEditRights({ actionType: 'update' }))) {
+        throw new Error('Unauthorized')
+    }
+
     const supabase = await createAdminClient()
     // const authClient = await createClient()
     // const { data: { user } } = await authClient.auth.getUser()
@@ -126,6 +139,10 @@ export async function updateSectionOrder(items: { id: string; sort_order: number
 }
 
 export async function updateSection(sectionId: string, updates: { title?: string }) {
+    if (!(await checkEditRights({ sectionId, actionType: 'update' }))) {
+        throw new Error('Unauthorized')
+    }
+
     const supabase = await createAdminClient()
 
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sectionId)
@@ -146,6 +163,10 @@ export async function updateSection(sectionId: string, updates: { title?: string
 }
 
 export async function updateSectionVisibility(sectionId: string, isEnabled: boolean) {
+    if (!(await checkEditRights({ sectionId, actionType: 'update' }))) {
+        throw new Error('Unauthorized')
+    }
+
     const supabase = await createAdminClient()
 
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sectionId)
