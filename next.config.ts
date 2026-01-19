@@ -1,8 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig = {
-  serverActions: {
-    bodySizeLimit: '5mb',
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '5mb',
+    },
   },
 } as any;
 
