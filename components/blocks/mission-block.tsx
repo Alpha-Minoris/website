@@ -10,6 +10,33 @@ import { TextToolbar } from '@/components/editor/text-toolbar'
 import { EditableText } from '@/components/editor/editable-text'
 import { AddButton, DeleteButton } from '@/components/editor/editable-list-controls'
 import { EditableAsset } from '@/components/editor/editable-asset'
+import { MissionAnimation } from './mission-animation'
+
+interface Feature {
+    title: string
+    description: string
+    icon: string
+    asset?: {
+        type: 'icon' | 'image'
+        value: string
+        linkUrl?: string
+        isHidden?: boolean
+        color?: string
+        maskSettings?: any
+    }
+}
+
+interface MissionSettings {
+    title: string
+    description: string
+    features: Feature[]
+    visualText?: string
+    align?: 'left' | 'center' | 'right'
+    fontFamily?: string
+    fontSize?: string
+    color?: string
+    level?: 'div' | 'h1' | 'h2' | 'h3' | 'h4' | 'label' | 'p' | 'span'
+}
 
 export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
     const folder = sectionSlug || slug
@@ -18,7 +45,7 @@ export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
     const [activeToolbarPos, setActiveToolbarPos] = useState<{ top: number, left: number } | null>(null)
 
     // Default Data
-    const defaultData = {
+    const defaultData: MissionSettings = {
         title: 'We bridge the gap between <span class="text-accent">Human Strategy</span> and <span class="text-accent">AI Execution</span>.',
         description: 'Most businesses are drowning in manual tasks while AI tools sit unused. We don\'t just "install AI" — we architect intelligent workflows that free your team to focus on what matters.',
         features: [
@@ -37,7 +64,7 @@ export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
     }
 
     // Local state
-    const [localSettings, setLocalSettings] = useState<any>({ ...defaultData, ...settings })
+    const [localSettings, setLocalSettings] = useState<MissionSettings>({ ...defaultData, ...settings })
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
     // Sync from props
@@ -47,7 +74,7 @@ export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
         }
     }, [settings])
 
-    const saveSettings = useCallback((newSettings: any) => {
+    const saveSettings = useCallback((newSettings: MissionSettings) => {
         setLocalSettings(newSettings)
         updateBlock(id, { settings: newSettings })
 
@@ -65,7 +92,7 @@ export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
         saveSettings({ ...localSettings, [key]: value })
     }, [localSettings, saveSettings])
 
-    const handleFeatureChange = useCallback((index: number, updates: any) => {
+    const handleFeatureChange = useCallback((index: number, updates: Partial<Feature>) => {
         const features = [...(localSettings.features || [])]
         features[index] = { ...features[index], ...updates }
         saveSettings({ ...localSettings, features })
@@ -174,7 +201,7 @@ export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                         />
 
                         <div className="grid gap-4 pt-4">
-                            {localSettings.features?.map((feature: any, i: number) => (
+                            {localSettings.features?.map((feature: Feature, i: number) => (
                                 <div key={i} className="flex items-start gap-3 group relative">
                                     <EditableAsset
                                         type={feature.asset?.type || 'icon'}
@@ -235,27 +262,9 @@ export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                 {/* Right: Abstract Visual */}
                 <div className="relative">
                     <div className="absolute inset-0 bg-accent/20 blur-[100px] rounded-full opacity-20"></div>
-                    <div className="relative h-[500px] w-full bg-white/5 border border-white/10 backdrop-blur-3xl rounded-3xl flex items-center justify-center p-8">
-                        {/* Abstract Graphic */}
-                        <div className="relative w-full h-full border border-white/5 rounded-2xl overflow-hidden group">
-                            <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent,rgba(255,255,255,0.05))]"></div>
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-accent/30 rounded-full blur-3xl group-hover:bg-accent/40 transition-colors duration-700"></div>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <EditableText
-                                    value={localSettings.visualText}
-                                    onChange={(v) => handleTextChange('visualText', v)}
-                                    isEditMode={isEditMode}
-                                    onFocus={onTextFocus}
-                                    onBlur={onTextBlur}
-                                    className="text-6xl font-bold text-white/5 font-heading text-center"
-                                    style={{
-                                        fontFamily: localSettings.fontFamily,
-                                        fontSize: localSettings.fontSize,
-                                        color: localSettings.color
-                                    }}
-                                />
-                            </div>
-                        </div>
+                    <div className="relative h-[600px] w-full bg-white/5 border border-white/10 backdrop-blur-3xl rounded-3xl flex items-center justify-center overflow-hidden">
+                        {/* Abstract Animation */}
+                        <MissionAnimation />
                     </div>
                 </div>
             </div>
