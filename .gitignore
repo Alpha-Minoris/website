@@ -36,3 +36,9 @@ next-env.d.ts
 
 # User Samples
 Samples/
+
+# Agent and Internal
+.agent/
+__tests__/
+scripts/
+supabase/
