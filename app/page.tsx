@@ -3,8 +3,12 @@ import { BlockProps, BlockType } from '@/components/blocks/types'
 import { PageBuilder } from '@/components/editor/page-builder'
 import { Navbar } from '@/components/layout/navbar'
 import { checkEditRights } from '@/lib/auth-utils'
+import { getSections, getVersions } from '@/lib/cache/page-cache'
 
-export const revalidate = 0 // Disable caching for active editing
+// PERFORMANCE: Enable page-level caching for 1 hour
+// This caches the entire page render including all database calls
+// Much simpler than function-level caching and works with cookies()
+export const revalidate = 3600
 
 export default async function Home() {
   const canEdit = await checkEditRights({ actionType: 'update', path: '/' })
@@ -16,18 +20,18 @@ export default async function Home() {
   const user = await supabase.auth.getUser()
   const isAdmin = canEdit || user.data.user?.role === 'authenticated'
 
-  // 1. Fetch Sections
-  // usage of AdminClient in dev ensures we get ALL sections (ignoring RLS 'enabled only' for anon).
-  // usage of Client in prod ensures RLS enforces privacy.
-  let query = supabase
-    .from('website_sections')
-    .select('*')
-    .order('sort_order', { ascending: true })
-
-  const { data: sections, error } = await query
-  console.log(`[Page] User: ${!!user.data.user}, Sections fetched: ${sections?.length}`)
-  if (sections) {
-    console.log(`[Page] Section statuses:`, sections.map(s => `${s.slug}:${s.is_enabled}`))
+  // PERFORMANCE: Database calls are cached via page-level revalidate = 3600
+  let sections
+  let error
+  try {
+    sections = await getSections(canEdit)
+    console.log(`[Page] User: ${!!user.data.user}, Sections: ${sections?.length}`)
+    if (sections) {
+      console.log(`[Page] Section statuses:`, sections.map(s => `${s.slug}:${s.is_enabled}`))
+    }
+  } catch (e: any) {
+    error = e
+    console.error('Error fetching sections:', e)
   }
 
   if (error) {
@@ -39,23 +43,18 @@ export default async function Home() {
     )
   }
 
-  // 2. Fetch Published Versions
+  // 2. Fetch Published Versions (also cached at page level)
   if (!sections || sections.length === 0) {
     return (
       <main className="min-h-screen bg-transparent text-foreground selection:bg-accent/30">
         <Navbar sections={[]} />
-        {/* <div className="p-10 text-center">No sections found.</div> */}
         <PageBuilder initialBlocks={[]} />
       </main>
     )
   }
 
   const sectionIds = sections.map(s => s.id)
-  const { data: versions } = await supabase
-    .from('website_section_versions')
-    .select('section_id, layout_json')
-    .eq('status', 'published')
-    .in('section_id', sectionIds)
+  const versions = await getVersions(sectionIds, canEdit)
 
   const versionMap = new Map()
   versions?.forEach(v => versionMap.set(v.section_id, v))

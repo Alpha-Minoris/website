@@ -79,7 +79,7 @@ export async function submitLead(prevState: FormState, formData: FormData): Prom
             { firstName, lastName, jobTitle, email, company, message },
             {
                 from: process.env.SMTP_ALIAS || process.env.SMTP_USER || 'contact-form@alpha-minoris.ai',
-                to: process.env.SMTP_ALERT_USER || 'farbodnezami@gmail.com'
+                to: process.env.SMTP_ALERT_USER || 'fnosratnezami@gmail.com'
             }
         )
     } catch (emailError) {
