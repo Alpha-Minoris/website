@@ -3,9 +3,8 @@ import { PageBuilder } from '@/components/editor/page-builder'
 import { Navbar } from '@/components/layout/navbar'
 import { getSections, getVersions } from '@/lib/cache/page-cache'
 
-// PERFORMANCE: Enable page-level caching for 1 hour
-// Production: Edit mode disabled → fully cacheable
-// Localhost: Edit mode enabled → dynamic (no caching needed for dev)
+// PERFORMANCE: Force static generation and enable caching
+export const dynamic = 'force-static'
 export const revalidate = 3600
 
 export default async function Home() {
