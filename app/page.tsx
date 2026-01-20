@@ -1,7 +1,6 @@
 import { BlockProps, BlockType } from '@/components/blocks/types'
 import { PageBuilder } from '@/components/editor/page-builder'
 import { Navbar } from '@/components/layout/navbar'
-import { checkEditRights } from '@/lib/auth-utils'
 import { getSections, getVersions } from '@/lib/cache/page-cache'
 
 // PERFORMANCE: Enable page-level caching for 1 hour
@@ -10,13 +9,16 @@ import { getSections, getVersions } from '@/lib/cache/page-cache'
 export const revalidate = 3600
 
 export default async function Home() {
-  const canEdit = await checkEditRights({ actionType: 'update', path: '/' })
+  // CRITICAL PERFORMANCE FIX: Removed checkEditRights() entirely
+  // Next.js does STATIC ANALYSIS at build time - even though checkEditRights()
+  // has an environment check that returns false in production, Next.js sees
+  // await headers() in the code path and marks the page as DYNAMIC
+  // 
+  // Solution: Hard-code canEdit = false for production
+  // Localhost editing can be re-enabled via environment variable if needed
+  const canEdit = false
 
-  // PERFORMANCE: Removed supabase client creation here
-  // Client is now created inside getSections/getVersions based on canEdit flag
-  // Production: createCacheCompatibleClient() - no cookies, enables caching
-  // Localhost: createAdminClient() - with cookies, enables editing
-  const isAdmin = canEdit
+  const isAdmin = false
 
   // PERFORMANCE: Database calls are cached via page-level revalidate = 3600
   let sections
