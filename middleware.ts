@@ -47,41 +47,14 @@ import type { NextRequest } from 'next/server'
 export function middleware(request: NextRequest) {
     const response = NextResponse.next()
 
-    // ========================================================================
-    // CURRENT IMPLEMENTATION (localhost only, no real auth)
-    // ========================================================================
-    // This section will be replaced by session-based auth below
+    // Localhost auto-redirect to editing mode
+    const host = request.headers.get('host') || ''
+    const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1')
 
-    // For now, rely on auth-utils.ts to check localhost
-    // No middleware action needed - all handled in page.tsx
-
-    // ========================================================================
-    // FUTURE IMPLEMENTATION (session-based auth)
-    // ========================================================================
-    // Uncomment when implementing authentication:
-
-    /*
-    // AUTH: Check for authentication session
-    const authSession = request.cookies.get('sb-auth-token')
-    
-    // If user is authenticated (has valid session):
-    if (authSession) {
-        // AUTH: Verify session with Supabase
-        // const supabase = createMiddlewareClient({ req: request, res: response })
-        // const { data: { session } } = await supabase.auth.getSession()
-        
-        // if (session) {
-        //     // User is authenticated - bypass cache for personalized experience
-        //     response.headers.set('x-middleware-cache', 'no-cache')
-        //     response.headers.set('Cache-Control', 'private, no-cache, no-store, max-age=0, must-revalidate')
-        //     
-        //     // OPTIONAL: Rewrite to admin-specific route for better separation
-        //     // return NextResponse.rewrite(new URL('/admin-view', request.url))
-        // }
+    if (isLocalhost && request.nextUrl.pathname === '/') {
+        return NextResponse.redirect(new URL('/edit', request.url))
     }
-    */
 
-    // For public users (no session), allow normal caching
     return response
 }
 
@@ -92,14 +65,5 @@ export function middleware(request: NextRequest) {
  * Apply middleware to all routes except static files and API routes
  */
 export const config = {
-    matcher: [
-        /*
-         * Match all request paths except for the ones starting with:
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico (favicon file)
-         * - api (API routes)
-         */
-        '/((?!_next/static|_next/image|favicon.ico|api).*)',
-    ],
+    matcher: '/',
 }

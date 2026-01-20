@@ -3,19 +3,14 @@ import { PageBuilder } from '@/components/editor/page-builder'
 import { Navbar } from '@/components/layout/navbar'
 import { getSections, getVersions } from '@/lib/cache/page-cache'
 
-// PERFORMANCE: Force static generation for production caching
-// For localhost editing: temporarily comment out the line below, restart dev server
+// PUBLIC ROUTE: Fully static for production caching
+// Editing happens at /edit route
 export const dynamic = 'force-static'
 export const revalidate = 3600
 
 export default async function Home() {
-  // PERFORMANCE FIX: Use environment variable instead of checkEditRights()
-  // - Development (NODE_ENV !== 'production'): canEdit = true for editing
-  // - Production (NODE_ENV === 'production'): canEdit = false for caching
-  // This avoids calling any function with headers() in its call graph
-  const isDev = process.env.NODE_ENV !== 'production'
-  const canEdit = isDev
-  const isAdmin = isDev
+  // Public page: Always render without editing
+  const canEdit = false
 
   // PERFORMANCE: Database calls are cached via page-level revalidate = 3600
   let sections
