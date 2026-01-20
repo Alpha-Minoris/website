@@ -66,22 +66,27 @@ const FRAGMENT_SHADER = `
         return h * 0.5 + 0.5;
     }
 
-    // Domain warping to create "silk folds"
-    float silkCurtain(vec2 p, float time, float offset, float dir) {
+    // Domain warping to create "silk folds" with flag-wave propagation
+    float silkCurtain(vec2 p, float time, float offset, float dir, float globalWave) {
         // Broad S-curve warping - Pronounced movement
         float warpScale = 1.0 + (1.0 - v_uv.y) * 1.5;
-        float warp = fbm(p * 0.22 + time * 0.22 + offset);
-        p.x += (warp - 0.5) * 1.8 * warpScale * dir;
         
-        // ribbon base - Extremely Broadened for high visibility
+        // Unified flag-wave propagation + subtle unique noise
+        float wave = globalWave * 0.15 * warpScale;
+        float warp = fbm(p * 0.22 + time * 0.2 + offset);
+        
+        p.x += (warp - 0.5) * 1.2 * warpScale * dir;
+        p.x += wave * dir; // Propagate the global flag wave
+        
+        // ribbon base - Extremely Broadened
         float d = abs(p.x - 1.0); 
         float ribbon = exp(-d * 1.0);
         
-        // Vertical Striations (Subtle but visible hair-like textures)
-        float rays = sin(p.x * 8.0 + warp * 10.0 + time * 0.3);
+        // Vertical Striations
+        float rays = sin(p.x * 8.0 + (warp + wave) * 10.0 + time * 0.3);
         rays = smoothstep(0.2, 0.9, 0.5 + 0.5 * rays);
         
-        // Height Profile (The rising curtain)
+        // Height Profile
         float h = smoothstep(0.0, 0.1, v_uv.y) * (1.0 - smoothstep(0.75, 1.0, v_uv.y));
         
         return ribbon * (0.4 + rays * 0.6) * h;
@@ -97,18 +102,26 @@ const FRAGMENT_SHADER = `
         float centerX = aspect * 0.5;
         p.x = (p.x - centerX) * (1.0 + uv.y * 2.0) + centerX;
 
-        // 1. Base Night Sky (Deep Dark Satin)
+        // 1. Base Night Sky
         vec3 col = vec3(0.0005, 0.0008, 0.0016);
         col = mix(col * 0.2, col, uv.y);
 
-        // 2. Dual Warped Silk Ribbons (Asymmetric Purple Flow)
+        // 2. Dual Warped Silk Ribbons (Asymmetric Flag-Wave)
         vec3 auroraAccum = vec3(0.0);
         
         for (int i = 0; i < 2; i++) {
             float dir = (i == 0) ? 1.0 : -1.0;
             
-            // Asymmetry: Unique time and X-offset per set
-            float setTime = u_time * u_speed * (0.22 + float(i) * 0.05);
+            // Shared Wave Physics: Propagation outward from center
+            float distFromCenter = p.x - centerX;
+            float absDist = abs(distFromCenter);
+            
+            // Ultra-Slow and elegant base time
+            float setTime = u_time * u_speed * 0.18;
+            
+            // Further decelerated horizontal propagation wave logic
+            float globalWave = sin(absDist * 3.0 - setTime * 2.5 + float(i) * 1.5);
+            
             float asymShift = float(i) * 0.4;
             
             for (int j = 0; j < 2; j++) {
@@ -116,14 +129,13 @@ const FRAGMENT_SHADER = `
                 float offset = idx * 6.0 + (i == 1 ? 19.5 : 0.0);
                 
                 vec2 pCurtain = p;
-                // Break perfect mirroring with unique shift and scale
                 if (i == 1) {
                     pCurtain.x = centerX - (pCurtain.x - centerX) * 0.95 + asymShift;
                 }
                 
-                float intens = silkCurtain(pCurtain, setTime, offset, dir);
+                float intens = silkCurtain(pCurtain, setTime, offset, dir, globalWave);
                 
-                // Color Mapping - Restoring Purple/Accent Dominance
+                // Color Mapping
                 vec3 c1 = u_colors[0]; // Teal/Green
                 vec3 c2 = u_colors[1]; // Purple/Accent
                 
@@ -132,8 +144,7 @@ const FRAGMENT_SHADER = `
             }
         }
 
-        // 3. Post-Process & Atmosphere (Full-Height Presence)
-        // Light is "less intense" toward the bottom but still present (0.15 baseline)
+        // 3. Post-Process & Atmosphere
         float verticalFade = 0.15 + 0.85 * smoothstep(0.0, 0.8, uv.y); 
         auroraAccum *= verticalFade;
         
@@ -144,7 +155,7 @@ const FRAGMENT_SHADER = `
         col += auroraAccum;
         col += auroraAccum * glow;
 
-        // Final Edge Mask (Clean top/bottom edges)
+        // Final Masking
         float mask = smoothstep(0.0, 0.01, uv.y) * (1.0 - smoothstep(0.98, 1.0, uv.y));
         col *= mask;
         
