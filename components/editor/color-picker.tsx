@@ -80,12 +80,11 @@ export function ColorPicker({ value, onChange, type = 'text', customPresets }: C
 
     // Update gradient config when value changes (to sync with selected text)
     React.useEffect(() => {
-        console.log('[ColorPicker] value prop:', value)
         if (value?.includes('gradient')) {
             const parsed = cssToGradient(value)
-            console.log('[ColorPicker] parsed gradient:', parsed)
             if (parsed) {
                 setGradientConfig(parsed)
+                setMode('gradient') // Auto-switch to gradient tab
             }
         }
     }, [value])

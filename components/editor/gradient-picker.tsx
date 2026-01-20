@@ -40,8 +40,7 @@ export function GradientPicker({ value, onChange, className }: GradientPickerPro
     }, [value, onChange])
 
     const handleAddStop = useCallback(() => {
-        if (value.stops.length >= 3) return
-
+        // Allow unlimited stops
         const newStop: ColorStop = { color: '#ffffff', position: 50 }
         const newStops = [...value.stops, newStop].sort((a, b) => a.position - b.position)
         onChange({ ...value, stops: newStops })
@@ -49,6 +48,14 @@ export function GradientPicker({ value, onChange, className }: GradientPickerPro
 
     const handleAngleChange = useCallback((angle: number) => {
         onChange({ ...value, angle })
+    }, [value, onChange])
+
+    const handleDeleteStop = useCallback((index: number) => {
+        // Prevent deleting if only 2 stops left (minimum for gradient)
+        if (value.stops.length <= 2) return
+
+        const newStops = value.stops.filter((_, i) => i !== index)
+        onChange({ ...value, stops: newStops })
     }, [value, onChange])
 
     // Drag handlers
@@ -62,12 +69,12 @@ export function GradientPicker({ value, onChange, className }: GradientPickerPro
     }, [])
 
     const handleStopClick = useCallback((index: number, e: React.MouseEvent) => {
-        // Open color picker on click (if not dragging)
-        if (draggingStop === null && (e.target as HTMLElement).tagName !== 'INPUT') {
+        // Open color picker on double-click only
+        if (e.detail === 2 && (e.target as HTMLElement).tagName !== 'INPUT') {
             e.stopPropagation()
             colorInputRefs.current[index]?.click()
         }
-    }, [draggingStop])
+    }, [])
 
     const handleMouseMove = useCallback((e: MouseEvent) => {
         if (draggingStop === null || !barRef.current) return
@@ -148,12 +155,13 @@ export function GradientPicker({ value, onChange, className }: GradientPickerPro
             >
                 {value.stops.map((stop, index) => (
                     <div
-                        key={index}
+                        key={`${stop.color}-${stop.position}-${index}`}
                         className="absolute"
                         style={{
-                            left: `calc(${stop.position}% - 10px)`,
+                            left: `calc(${stop.position}% - 12px)`,
                             top: '50%',
-                            transform: 'translateY(-50%)'
+                            transform: 'translateY(-50%)',
+                            zIndex: draggingStop === index ? 10 : 1
                         }}
                     >
                         {/* Hidden color input */}
@@ -167,13 +175,18 @@ export function GradientPicker({ value, onChange, className }: GradientPickerPro
                         {/* Visible handle */}
                         <button
                             className={cn(
-                                "w-5 h-5 rounded-full border-2 transition-all hover:scale-110",
+                                "w-6 h-6 rounded-full border-2 transition-all hover:scale-110",
                                 "border-white/80 shadow-lg",
                                 draggingStop === index ? "scale-125 cursor-grabbing" : "cursor-pointer"
                             )}
                             style={{ backgroundColor: stop.color }}
                             onMouseDown={(e) => handleStopMouseDown(index, e)}
                             onClick={(e) => handleStopClick(index, e)}
+                            onContextMenu={(e) => {
+                                e.preventDefault()
+                                handleDeleteStop(index)
+                            }}
+                            title="Double-click for color • Drag to move • Right-click to delete"
                         />
                     </div>
                 ))}
@@ -181,16 +194,15 @@ export function GradientPicker({ value, onChange, className }: GradientPickerPro
 
             {/* Add Stop Button */}
             <div className="flex items-center justify-between px-1">
-                <Label className="text-[10px] text-zinc-500">Drag to position • Click for color</Label>
+                <Label className="text-[10px] text-zinc-500">Stops: {value.stops.length}</Label>
                 <Button
                     size="sm"
                     variant="ghost"
                     onClick={handleAddStop}
-                    disabled={value.stops.length >= 3}
                     className="h-6 px-2 text-[10px]"
                 >
                     <Plus className="w-3 h-3 mr-1" />
-                    Add ({value.stops.length}/3)
+                    Add Stop
                 </Button>
             </div>
 

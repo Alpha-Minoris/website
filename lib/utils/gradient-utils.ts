@@ -98,14 +98,15 @@ export function cssToGradient(cssString: string): GradientConfig | null {
             const anglePart = parts[0]
             const angle = parseInt(anglePart) || 180
 
-            const stops: ColorStop[] = parts.slice(1).map(stopStr => {
+            const stops: ColorStop[] = parts.slice(1).map((stopStr) => {
                 const colorMatch = stopStr.match(/(rgba?\([^)]+\)|#[a-fA-F0-9]{3,6})/)
-                const posMatch = stopStr.match(/(\d+)%/)
+                // FIX: Support decimal percentages like 78.57%
+                const posMatch = stopStr.match(/(\d+(?:\.\d+)?)%/)
 
                 if (colorMatch && posMatch) {
                     return {
                         color: rgbToHex(colorMatch[1]),
-                        position: parseInt(posMatch[1])
+                        position: parseFloat(posMatch[1])
                     }
                 }
 
@@ -125,12 +126,13 @@ export function cssToGradient(cssString: string): GradientConfig | null {
             const stopStart = shapeAndPos.includes('at') ? 1 : 1
             const stops: ColorStop[] = parts.slice(stopStart).map(stopStr => {
                 const colorMatch = stopStr.match(/(rgba?\([^)]+\)|#[a-fA-F0-9]{3,6})/)
-                const posMatch = stopStr.match(/(\d+)%/)
+                // FIX: Support decimal percentages like 78.57%
+                const posMatch = stopStr.match(/(\d+(?:\.\d+)?)%/)
 
                 if (colorMatch && posMatch) {
                     return {
                         color: rgbToHex(colorMatch[1]),
-                        position: parseInt(posMatch[1])
+                        position: parseFloat(posMatch[1])
                     }
                 }
 

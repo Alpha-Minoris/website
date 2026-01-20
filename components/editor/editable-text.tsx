@@ -118,6 +118,17 @@ export const EditableText = memo(({
         />
     )
 }, (prev, next) => {
+    // Deep compare style objects properly
+    const styleEqual = !prev.style && !next.style ? true :
+        prev.style && next.style ?
+            Object.keys(prev.style).length === Object.keys(next.style).length &&
+            Object.keys(prev.style).every(key => {
+                const prevVal = prev.style![key as keyof React.CSSProperties]
+                const nextVal = next.style![key as keyof React.CSSProperties]
+                return prevVal === nextVal
+            })
+            : false
+
     return (
         prev.isEditMode === next.isEditMode &&
         prev.className === next.className &&
@@ -126,7 +137,7 @@ export const EditableText = memo(({
         prev.placeholder === next.placeholder &&
         prev.align === next.align &&
         prev.color === next.color &&
-        JSON.stringify(prev.style) === JSON.stringify(next.style)
+        styleEqual
     )
 })
 
