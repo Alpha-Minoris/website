@@ -81,11 +81,11 @@ export function TestimonialsBlock({ id, settings }: BlockProps) {
         fetchTestimonials()
     }, [])
 
-    if (loading) return <div className="py-24 bg-black text-white/50 text-center">Loading testimonials...</div>
+    if (loading) return <div className="py-24 bg-transparent text-white/50 text-center">Loading testimonials...</div>
     if (testimonials.length === 0) return null
 
     return (
-        <section id={id} ref={sectionRef} className="py-24 bg-black relative overflow-hidden">
+        <section id={id} ref={sectionRef} className="py-24 bg-transparent relative overflow-hidden">
             {/* Local Toolbar */}
             {isEditMode && activeToolbarPos && (
                 <div
@@ -97,8 +97,7 @@ export function TestimonialsBlock({ id, settings }: BlockProps) {
                 </div>
             )}
 
-            {/* Background Gradients */}
-            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(12,117,154,0.1),transparent_70%)] pointer-events-none"></div>
+            {/* No local background - seamless with global DynamicBackground */}
 
             <div className="container mx-auto px-4">
                 <div className="text-center mb-16 relative">

@@ -76,7 +76,7 @@ export function Navbar({ sections }: NavbarProps) {
     return (
         <header className="fixed top-0 left-0 right-0 z-50 px-4 py-4 pointer-events-none">
             <div className="container mx-auto">
-                <nav className="bg-black/40 backdrop-blur-3xl backdrop-saturate-150 border border-white/[0.08] rounded-full px-6 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex items-center justify-between pointer-events-auto transition-all duration-300">
+                <nav className="bg-white/[0.03] backdrop-blur-3xl backdrop-saturate-150 border border-white/[0.08] rounded-full px-6 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex items-center justify-between pointer-events-auto transition-all duration-300">
 
                     {/* Brand */}
                     <a

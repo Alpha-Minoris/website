@@ -42,7 +42,7 @@ export default async function Home() {
   // 2. Fetch Published Versions
   if (!sections || sections.length === 0) {
     return (
-      <main className="min-h-screen bg-background text-foreground selection:bg-accent/30">
+      <main className="min-h-screen bg-transparent text-foreground selection:bg-accent/30">
         <Navbar sections={[]} />
         {/* <div className="p-10 text-center">No sections found.</div> */}
         <PageBuilder initialBlocks={[]} />
@@ -104,7 +104,7 @@ export default async function Home() {
   })
 
   return (
-    <main className="min-h-screen bg-background text-foreground selection:bg-accent/30">
+    <main className="min-h-screen bg-transparent text-foreground selection:bg-accent/30">
       <Navbar sections={sections} />
       {/* 
         This is the new PageBuilder that handles Editor wrappers.

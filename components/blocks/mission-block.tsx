@@ -146,7 +146,7 @@ export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
             id={id}
             ref={sectionRef}
             onClickCapture={handleMissionClick}
-            className="py-24 bg-black relative overflow-hidden"
+            className="py-24 bg-transparent relative overflow-hidden"
         >
             {/* Local Toolbar */}
             {isEditMode && activeToolbarPos && (

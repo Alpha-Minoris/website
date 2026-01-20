@@ -27,11 +27,11 @@ export function CaseStudyGridBlock({ id, settings }: BlockProps) {
         fetchStudies()
     }, [])
 
-    if (loading) return <div className="py-24 bg-black text-white/50 text-center">Loading cases...</div>
+    if (loading) return <div className="py-24 bg-transparent text-white/50 text-center">Loading cases...</div>
     if (caseStudies.length === 0) return null
 
     return (
-        <section id={id} className="py-24 bg-black relative">
+        <section id={id} className="py-24 bg-transparent relative">
             <CaseStudyGridClient
                 id={id}
                 caseStudies={caseStudies}

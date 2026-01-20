@@ -142,24 +142,24 @@ export function CaseStudyGridClient({ id, caseStudies, settings, isEditMode }: C
                     <div
                         key={study.id}
                         onClick={() => handleSelect(study)}
-                        className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-white/10 bg-white/5 cursor-pointer"
+                        className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm hover:bg-white/8 hover:border-accent/50 transition-all duration-300 cursor-pointer"
                     >
-                        {/* Background Image Placeholder */}
+                        {/* Background gradient same as packages */}
                         <div className={cn(
-                            "absolute inset-0 opacity-50 group-hover:scale-105 transition-transform duration-700",
-                            study.layout_json?.image_color || 'bg-gray-800'
+                            "absolute inset-0 opacity-40 group-hover:scale-105 transition-transform duration-700",
+                            study.layout_json?.image_color || 'bg-gradient-to-br from-accent/20 to-purple-500/15'
                         )}></div>
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
 
-                        <div className="absolute inset-0 p-8 flex flex-col justify-end items-start space-y-4">
+                        <div className="absolute inset-0 p-6 flex flex-col justify-end items-start space-y-3">
                             <div className="flex gap-2 flex-wrap">
                                 {study.tags?.slice(0, 2).map(tag => (
-                                    <Badge key={tag} variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-none backdrop-blur-md">
+                                    <Badge key={tag} variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-none backdrop-blur-md text-xs">
                                         {tag}
                                     </Badge>
                                 ))}
                             </div>
-                            <h3 className="text-2xl font-bold text-white font-heading group-hover:text-accent transition-colors">
+                            <h3 className="text-xl font-bold text-white font-heading group-hover:text-accent transition-colors">
                                 {study.title}
                             </h3>
                         </div>

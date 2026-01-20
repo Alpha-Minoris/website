@@ -53,28 +53,9 @@ export function MissionAnimation() {
     }, [])
 
     return (
-        <div className="relative w-full h-[550px] flex flex-col items-center justify-between py-12 px-8 overflow-hidden bg-black/40">
-            {/* Ultra-Premium Background: Ethereal Gradients */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                <motion.div
-                    animate={{
-                        opacity: [0.1, 0.15, 0.1],
-                        scale: [1, 1.1, 1],
-                        rotate: [0, 90, 180],
-                    }}
-                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                    className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-accent/20 via-transparent to-transparent blur-[120px] rounded-full"
-                />
-                <motion.div
-                    animate={{
-                        opacity: [0.05, 0.1, 0.05],
-                        scale: [1.2, 1, 1.2],
-                        rotate: [180, 270, 360],
-                    }}
-                    transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-                    className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-purple-500/10 via-transparent to-transparent blur-[120px] rounded-full"
-                />
-            </div>
+        <div className="relative w-full min-h-[450px] md:min-h-[550px] flex flex-col items-center justify-between py-8 md:py-12 px-4 md:px-8 overflow-hidden bg-transparent">
+            {/* Subtle local depth - blends with global aurora */}
+            <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent via-black/5 to-transparent" />
 
             {/* Stage Indicators: The "Synaptic Bridge" */}
             <div className="relative w-full max-w-2xl px-4 mt-8">

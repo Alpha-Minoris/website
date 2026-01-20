@@ -113,7 +113,7 @@ export function FAQBlock({ id, settings, sectionSlug, slug }: BlockProps) {
     }, [isEditMode])
 
     return (
-        <section id={id} ref={sectionRef} onClickCapture={handleFAQClick} className="py-24 bg-black relative">
+        <section id={id} ref={sectionRef} onClickCapture={handleFAQClick} className="py-24 bg-transparent relative">
             {/* Local Toolbar */}
             {isEditMode && activeToolbarPos && (
                 <div

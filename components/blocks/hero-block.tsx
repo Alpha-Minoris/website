@@ -138,11 +138,10 @@ export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
         <section
             ref={sectionRef}
             onClickCapture={handleHeroClick}
-            className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black pt-20 pb-32"
+            className="relative min-h-screen flex items-center justify-center overflow-hidden bg-transparent pt-20 pb-32"
         >
-            {/* Background Noise & Gradient */}
-            <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-20 pointer-events-none"></div>
-            <div className="absolute inset-0 bg-gradient-to-b from-black via-transparent to-black pointer-events-none"></div>
+            {/* Background Gradient (Noise handled by DynamicBackground) */}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-transparent pointer-events-none"></div>
 
             {/* Flying Icons (Background) */}
             <LogoRibbon logos={localSettings.logos} />
@@ -216,27 +215,24 @@ export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                             "mx-auto"
                 )}>
                     {/* Eyebrow */}
-                    <div className={cn(
-                        "inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-accent uppercase tracking-widest font-bold",
+                    <span className={cn(
+                        "inline-flex items-center gap-2 h-7 px-3 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm",
                         localSettings.align === 'left' ? "mr-auto" :
                             localSettings.align === 'right' ? "ml-auto" :
                                 "mx-auto"
                     )}>
-                        <span className="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse shrink-0"></span>
                         <EditableText
-                            value={localSettings.eyebrow}
+                            value={typeof localSettings.eyebrow === 'string'
+                                ? localSettings.eyebrow.replace(/<[^>]*>/g, '')
+                                : 'AI Automation Agency'}
                             onChange={(v) => handleTextChange('eyebrow', v)}
                             isEditMode={isEditMode}
                             onFocus={onTextFocus}
                             onBlur={onTextBlur}
-                            className="bg-transparent"
-                            style={{
-                                fontFamily: localSettings.fontFamily,
-                                fontSize: localSettings.fontSize,
-                                color: localSettings.color
-                            }}
+                            className="bg-transparent text-[11px] text-accent uppercase tracking-wider font-medium"
                         />
-                    </div>
+                    </span>
 
                     {/* Title */}
                     <EditableText

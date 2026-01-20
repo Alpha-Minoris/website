@@ -178,7 +178,7 @@ export function PackagesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
     }, [isEditMode])
 
     return (
-        <section id={id} ref={sectionRef} onClickCapture={handlePackagesClick} className="py-24 bg-black relative">
+        <section id={id} ref={sectionRef} onClickCapture={handlePackagesClick} className="py-24 bg-transparent relative">
             {/* Local Toolbar */}
             {isEditMode && activeToolbarPos && (
                 <div

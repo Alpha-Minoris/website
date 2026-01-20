@@ -149,7 +149,7 @@ export function TeamBlock({ id, settings, sectionSlug, slug }: BlockProps) {
     const visibleMembersCount = localSettings.members?.filter((m: any) => !m.isHidden || isEditMode).length || 0
 
     return (
-        <section id={id} ref={sectionRef} onClickCapture={handleTeamClick} className="py-24 bg-black relative">
+        <section id={id} ref={sectionRef} onClickCapture={handleTeamClick} className="py-24 bg-transparent relative">
             {/* Local Toolbar */}
             {isEditMode && activeToolbarPos && (
                 <div
