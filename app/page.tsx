@@ -3,8 +3,9 @@ import { PageBuilder } from '@/components/editor/page-builder'
 import { Navbar } from '@/components/layout/navbar'
 import { getSections, getVersions } from '@/lib/cache/page-cache'
 
-// PERFORMANCE: Force static generation and enable caching
-export const dynamic = 'force-static'
+// PERFORMANCE: Force static generation in production only
+// Development needs dynamic rendering for editing
+export const dynamic = process.env.NODE_ENV === 'production' ? 'force-static' : 'force-dynamic'
 export const revalidate = 3600
 
 export default async function Home() {
