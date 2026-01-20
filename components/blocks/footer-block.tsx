@@ -182,7 +182,7 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
             id="footer-block-root"
             ref={footerRef}
             onClickCapture={handleFooterClick}
-            className="bg-transparent border-t border-white/10 pt-16 pb-8 text-sm text-muted-foreground relative z-10 w-full"
+            className="bg-black border-t border-white/10 pt-16 pb-8 text-sm text-muted-foreground relative z-10 w-full"
         >
             {/* Dynamic Local Toolbar */}
             {isEditMode && activeToolbarPos && (
