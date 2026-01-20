@@ -17,17 +17,18 @@ export default async function Home() {
   // Otherwise use standard Client which respects RLS (Public=Visible only)
   const supabase = canEdit ? await createAdminClient() : await createClient()
 
-  const user = await supabase.auth.getUser()
-  const isAdmin = canEdit || user.data.user?.role === 'authenticated'
+  // PERFORMANCE: Removed supabase.auth.getUser() call
+  // In production: canEdit = false, so isAdmin = false (enables caching)
+  // On localhost: canEdit = true, so isAdmin = true (enables editing)
+  const isAdmin = canEdit
 
   // PERFORMANCE: Database calls are cached via page-level revalidate = 3600
   let sections
   let error
   try {
     sections = await getSections(canEdit)
-    console.log(`[Page] User: ${!!user.data.user}, Sections: ${sections?.length}`)
     if (sections) {
-      console.log(`[Page] Section statuses:`, sections.map(s => `${s.slug}:${s.is_enabled}`))
+      console.log(`[Page] Loaded ${sections.length} sections, canEdit: ${canEdit}`)
     }
   } catch (e: any) {
     error = e
