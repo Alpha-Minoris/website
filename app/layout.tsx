@@ -5,7 +5,6 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
 import { EditorToggle } from "@/components/editor/editor-toggle";
 import { EditorSidebar } from "@/components/editor/editor-sidebar";
-import { checkEditRights } from "@/lib/auth-utils";
 import { DynamicBackground } from "@/components/layout/dynamic-background";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-body" });
@@ -21,7 +20,11 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const canEdit = await checkEditRights()
+  // PERFORMANCE FIX: Removed checkEditRights() call
+  // This was forcing EVERY page to dynamic rendering because layout is shared
+  // In production (process.env.NODE_ENV === 'production'), editor is never shown
+  // On localhost, editor components are client-side and can detect environment themselves
+  const canEdit = false  // Editor disabled in layout - pages handle their own auth
 
   return (
     <html lang="en" suppressHydrationWarning>
