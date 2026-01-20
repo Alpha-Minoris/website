@@ -3,10 +3,11 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const supabase = await createClient()
+        const { id } = await params
 
         const body = await request.json()
         const { name } = body
@@ -19,7 +20,7 @@ export async function PATCH(
         const { data: updatedPreset, error } = await supabase
             .from('website_color_presets')
             .update({ name, updated_at: new Date().toISOString() })
-            .eq('id', params.id)
+            .eq('id', id)
             .eq('is_default', false) // Can't update defaults
             .select()
             .single()
@@ -43,16 +44,17 @@ export async function PATCH(
 
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const supabase = await createClient()
+        const { id } = await params
 
         // Delete preset (can't delete system defaults)
         const { error } = await supabase
             .from('website_color_presets')
             .delete()
-            .eq('id', params.id)
+            .eq('id', id)
             .eq('is_default', false) // Can't delete defaults
 
         if (error) {
