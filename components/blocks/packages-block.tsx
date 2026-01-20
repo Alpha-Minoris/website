@@ -304,6 +304,7 @@ export function PackagesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                                         linkUrl={featObj.asset?.linkUrl}
                                                         isHidden={featObj.asset?.isHidden}
                                                         color={featObj.asset?.color}
+                                                        size={featObj.asset?.size}
                                                         maskSettings={featObj.asset?.maskSettings}
                                                         folder={folder}
                                                         className="w-5 h-5 shrink-0"

@@ -232,6 +232,7 @@ export function TeamBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                         onUpdate={(updates: any) => handleMemberChange(i, 'asset', { ...member.asset, ...updates })}
                                         isEditMode={isEditMode}
                                         color={member.asset?.color}
+                                        size={member.asset?.size}
                                         maskSettings={member.asset?.maskSettings}
                                         folder={folder}
                                         className="w-32 h-32 rounded-full"
@@ -294,6 +295,7 @@ export function TeamBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                                 linkUrl={social.url}
                                                 isHidden={social.isHidden}
                                                 color={social.color}
+                                                size={social.size}
                                                 folder={folder}
                                                 className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white transition-all shadow-lg"
                                                 iconClassName="w-4 h-4"

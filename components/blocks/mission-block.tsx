@@ -212,6 +212,7 @@ export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                         linkUrl={feature.asset?.linkUrl}
                                         isHidden={feature.asset?.isHidden}
                                         color={feature.asset?.color}
+                                        size={feature.asset?.size}
                                         maskSettings={feature.asset?.maskSettings}
                                         folder={folder}
                                         className="w-10 h-10 border-none shrink-0"

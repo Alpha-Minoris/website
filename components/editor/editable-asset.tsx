@@ -64,7 +64,10 @@ export function EditableAsset({
             {type === 'icon' ? (
                 <IconDisplay
                     name={value || 'user'}
-                    className={cn(iconClassName, !size && !iconClassName && "w-full h-full")}
+                    className={cn(
+                        !size && iconClassName,  // Only use iconClassName when size is not set
+                        !size && !iconClassName && "w-full h-full"  // Default fallback
+                    )}
                     color={color}
                     style={size ? { width: `${size}px`, height: `${size}px` } : undefined}
                 />

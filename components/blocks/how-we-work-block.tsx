@@ -188,6 +188,7 @@ export function HowWeWorkBlock({ id, settings, sectionSlug, slug }: BlockProps) 
                                             linkUrl={step.asset?.linkUrl}
                                             isHidden={step.asset?.isHidden}
                                             color={step.asset?.color}
+                                            size={step.asset?.size}
                                             maskSettings={step.asset?.maskSettings}
                                             folder={folder}
                                             className="w-8 h-8 rounded-lg bg-accent/10 border-none shrink-0"

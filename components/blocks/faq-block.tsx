@@ -169,6 +169,7 @@ export function FAQBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                         linkUrl={item.asset?.linkUrl}
                                         isHidden={item.asset?.isHidden}
                                         color={item.asset?.color}
+                                        size={item.asset?.size}
                                         maskSettings={item.asset?.maskSettings}
                                         folder={folder}
                                         className="w-6 h-6 rounded-lg bg-accent/5 border-none shrink-0"

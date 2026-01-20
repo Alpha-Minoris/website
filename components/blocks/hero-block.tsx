@@ -162,6 +162,7 @@ export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                     linkUrl={logo.asset.linkUrl}
                                     isHidden={logo.asset.isHidden}
                                     color={logo.asset.color}
+                                    size={logo.asset.size}
                                     maskSettings={logo.asset.maskSettings}
                                     folder={folder}
                                     className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 p-2"
@@ -315,6 +316,7 @@ export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                     linkUrl={item.asset?.linkUrl}
                                     isHidden={item.asset?.isHidden}
                                     color={item.asset?.color}
+                                    size={item.asset?.size}
                                     maskSettings={item.asset?.maskSettings}
                                     folder={folder}
                                     className="w-7 h-7 opacity-60 group-hover:opacity-100"
