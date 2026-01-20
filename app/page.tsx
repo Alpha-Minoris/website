@@ -9,16 +9,13 @@ import { getSections, getVersions } from '@/lib/cache/page-cache'
 export const revalidate = 3600
 
 export default async function Home() {
-  // CRITICAL PERFORMANCE FIX: Removed checkEditRights() entirely
-  // Next.js does STATIC ANALYSIS at build time - even though checkEditRights()
-  // has an environment check that returns false in production, Next.js sees
-  // await headers() in the code path and marks the page as DYNAMIC
-  // 
-  // Solution: Hard-code canEdit = false for production
-  // Localhost editing can be re-enabled via environment variable if needed
-  const canEdit = false
-
-  const isAdmin = false
+  // PERFORMANCE FIX: Use environment variable instead of checkEditRights()
+  // - Development (NODE_ENV !== 'production'): canEdit = true for editing
+  // - Production (NODE_ENV === 'production'): canEdit = false for caching
+  // This avoids calling any function with headers() in its call graph
+  const isDev = process.env.NODE_ENV !== 'production'
+  const canEdit = isDev
+  const isAdmin = isDev
 
   // PERFORMANCE: Database calls are cached via page-level revalidate = 3600
   let sections
