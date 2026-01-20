@@ -1,25 +1,22 @@
 /**
  * Cache utility for website sections
  * 
- * NOTE: We rely on page-level revalidation (revalidate = 3600 in app/page.tsx)
- * instead of function-level caching because Supabase client uses cookies()
- * which cannot be used inside unstable_cache()
+ * PUBLIC PAGE CACHE - No cookies, enables static generation
+ * For edit mode cache with cookies, see edit-cache.ts
  */
 
-import { createCacheCompatibleClient, createAdminClient } from '@/lib/supabase/server'
+import { createCacheCompatibleClient } from '@/lib/supabase/server'
 
 /**
- * Get sections from database
+ * Get sections from database (PUBLIC - no auth)
+ * Used by production public page (/)
  * Cached at page level via revalidate setting
  */
-export async function getSections(canEdit: boolean) {
+export async function getSections() {
     console.log('[Cache] Fetching sections from database...')
 
-    // Production: Use cache-compatible client (no cookies, enables caching)
-    // Localhost: Use admin client (with cookies, for editing)
-    const supabase = canEdit
-        ? await createAdminClient()           // Localhost: full access with cookies
-        : createCacheCompatibleClient()        // Production: no cookies!
+    // Always use cache-compatible client (no cookies!)
+    const supabase = createCacheCompatibleClient()
 
     const { data: sections, error } = await supabase
         .from('website_sections')
@@ -33,17 +30,15 @@ export async function getSections(canEdit: boolean) {
 }
 
 /**
- * Get section versions from database
+ * Get PUBLISHED section versions from database (PUBLIC - no auth)
+ * Used by production public page (/)
  * Cached at page level via revalidate setting
  */
-export async function getVersions(sectionIds: string[], canEdit: boolean) {
+export async function getVersions(sectionIds: string[]) {
     console.log('[Cache] Fetching versions from database...')
 
-    // Production: Use cache-compatible client (no cookies, enables caching)
-    // Localhost: Use admin client (with cookies, for editing)
-    const supabase = canEdit
-        ? await createAdminClient()           // Localhost: full access with cookies
-        : createCacheCompatibleClient()        // Production: no cookies!
+    // Always use cache-compatible client (no cookies!)
+    const supabase = createCacheCompatibleClient()
 
     const { data: versions } = await supabase
         .from('website_section_versions')

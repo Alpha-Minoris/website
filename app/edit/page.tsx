@@ -3,7 +3,7 @@ import { headers } from 'next/headers'
 import { BlockProps, BlockType } from '@/components/blocks/types'
 import { PageBuilder } from '@/components/editor/page-builder'
 import { Navbar } from '@/components/layout/navbar'
-import { getSections, getVersions } from '@/lib/cache/page-cache'
+import { getSections, getDraftVersions } from '@/lib/cache/edit-cache'
 import { EditorToggle } from '@/components/editor/editor-toggle'
 import { EditorSidebar } from '@/components/editor/editor-sidebar'
 
@@ -34,13 +34,10 @@ export default async function EditPage() {
         redirect('/')
     }
 
-    // Authenticated: Enable editing
-    const canEdit = true
-
     let sections
     let error
     try {
-        sections = await getSections(canEdit)
+        sections = await getSections()
     } catch (e: any) {
         error = e
         console.error('Error fetching sections:', e)
@@ -66,7 +63,9 @@ export default async function EditPage() {
     }
 
     const sectionIds = sections.map(s => s.id)
-    const versions = await getVersions(sectionIds, canEdit)
+
+    // Load DRAFT versions in edit mode (editor sees drafts, not published)
+    const versions = await getDraftVersions(sectionIds)
 
     const versionMap = new Map()
     versions?.forEach(v => versionMap.set(v.section_id, v))

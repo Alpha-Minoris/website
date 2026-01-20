@@ -1,6 +1,6 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+// NOTE: cookies imported dynamically inside functions to prevent forcing dynamic rendering
 
 /**
  * CACHE-COMPATIBLE CLIENT (Production, Public)
@@ -32,6 +32,7 @@ export function createCacheCompatibleClient() {
 
 
 export async function createClient() {
+    const { cookies } = await import('next/headers')
     const cookieStore = await cookies()
 
     return createServerClient(
@@ -59,6 +60,7 @@ export async function createClient() {
 }
 
 export async function createAdminClient() {
+    const { cookies } = await import('next/headers')
     const cookieStore = await cookies()
 
     return createServerClient(

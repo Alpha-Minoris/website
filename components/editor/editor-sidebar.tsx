@@ -19,11 +19,43 @@ import {
 
 import { useRouter } from 'next/navigation'
 
+import { publishChangesAction, getUnpublishedCountAction } from '@/actions/publish-actions'
+import { Upload } from 'lucide-react'
+
 export function EditorSidebar() {
     const { isEditMode, selectedBlockId, setSelectedBlockId, addBlock, blocks } = useEditorStore()
     const router = useRouter()
     const [activeTab, setActiveTab] = useState<'components' | 'layers' | 'settings' | 'theme' | null>(null)
+    const [unpublishedCount, setUnpublishedCount] = useState(0)
+    const [isPublishing, setIsPublishing] = useState(false)
     const islandRef = useRef<HTMLDivElement>(null)
+
+    // Check for unpublished changes on mount and when edit mode toggles
+    useEffect(() => {
+        if (isEditMode) {
+            getUnpublishedCountAction().then(setUnpublishedCount)
+        }
+    }, [isEditMode, blocks]) // Re-check when blocks change
+
+    const handlePublish = async () => {
+        if (isPublishing) return
+        setIsPublishing(true)
+
+        try {
+            const result = await publishChangesAction()
+            if (result.success) {
+                setUnpublishedCount(0)
+                router.refresh() // Reload to show published state
+            } else {
+                alert(`Publish failed: ${result.error}`)
+            }
+        } catch (err) {
+            console.error('Publish error:', err)
+            alert('Publish failed. Check console.')
+        } finally {
+            setIsPublishing(false)
+        }
+    }
 
     // Close when clicking outside
     useEffect(() => {
@@ -157,8 +189,36 @@ export function EditorSidebar() {
             {/* Main Interactive Island */}
             <Card className="p-1.5 px-3 bg-zinc-950/90 border-white/10 backdrop-blur-xl shadow-2xl flex flex-row items-center gap-2 rounded-full ring-1 ring-white/10">
 
-                {/* Brand / Home */}
-                <div className="w-2 h-2 rounded-full bg-emerald-500 mx-1" />
+                {/* Publish Button + Status Indicator */}
+                <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={unpublishedCount === 0 || isPublishing}
+                                onClick={handlePublish}
+                                className={cn(
+                                    "rounded-full px-3 h-8 text-xs gap-1.5 transition-all",
+                                    unpublishedCount > 0
+                                        ? "bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/30 hover:text-yellow-200"
+                                        : "bg-emerald-500/30 text-emerald-200 cursor-default"
+                                )}
+                            >
+                                <div className={cn(
+                                    "w-2 h-2 rounded-full",
+                                    unpublishedCount > 0 ? "bg-yellow-500" : "bg-emerald-400"
+                                )} />
+                                {isPublishing ? 'Publishing...' : unpublishedCount > 0 ? 'Publish' : 'Published'}
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="bg-zinc-900 border-white/10 text-xs">
+                            {unpublishedCount > 0
+                                ? `${unpublishedCount} unpublished section${unpublishedCount > 1 ? 's' : ''}`
+                                : 'All changes published'}
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
 
                 <Separator orientation="vertical" className="h-4 bg-white/10" />
 

@@ -2,6 +2,7 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { getOrCreateDraftVersion } from '@/lib/staging/staging-utils'
 
 // Update a block (can be nested deeply).
 // For recursive updates, we need to traverse the JSON.
@@ -43,33 +44,25 @@ export async function updateBlock(blockId: string, updates: any) {
             throw new Error("Section has no published version")
         }
 
-        // Direct Section Update
-        const { data: version, error: versionFetchError } = await supabase
-            .from('website_section_versions')
-            .select('layout_json')
-            .eq('id', sectionRow.published_version_id)
-            .single()
+        // Get or create draft version for this section
+        const draftVersion = await getOrCreateDraftVersion(sectionRow.id)
+        console.log(`[updateBlock] Using draft version ${draftVersion.id}`)
 
-        if (versionFetchError) {
-            console.error(`[updateBlock] Error fetching version ${sectionRow.published_version_id}:`, versionFetchError)
-            throw versionFetchError
-        }
-
-        const currentLayout = version?.layout_json || {}
+        const currentLayout = draftVersion.layout_json || {}
         const newLayout = { ...currentLayout, ...updates }
 
         const { error: updateError } = await supabase
             .from('website_section_versions')
             .update({ layout_json: newLayout })
-            .eq('id', sectionRow.published_version_id)
+            .eq('id', draftVersion.id)
 
         if (updateError) {
-            console.error(`[updateBlock] Error updating version ${sectionRow.published_version_id}:`, updateError)
+            console.error(`[updateBlock] Error updating draft version ${draftVersion.id}:`, updateError)
             throw updateError
         }
 
-        console.log(`[updateBlock] Success: Direct section update for ${blockId}`)
-        revalidatePath('/')
+        console.log(`[updateBlock] Success: Updated draft version ${draftVersion.id}`)
+        // NO revalidatePath here - only on publish!
         return { success: true }
     }
 
@@ -160,7 +153,7 @@ export async function addChildBlock(parentId: string, newBlock: any, targetField
     const { data: allVersions, error: fetchError } = await supabase
         .from('website_section_versions')
         .select('id, section_id, layout_json')
-        .eq('status', 'published')
+        .eq('status', 'draft')
 
     if (fetchError) {
         console.error(`[addChildBlock] Error fetching versions:`, fetchError)
@@ -197,7 +190,7 @@ export async function addChildBlock(parentId: string, newBlock: any, targetField
     }
 
     if (!targetVersion) {
-        console.error(`[addChildBlock] Target container ${parentId} not found in any published section.`)
+        console.error(`[addChildBlock] Target container ${parentId} not found in any draft section.`)
         throw new Error("Target container not found")
     }
 
@@ -248,7 +241,9 @@ export async function addChildBlock(parentId: string, newBlock: any, targetField
         .eq('id', targetVersion.id)
 
     if (error) throw error
-    revalidatePath('/')
+
+    console.log(`[addChildBlock] Success: Added to draft version ${targetVersion.id}`)
+    // NO revalidatePath - only on publish!
     return { success: true }
 }
 
@@ -265,7 +260,7 @@ export async function updateBlockContent(sectionId: string, blockId: string, upd
     const isUuid = UUID_REGEX.test(sectionId)
     console.log(`[updateBlockContent] isUuid(sectionId)=${isUuid}`)
 
-    let query = supabase.from('website_sections').select('published_version_id, slug')
+    let query = supabase.from('website_sections').select('id, published_version_id, slug')
     if (isUuid) {
         query = query.eq('id', sectionId)
     } else {
@@ -284,20 +279,13 @@ export async function updateBlockContent(sectionId: string, blockId: string, upd
         throw new Error("Section or version not found")
     }
 
-    console.log(`[updateBlockContent] Using version ${sectionRow.published_version_id} for section ${sectionRow.slug}`)
+    console.log(`[updateBlockContent] Using section ${sectionRow.slug}`)
 
-    const { data: version, error: versionError } = await supabase
-        .from('website_section_versions')
-        .select('layout_json')
-        .eq('id', sectionRow.published_version_id)
-        .single()
+    // Get or create draft version
+    const draftVersion = await getOrCreateDraftVersion(sectionRow.id)
+    console.log(`[updateBlockContent] Using draft version ${draftVersion.id}`)
 
-    if (versionError) {
-        console.error(`[updateBlockContent] Error fetching version ${sectionRow.published_version_id}:`, versionError)
-        throw versionError
-    }
-
-    const currentLayout = version?.layout_json || {}
+    const currentLayout = draftVersion.layout_json || {}
     const content = Array.isArray(currentLayout.content) ? currentLayout.content : []
 
     // 2. Recursive Update Helper
@@ -348,11 +336,12 @@ export async function updateBlockContent(sectionId: string, blockId: string, upd
     const { error } = await supabase
         .from('website_section_versions')
         .update({ layout_json: newLayout })
-        .eq('id', sectionRow.published_version_id)
+        .eq('id', draftVersion.id)
 
     if (error) throw error
 
-    revalidatePath('/')
+    console.log(`[updateBlockContent] Success: Updated draft version ${draftVersion.id}`)
+    // NO revalidatePath - only on publish!
     return { success: true }
 }
 
@@ -367,7 +356,7 @@ export async function deleteChildBlock(sectionId: string, blockId: string) {
 
     const isUuid = UUID_REGEX.test(sectionId)
 
-    let query = supabase.from('website_sections').select('published_version_id, slug')
+    let query = supabase.from('website_sections').select('id, published_version_id, slug')
     if (isUuid) {
         query = query.eq('id', sectionId)
     } else {
@@ -386,20 +375,13 @@ export async function deleteChildBlock(sectionId: string, blockId: string) {
         throw new Error("Section version not found")
     }
 
-    console.log(`[deleteChildBlock] Updating version ${sectionRow.published_version_id} for section ${sectionRow.slug}`)
+    console.log(`[deleteChildBlock] Updating section ${sectionRow.slug}`)
 
-    const { data: version, error: versionError } = await supabase
-        .from('website_section_versions')
-        .select('layout_json')
-        .eq('id', sectionRow.published_version_id)
-        .single()
+    // Get or create draft version
+    const draftVersion = await getOrCreateDraftVersion(sectionRow.id)
+    console.log(`[deleteChildBlock] Using draft version ${draftVersion.id}`)
 
-    if (versionError) {
-        console.error(`[deleteChildBlock] Error fetching version ${sectionRow.published_version_id}:`, versionError)
-        throw versionError
-    }
-
-    const currentLayout = version?.layout_json || {}
+    const currentLayout = draftVersion.layout_json || {}
     const content = Array.isArray(currentLayout.content) ? currentLayout.content : []
 
     const newContent = content.filter((b: any) => b.id !== blockId)
@@ -412,10 +394,11 @@ export async function deleteChildBlock(sectionId: string, blockId: string) {
     const { error } = await supabase
         .from('website_section_versions')
         .update({ layout_json: newLayout })
-        .eq('id', sectionRow.published_version_id)
+        .eq('id', draftVersion.id)
 
     if (error) throw error
 
-    revalidatePath('/')
+    console.log(`[deleteChildBlock] Success: Updated draft version ${draftVersion.id}`)
+    // NO revalidatePath - only on publish!
     return { success: true }
 }

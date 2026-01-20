@@ -3,22 +3,21 @@ import { PageBuilder } from '@/components/editor/page-builder'
 import { Navbar } from '@/components/layout/navbar'
 import { getSections, getVersions } from '@/lib/cache/page-cache'
 
-// PUBLIC ROUTE: Fully static for production caching
+// PUBLIC ROUTE: ISR with on-demand revalidation
+// Static generation with 1-hour cache, invalidated on publish
 // Editing happens at /edit route
-export const dynamic = 'force-static'
-export const revalidate = 3600
+export const revalidate = 3600 // ISR: regenerate every hour OR on revalidatePath
 
 export default async function Home() {
-  // Public page: Always render without editing
-  const canEdit = false
+  // Public page: NEVER has editing (middleware redirects authenticated users to /edit)
 
   // PERFORMANCE: Database calls are cached via page-level revalidate = 3600
   let sections
   let error
   try {
-    sections = await getSections(canEdit)
+    sections = await getSections()
     if (sections) {
-      console.log(`[Page] Loaded ${sections.length} sections, canEdit: ${canEdit}`)
+      console.log(`[Page] Loaded ${sections.length} sections`)
     }
   } catch (e: any) {
     error = e
@@ -45,7 +44,7 @@ export default async function Home() {
   }
 
   const sectionIds = sections.map(s => s.id)
-  const versions = await getVersions(sectionIds, canEdit)
+  const versions = await getVersions(sectionIds)
 
   const versionMap = new Map()
   versions?.forEach(v => versionMap.set(v.section_id, v))
