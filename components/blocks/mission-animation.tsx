@@ -38,7 +38,7 @@ const stages: Stage[] = [
         icon: Zap,
         description: 'Embedding a sovereign AI engine into your company DNA, creating a self-evolving competitive advantage.',
         color: 'text-accent',
-        accentColor: 'hsl(var(--accent))'
+        accentColor: '#0c759a' // Resolved from hsl(var(--accent))
     }
 ]
 

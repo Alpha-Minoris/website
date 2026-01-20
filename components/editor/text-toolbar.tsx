@@ -125,6 +125,12 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
                         const fontSize = current.style.fontSize;
                         const fontFamily = current.style.fontFamily;
                         const color = current.style.color;
+                        const backgroundImage = current.style.backgroundImage;
+
+                        // Check if this is a gradient-text element
+                        if (current.classList.contains('gradient-text') && backgroundImage && !detectedColor) {
+                            detectedColor = backgroundImage;
+                        }
 
                         if (fontSize && !detectedFontSize) {
                             detectedFontSize = fontSize;
@@ -753,13 +759,77 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
             <div className="flex items-center gap-1.5 px-1">
                 <ColorControl
                     label="Text Color"
-                    value={settings.color}
+                    value={localFormatState.color || settings.color}
                     isExecCommand={true}
                     defaultHex="#000000"
                     onChange={(v) => {
                         const selection = window.getSelection();
-                        if (selection && selection.toString().trim().length > 0) {
-                            handleExec('foreColor', v)
+                        if (selection && selection.rangeCount > 0 && selection.toString().trim().length > 0) {
+                            const range = selection.getRangeAt(0);
+
+                            // Check if selection is within a single gradient-text span
+                            let gradientSpan: HTMLElement | null = null;
+                            let node = range.commonAncestorContainer;
+
+                            // Traverse up to find gradient-text span
+                            while (node && node !== document.body) {
+                                if (node instanceof HTMLElement && node.classList?.contains('gradient-text')) {
+                                    gradientSpan = node;
+                                    break;
+                                }
+                                node = node.parentNode;
+                            }
+
+                            if (v.includes('gradient')) {
+                                // Applying gradient
+                                if (gradientSpan) {
+                                    // Already in gradient span, just update the style
+                                    gradientSpan.style.backgroundImage = v;
+                                } else {
+                                    // Wrap selection in gradient span
+                                    const span = document.createElement('span');
+                                    span.className = 'gradient-text';
+                                    span.style.cssText = `
+                                        background-image: ${v};
+                                        -webkit-background-clip: text;
+                                        background-clip: text;
+                                        -webkit-text-fill-color: transparent;
+                                    `;
+
+                                    try {
+                                        range.surroundContents(span);
+                                    } catch (e) {
+                                        // If surroundContents fails, fallback to extract/insert
+                                        const contents = range.extractContents();
+                                        span.appendChild(contents);
+                                        range.insertNode(span);
+                                    }
+
+                                    // Re-select
+                                    const newRange = document.createRange();
+                                    newRange.selectNodeContents(span);
+                                    selection.removeAllRanges();
+                                    selection.addRange(newRange);
+                                }
+                            } else {
+                                // Applying solid color
+                                if (gradientSpan) {
+                                    // Unwrap the gradient span
+                                    const parent = gradientSpan.parentNode;
+                                    const textContent = gradientSpan.textContent || '';
+                                    const textNode = document.createTextNode(textContent);
+                                    parent?.replaceChild(textNode, gradientSpan);
+                                    // Re-select ONLY the text node 
+                                    const newRange = document.createRange();
+                                    newRange.selectNodeContents(textNode);
+                                    selection.removeAllRanges();
+                                    selection.addRange(newRange);
+                                }
+
+                                // Apply solid color
+                                document.execCommand('styleWithCSS', false, 'true');
+                                handleExec('foreColor', v);
+                            }
                         } else {
                             onUpdate({ color: v })
                         }
