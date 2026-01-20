@@ -109,7 +109,7 @@ export function MissionAnimation() {
                         const Icon = stage.icon
 
                         return (
-                            <div key={stage.id} className="flex flex-col items-center w-32 group">
+                            <div key={stage.id} className="flex flex-col items-center w-24 md:w-32 group">
                                 {/* Hub Circle */}
                                 <div className="relative">
                                     <motion.div
@@ -120,12 +120,12 @@ export function MissionAnimation() {
                                             boxShadow: isActive ? `0 0 40px ${stage.accentColor}33` : '0 0 0px transparent'
                                         }}
                                         className={cn(
-                                            "w-16 h-16 rounded-full border-[1.5px] flex items-center justify-center backdrop-blur-2xl transition-all duration-700",
+                                            "w-12 h-12 md:w-16 md:h-16 rounded-full border-[1.5px] flex items-center justify-center backdrop-blur-2xl transition-all duration-700",
                                             "before:absolute before:inset-0 before:rounded-full before:bg-gradient-to-b before:from-white/5 before:to-transparent"
                                         )}
                                     >
                                         <Icon className={cn(
-                                            "w-7 h-7 transition-all duration-700",
+                                            "w-5 h-5 md:w-7 md:h-7 transition-all duration-700",
                                             isActive ? stage.color : "text-zinc-600 group-hover:text-zinc-400"
                                         )} />
                                     </motion.div>

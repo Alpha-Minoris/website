@@ -46,19 +46,19 @@ export function TestimonialCarousel({ testimonials }: TestimonialCarouselProps) 
     if (items.length === 0) return null
 
     return (
-        <div className="relative w-full max-w-4xl mx-auto flex items-center justify-center gap-6 md:gap-10">
+        <div className="relative w-full max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-center gap-6 md:gap-10">
 
-            {/* Left Arrow Button */}
+            {/* Left Arrow Button - Desktop */}
             <button
                 onClick={rotateLeft}
                 disabled={items.length <= 1}
-                className="w-14 h-14 md:w-16 md:h-16 shrink-0 flex items-center justify-center rounded-full bg-white/[0.03] border border-white/10 backdrop-blur-xl hover:bg-white/[0.08] hover:border-white/20 text-white/60 hover:text-white disabled:opacity-20 transition-all duration-300 group"
+                className="hidden md:flex w-14 h-14 md:w-16 md:h-16 shrink-0 items-center justify-center rounded-full bg-white/[0.03] border border-white/10 backdrop-blur-xl hover:bg-white/[0.08] hover:border-white/20 text-white/60 hover:text-white disabled:opacity-20 transition-all duration-300 group"
             >
                 <ArrowLeft className="w-6 h-6 group-hover:-translate-x-0.5 transition-transform" />
             </button>
 
             {/* Cards Stack */}
-            <div className="relative w-full max-w-2xl h-[300px] md:h-[340px]">
+            <div className="relative w-full max-w-2xl h-[340px] md:h-[340px] order-1 md:order-none">
                 <AnimatePresence initial={false} mode="popLayout">
                     {items.slice(0, 3).map((t, index) => {
                         const isFront = index === 0
@@ -88,8 +88,8 @@ export function TestimonialCarousel({ testimonials }: TestimonialCarouselProps) 
                             >
                                 <div className={`
                                     bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl 
-                                    p-8 md:p-10 rounded-3xl shadow-2xl 
-                                    min-h-[280px] md:min-h-[320px] 
+                                    p-6 md:p-10 rounded-3xl shadow-2xl 
+                                    min-h-[320px] md:min-h-[320px] 
                                     flex flex-col justify-center relative overflow-hidden
                                 `}>
                                     {/* Inner glow */}
@@ -99,7 +99,7 @@ export function TestimonialCarousel({ testimonials }: TestimonialCarouselProps) 
                                     <Quote className="absolute top-6 left-8 w-8 h-8 text-accent/15" />
 
                                     <div className="relative z-10 space-y-6 text-center px-4 md:px-10">
-                                        <p className="text-lg md:text-xl lg:text-2xl font-medium text-white/90 leading-relaxed">
+                                        <p className="text-base md:text-xl lg:text-2xl font-medium text-white/90 leading-relaxed">
                                             "{t.quote}"
                                         </p>
 
@@ -122,14 +122,32 @@ export function TestimonialCarousel({ testimonials }: TestimonialCarouselProps) 
                 </AnimatePresence>
             </div>
 
-            {/* Right Arrow Button */}
+            {/* Right Arrow Button - Desktop */}
             <button
                 onClick={rotateRight}
                 disabled={items.length <= 1}
-                className="w-14 h-14 md:w-16 md:h-16 shrink-0 flex items-center justify-center rounded-full bg-white/[0.03] border border-white/10 backdrop-blur-xl hover:bg-white/[0.08] hover:border-white/20 text-white/60 hover:text-white disabled:opacity-20 transition-all duration-300 group"
+                className="hidden md:flex w-14 h-14 md:w-16 md:h-16 shrink-0 items-center justify-center rounded-full bg-white/[0.03] border border-white/10 backdrop-blur-xl hover:bg-white/[0.08] hover:border-white/20 text-white/60 hover:text-white disabled:opacity-20 transition-all duration-300 group"
             >
                 <ArrowRight className="w-6 h-6 group-hover:translate-x-0.5 transition-transform" />
             </button>
+
+            {/* Mobile Navigation Controls */}
+            <div className="flex md:hidden items-center gap-4 mt-4 order-2">
+                <button
+                    onClick={rotateLeft}
+                    disabled={items.length <= 1}
+                    className="w-12 h-12 flex items-center justify-center rounded-full bg-white/[0.03] border border-white/10 backdrop-blur-xl text-white/60 disabled:opacity-20 transition-all"
+                >
+                    <ArrowLeft className="w-5 h-5" />
+                </button>
+                <button
+                    onClick={rotateRight}
+                    disabled={items.length <= 1}
+                    className="w-12 h-12 flex items-center justify-center rounded-full bg-white/[0.03] border border-white/10 backdrop-blur-xl text-white/60 disabled:opacity-20 transition-all"
+                >
+                    <ArrowRight className="w-5 h-5" />
+                </button>
+            </div>
         </div>
     )
 }

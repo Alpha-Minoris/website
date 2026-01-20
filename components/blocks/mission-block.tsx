@@ -262,7 +262,7 @@ export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                 {/* Right: Abstract Visual */}
                 <div className="relative">
                     <div className="absolute inset-0 bg-accent/20 blur-[100px] rounded-full opacity-20"></div>
-                    <div className="relative h-[600px] w-full bg-white/5 border border-white/10 backdrop-blur-3xl rounded-3xl flex items-center justify-center overflow-hidden">
+                    <div className="relative h-[400px] md:h-[600px] w-full bg-white/5 border border-white/10 backdrop-blur-3xl rounded-3xl flex items-center justify-center overflow-hidden">
                         {/* Abstract Animation */}
                         <MissionAnimation />
                     </div>
