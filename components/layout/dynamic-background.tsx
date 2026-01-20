@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useMemo } from 'react'
+import { SynapticBackground } from './synaptic-background'
 
 /**
  * Premium Aurora Background (Fixed & Refined)
@@ -191,8 +192,9 @@ export function DynamicBackground({
     curtains = 4,
     colors = ['#0cebb9', '#9d4edd', '#4cc9f0', '#0cebb9', '#9d4edd'],
     opacity = 1.0,
-    disabled = false
-}: AuroraBackgroundProps) {
+    disabled = false,
+    useAurora = false
+}: AuroraBackgroundProps & { useAurora?: boolean }) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const glRef = useRef<WebGLRenderingContext | null>(null)
     const programRef = useRef<WebGLProgram | null>(null)
@@ -314,6 +316,10 @@ export function DynamicBackground({
     }, [prefersReducedMotion, webglSupported, intensity, speed, bloomStrength, grainAmount, curtains, rgbColors, colors.length, opacity, disabled])
 
     if (disabled) return null
+
+    if (!useAurora) {
+        return <SynapticBackground />
+    }
 
     if (!webglSupported) {
         return (
