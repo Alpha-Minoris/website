@@ -1,4 +1,3 @@
-import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { BlockProps, BlockType } from '@/components/blocks/types'
 import { PageBuilder } from '@/components/editor/page-builder'
 import { Navbar } from '@/components/layout/navbar'
@@ -13,13 +12,10 @@ export const revalidate = 3600
 export default async function Home() {
   const canEdit = await checkEditRights({ actionType: 'update', path: '/' })
 
-  // Use Admin client if edit rights are present (e.g. localhost) to see hidden sections
-  // Otherwise use standard Client which respects RLS (Public=Visible only)
-  const supabase = canEdit ? await createAdminClient() : await createClient()
-
-  // PERFORMANCE: Removed supabase.auth.getUser() call
-  // In production: canEdit = false, so isAdmin = false (enables caching)
-  // On localhost: canEdit = true, so isAdmin = true (enables editing)
+  // PERFORMANCE: Removed supabase client creation here
+  // Client is now created inside getSections/getVersions based on canEdit flag
+  // Production: createCacheCompatibleClient() - no cookies, enables caching
+  // Localhost: createAdminClient() - with cookies, enables editing
   const isAdmin = canEdit
 
   // PERFORMANCE: Database calls are cached via page-level revalidate = 3600

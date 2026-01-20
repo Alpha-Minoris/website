@@ -6,7 +6,7 @@
  * which cannot be used inside unstable_cache()
  */
 
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createCacheCompatibleClient, createAdminClient } from '@/lib/supabase/server'
 
 /**
  * Get sections from database
@@ -15,7 +15,11 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 export async function getSections(canEdit: boolean) {
     console.log('[Cache] Fetching sections from database...')
 
-    const supabase = canEdit ? await createAdminClient() : await createClient()
+    // Production: Use cache-compatible client (no cookies, enables caching)
+    // Localhost: Use admin client (with cookies, for editing)
+    const supabase = canEdit
+        ? await createAdminClient()           // Localhost: full access with cookies
+        : createCacheCompatibleClient()        // Production: no cookies!
 
     const { data: sections, error } = await supabase
         .from('website_sections')
@@ -35,7 +39,11 @@ export async function getSections(canEdit: boolean) {
 export async function getVersions(sectionIds: string[], canEdit: boolean) {
     console.log('[Cache] Fetching versions from database...')
 
-    const supabase = canEdit ? await createAdminClient() : await createClient()
+    // Production: Use cache-compatible client (no cookies, enables caching)
+    // Localhost: Use admin client (with cookies, for editing)
+    const supabase = canEdit
+        ? await createAdminClient()           // Localhost: full access with cookies
+        : createCacheCompatibleClient()        // Production: no cookies!
 
     const { data: versions } = await supabase
         .from('website_section_versions')
