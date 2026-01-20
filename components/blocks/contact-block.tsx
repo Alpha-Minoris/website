@@ -20,9 +20,10 @@ const initialState: {
     errors?: {
         firstName?: string[]
         lastName?: string[]
+        jobTitle?: string[]
         email?: string[]
         company?: string[]
-        website?: string[]
+        message?: string[]
     }
 } = {
     message: '',
@@ -36,7 +37,7 @@ export function ContactBlock({ id }: BlockProps) {
         <section id={id} className="py-24 bg-transparent relative">
             <div className="absolute inset-0 bg-gradient-to-t from-accent/10 to-transparent pointer-events-none"></div>
 
-            <div className="container mx-auto px-4 max-w-xl relative z-10">
+            <div className="container mx-auto px-4 max-w-3xl relative z-10">
                 <TiltCard>
                     <Card className="bg-white/5 border-white/10 backdrop-blur-2xl rounded-3xl shadow-2xl overflow-hidden p-2">
                         {/* Added inner glow/blur effects from hero demo style */}
@@ -71,18 +72,30 @@ export function ContactBlock({ id }: BlockProps) {
                                             </div>
                                         </div>
                                         <div className="space-y-2">
+                                            <Label htmlFor="job-title">Job Title</Label>
+                                            <Input name="job-title" id="job-title" placeholder="CEO" className="bg-white/5 border-white/10 h-12" required />
+                                            {state.errors?.jobTitle && <p className="text-red-400 text-xs">{state.errors.jobTitle}</p>}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="company">Company Name</Label>
+                                            <Input name="company" id="company" placeholder="Company Name" className="bg-white/5 border-white/10 h-12" required />
+                                            {state.errors?.company && <p className="text-red-400 text-xs">{state.errors.company}</p>}
+                                        </div>
+                                        <div className="space-y-2">
                                             <Label htmlFor="email">Work Email</Label>
                                             <Input name="email" id="email" type="email" placeholder="jane@company.com" className="bg-white/5 border-white/10 h-12" required />
                                             {state.errors?.email && <p className="text-red-400 text-xs">{state.errors.email}</p>}
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="company">Company Website</Label>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <Input name="company" id="company" placeholder="Company Name" className="bg-white/5 border-white/10 h-12" required />
-                                                <Input name="website" id="website" placeholder="website.com" className="bg-white/5 border-white/10 h-12" />
-                                            </div>
-                                            {state.errors?.company && <p className="text-red-400 text-xs">{state.errors.company}</p>}
-                                            {state.errors?.website && <p className="text-red-400 text-xs">{state.errors.website}</p>}
+                                            <Label htmlFor="message">Message</Label>
+                                            <textarea
+                                                name="message"
+                                                id="message"
+                                                placeholder="Tell us about your automation needs..."
+                                                className="w-full min-h-[120px] bg-white/5 border border-white/10 rounded-md px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+                                                rows={4}
+                                            />
+                                            {state.errors?.message && <p className="text-red-400 text-xs">{state.errors.message}</p>}
                                         </div>
 
                                         {state.message && !state.success && (

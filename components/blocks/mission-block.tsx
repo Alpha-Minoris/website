@@ -22,6 +22,7 @@ interface Feature {
         linkUrl?: string
         isHidden?: boolean
         color?: string
+        size?: number
         maskSettings?: any
     }
 }

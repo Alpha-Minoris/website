@@ -6,21 +6,22 @@ import { z } from 'zod'
 const LeadSchema = z.object({
     firstName: z.string().min(1, 'First name is required'),
     lastName: z.string().min(1, 'Last name is required'),
+    jobTitle: z.string().min(1, 'Job title is required'),
     email: z.string().email('Invalid email address'),
     company: z.string().min(1, 'Company name is required'),
-    website: z.string().optional().or(z.literal('')), // Relaxed validation
+    message: z.string().optional().or(z.literal('')),
 })
 
 export type FormState = {
-    // ... same types
     message: string
     success: boolean
     errors?: {
         firstName?: string[]
         lastName?: string[]
+        jobTitle?: string[]
         email?: string[]
         company?: string[]
-        website?: string[]
+        message?: string[]
     }
 }
 
@@ -28,9 +29,10 @@ export async function submitLead(prevState: FormState, formData: FormData): Prom
     const validatedFields = LeadSchema.safeParse({
         firstName: formData.get('first-name'),
         lastName: formData.get('last-name'),
+        jobTitle: formData.get('job-title'),
         email: formData.get('email'),
         company: formData.get('company'),
-        website: formData.get('website'),
+        message: formData.get('message'),
     })
 
     if (!validatedFields.success) {
@@ -41,7 +43,7 @@ export async function submitLead(prevState: FormState, formData: FormData): Prom
         }
     }
 
-    const { firstName, lastName, email, company, website } = validatedFields.data
+    const { firstName, lastName, jobTitle, email, company, message } = validatedFields.data
     const displayName = `${firstName} ${lastName}`.trim()
 
     // Use Service Role to bypass RLS for public submission
@@ -52,9 +54,12 @@ export async function submitLead(prevState: FormState, formData: FormData): Prom
 
     const { error } = await supabase.from('clients').insert({
         display_name: displayName,
+        first_name: firstName,
+        last_name: lastName,
+        job_title: jobTitle,
         legal_name: company,
-        website_url: website,
         email: email,
+        message: message || null,
         lifecycle_stage: 'lead'
     })
 
@@ -68,6 +73,6 @@ export async function submitLead(prevState: FormState, formData: FormData): Prom
 
     return {
         success: true,
-        message: "Based on the table we received your info.",
+        message: "We will get in touch with you in the coming days.",
     }
 }

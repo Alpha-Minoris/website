@@ -769,7 +769,7 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
 
                             // Check if selection is within a single gradient-text span
                             let gradientSpan: HTMLElement | null = null;
-                            let node = range.commonAncestorContainer;
+                            let node: Node | null = range.commonAncestorContainer;
 
                             // Traverse up to find gradient-text span
                             while (node && node !== document.body) {
