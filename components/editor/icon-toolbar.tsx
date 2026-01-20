@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { IconPicker } from './icon-picker'
 import { ColorPicker } from './color-picker'
 import { cn } from '@/lib/utils'
-import { ChevronDown, Smile, Link, Unlink, Trash, Check, Maximize2, MoveRight, Eye, EyeOff } from 'lucide-react'
+import { ChevronDown, Smile, Link, Unlink, Trash, Check, Maximize2, MoveRight, Eye, EyeOff, Minus, Plus } from 'lucide-react'
 import { useState, useMemo, lazy, Suspense } from 'react'
 import dynamicIconImports from 'lucide-react/dynamicIconImports'
 import { Input } from "@/components/ui/input"
@@ -77,6 +77,23 @@ export function IconToolbar({ settings, onUpdate, onDelete }: IconToolbarProps) 
         onUpdate({ linkUrl: null })
         setLinkUrl('')
         setIsLinkPopoverOpen(false)
+    }
+
+    const handleQuickScale = (delta: number) => {
+        // More robust parsing: find the first number in the string
+        const currentWidth = settings.width || '32'
+        const match = currentWidth.match(/(\d+)/)
+        const currentSize = match ? parseInt(match[0]) : 32
+
+        const newSize = Math.max(8, currentSize + delta)
+        const unit = currentWidth.replace(/\d+/, '') || 'px'
+        const sizeStr = `${newSize}${unit === '%' ? '%' : 'px'}` // Prefer px for icons unless % was explicitly used
+
+        onUpdate({
+            width: sizeStr,
+            height: sizeStr,
+            size: newSize
+        })
     }
 
     return (
@@ -265,6 +282,38 @@ export function IconToolbar({ settings, onUpdate, onDelete }: IconToolbarProps) 
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="p-3 w-48 bg-zinc-900/80 border-white/10 backdrop-blur-2xl rounded-2xl shadow-2xl space-y-3">
+                    <div className="flex items-center gap-2 p-1 bg-white/5 rounded-lg">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-md hover:bg-white/10 text-zinc-400 hover:text-white"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleQuickScale(-4);
+                            }}
+                        >
+                            <Minus className="w-4 h-4" />
+                        </Button>
+                        <div className="flex-1 text-center text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                            Scale
+                        </div>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-md hover:bg-white/10 text-zinc-400 hover:text-white"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleQuickScale(4);
+                            }}
+                        >
+                            <Plus className="w-4 h-4" />
+                        </Button>
+                    </div>
+
+                    <Separator className="bg-white/5" />
+
                     <div className="space-y-1">
                         <div className="flex justify-between text-[10px] text-zinc-500 uppercase tracking-widest font-bold">
                             <span>Width</span>

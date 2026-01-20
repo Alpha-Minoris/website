@@ -76,7 +76,7 @@ export function Navbar({ sections }: NavbarProps) {
     return (
         <header className="fixed top-0 left-0 right-0 z-50 px-4 py-4 pointer-events-none">
             <div className="container mx-auto">
-                <nav className="bg-white/[0.03] backdrop-blur-3xl backdrop-saturate-150 border border-white/[0.08] rounded-full px-6 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex items-center justify-between pointer-events-auto transition-all duration-300">
+                <nav className="bg-white/[0.03] backdrop-blur-3xl backdrop-saturate-150 border border-white/[0.08] rounded-2xl px-6 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex items-center justify-between pointer-events-auto transition-all duration-300">
 
                     {/* Brand */}
                     <a
@@ -98,7 +98,7 @@ export function Navbar({ sections }: NavbarProps) {
                                         href={`#${targetId}`}
                                         onClick={(e) => scrollToSection(e, targetId)}
                                         className={cn(
-                                            "px-3 py-2 text-sm font-medium rounded-full transition-all duration-300 whitespace-nowrap",
+                                            "px-3 py-2 text-sm font-medium rounded-xl transition-all duration-300 whitespace-nowrap",
                                             activeSection === section.id // we still track active by ID in spy? 
                                                 // Wait, spy above sets activeSection to ID. So this check works.
                                                 ? "bg-white/10 text-white"
@@ -116,7 +116,7 @@ export function Navbar({ sections }: NavbarProps) {
                     <div className="hidden md:block shrink-0">
                         <Button
                             onClick={(e) => scrollToSection(e, 'contact')} // Assuming 'contact' slug/id exists or we filter for it
-                            className="rounded-md bg-accent text-white hover:bg-accent/90 font-bold px-6 shadow-glow"
+                            className="rounded-2xl bg-accent text-white hover:bg-accent/90 font-bold px-6 shadow-glow"
                         >
                             Contact Us
                         </Button>
@@ -167,7 +167,7 @@ export function Navbar({ sections }: NavbarProps) {
                                 <div className="h-px bg-white/10 my-2" />
                                 <Button
                                     onClick={(e) => scrollToSection(e, 'contact')}
-                                    className="w-full rounded-xl bg-accent text-white hover:bg-accent/90 font-bold"
+                                    className="w-full rounded-2xl bg-accent text-white hover:bg-accent/90 font-bold"
                                 >
                                     Contact Us
                                 </Button>

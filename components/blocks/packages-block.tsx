@@ -252,7 +252,7 @@ export function PackagesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                 pkg.highlight ? "bg-white/10 border-accent/50 shadow-2xl" : "bg-white/5 hover:bg-white/8"
                             )}>
                                 {pkg.highlight && (
-                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-accent text-white text-xs font-bold uppercase tracking-widest rounded-full">
+                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-accent text-white text-xs font-bold uppercase tracking-widest rounded-lg">
                                         Most Popular
                                     </div>
                                 )}

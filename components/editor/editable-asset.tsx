@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { useState } from 'react'
-import { Image as ImageIcon, Smile, Upload, X, Link, Unlink, Check, Eye, EyeOff } from 'lucide-react'
+import { Image as ImageIcon, Smile, Upload, X, Link, Unlink, Check, Eye, EyeOff, Minus, Plus } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
@@ -29,10 +29,11 @@ interface EditableAssetProps {
     color?: string
     folder?: string
     placeholderText?: string
+    size?: number
 }
 
 export function EditableAsset({
-    type, value, onChange, onUpdate, isEditMode, className, iconClassName, linkUrl, isHidden, maskSettings, color, folder, placeholderText
+    type, value, onChange, onUpdate, isEditMode, className, iconClassName, linkUrl, isHidden, maskSettings, color, folder, placeholderText, size
 }: EditableAssetProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [isMediaManagerOpen, setIsMediaManagerOpen] = useState(false)
@@ -63,8 +64,9 @@ export function EditableAsset({
             {type === 'icon' ? (
                 <IconDisplay
                     name={value || 'user'}
-                    className={iconClassName || "w-full h-full"}
+                    className={cn(iconClassName, !size && !iconClassName && "w-full h-full")}
                     color={color}
+                    style={size ? { width: `${size}px`, height: `${size}px` } : undefined}
                 />
             ) : (
                 <div
@@ -161,6 +163,43 @@ export function EditableAsset({
                                         }}
                                     />
                                 </div>
+
+                                {onUpdate && (
+                                    <div className="pt-2 border-t border-white/10">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Size</p>
+                                            <div className="flex items-center gap-1 bg-white/5 rounded-md p-0.5">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 rounded-sm hover:bg-white/10 text-zinc-400 hover:text-white"
+                                                    onMouseDown={(e) => e.preventDefault()}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onUpdate({ size: Math.max(8, (size || 32) - 4) });
+                                                    }}
+                                                >
+                                                    <Minus className="w-3 h-3" />
+                                                </Button>
+                                                <span className="min-w-[24px] text-center text-[10px] font-mono text-zinc-400">
+                                                    {size || 32}
+                                                </span>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 rounded-sm hover:bg-white/10 text-zinc-400 hover:text-white"
+                                                    onMouseDown={(e) => e.preventDefault()}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onUpdate({ size: (size || 32) + 4 });
+                                                    }}
+                                                >
+                                                    <Plus className="w-3 h-3" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {onUpdate && (
                                     <>

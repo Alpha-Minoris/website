@@ -49,11 +49,24 @@ export function IconBlock({ id, settings, sectionSlug, slug }: BlockProps) {
     if (isHidden && !isEditMode) return null
 
     const handleUpdate = (updates: any) => {
-        updateBlock(id, { settings: { ...settings, ...updates } })
+        const newSettings = { ...settings, ...updates }
+        updateBlock(id, { settings: newSettings })
+        import('@/actions/block-actions').then(({ updateBlockContent }) => {
+            updateBlockContent(sectionSlug || slug || id, id, { settings: newSettings })
+        })
     }
 
     const handleChange = (type: 'icon' | 'image', value: string) => {
-        updateBlock(id, { settings: { ...settings, type, value, iconName: type === 'icon' ? value : undefined } })
+        const newSettings = {
+            ...settings,
+            type,
+            value,
+            iconName: type === 'icon' ? value : undefined
+        }
+        updateBlock(id, { settings: newSettings })
+        import('@/actions/block-actions').then(({ updateBlockContent }) => {
+            updateBlockContent(sectionSlug || slug || id, id, { settings: newSettings })
+        })
     }
 
     return (
@@ -73,8 +86,12 @@ export function IconBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                 color={color}
                 maskSettings={maskSettings}
                 folder={folder}
-                className="w-full h-full transition-all group-hover:scale-110"
-                iconClassName="w-full h-full"
+                size={settings?.size}
+                className={cn(
+                    "transition-all group-hover:scale-110",
+                    !settings?.size && "w-full h-full"
+                )}
+                iconClassName={!settings?.size ? "w-full h-full" : undefined}
             />
             {isEditMode && isHidden && (
                 <Icons.EyeOff className="absolute w-4 h-4 text-white/50 top-1 right-1" />

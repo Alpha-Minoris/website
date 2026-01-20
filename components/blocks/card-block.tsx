@@ -14,7 +14,7 @@ import dynamicIconImports from 'lucide-react/dynamicIconImports'
 import { lazy, Suspense, useMemo } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 
-const IconDisplay = ({ name, className, style }: { name?: string, className?: string, style?: any }) => {
+const IconDisplay = ({ name, className, style, size }: { name?: string, className?: string, style?: any, size?: number }) => {
     const LucideIcon = useMemo(() => {
         if (!name) return null
         const icon = dynamicIconImports[name as keyof typeof dynamicIconImports]
@@ -22,11 +22,16 @@ const IconDisplay = ({ name, className, style }: { name?: string, className?: st
         return lazy(icon)
     }, [name])
 
-    if (!name || !LucideIcon) return <RefreshCw className={className} style={style} />
+    const combinedStyle = {
+        ...style,
+        ...(size ? { width: `${size}px`, height: `${size}px` } : {})
+    }
+
+    if (!name || !LucideIcon) return <RefreshCw className={className} style={combinedStyle} />
 
     return (
-        <Suspense fallback={<div className={className} style={style} />}>
-            <LucideIcon className={className} style={style} />
+        <Suspense fallback={<div className={className} style={combinedStyle} />}>
+            <LucideIcon className={className} style={combinedStyle} />
         </Suspense>
     )
 }
@@ -266,7 +271,8 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                                     >
                                         <IconDisplay
                                             name={settings?.iconFrontSettings?.iconName}
-                                            className="w-3 h-3"
+                                            className={cn("transition-transform", !settings?.iconFrontSettings?.size && "w-3 h-3")}
+                                            size={settings?.iconFrontSettings?.size}
                                             style={{ color: settings?.iconFrontSettings?.color || settings?.linkFrontSettings?.color }}
                                         />
                                     </div>
@@ -354,7 +360,8 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                                     >
                                         <IconDisplay
                                             name={settings?.iconBackSettings?.iconName}
-                                            className="w-3 h-3 rotate-180"
+                                            className={cn("transition-transform rotate-180", !settings?.iconBackSettings?.size && "w-3 h-3")}
+                                            size={settings?.iconBackSettings?.size}
                                             style={{ color: settings?.iconBackSettings?.color || settings?.linkBackSettings?.color }}
                                         />
                                     </div>

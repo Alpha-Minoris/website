@@ -237,7 +237,17 @@ function BlockFrame({
 
                     {blockType === 'icon' &&
                         <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50 cursor-default" onPointerDown={e => e.stopPropagation()}>
-                            <IconToolbar settings={settings} onUpdate={(u: any) => useEditorStore.getState().updateBlock(blockId, { settings: { ...settings, ...u } })} onDelete={() => { }} />
+                            <IconToolbar
+                                settings={settings}
+                                onUpdate={(u: any) => {
+                                    const newSettings = { ...settings, ...u }
+                                    useEditorStore.getState().updateBlock(blockId, { settings: newSettings })
+                                    import('@/actions/block-actions').then(({ updateBlockContent }) => {
+                                        updateBlockContent(sectionId || blockId, blockId, { settings: newSettings })
+                                    })
+                                }}
+                                onDelete={() => { }}
+                            />
                         </div>
                     }
                 </>

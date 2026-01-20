@@ -154,7 +154,7 @@ export function HowWeWorkBlock({ id, settings, sectionSlug, slug }: BlockProps) 
                         isEditMode={isEditMode}
                         onFocus={onTextFocus}
                         onBlur={onTextBlur}
-                        className="text-muted-foreground text-lg max-w-xl"
+                        className="text-muted-foreground text-lg max-w-xl mx-auto"
                         style={{
                             fontFamily: localSettings.fontFamily,
                             fontSize: localSettings.fontSize,

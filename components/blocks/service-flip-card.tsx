@@ -12,7 +12,7 @@ type ServiceCardProps = {
     title: string
     desc: string
     details: string[]
-    asset: { type: 'icon' | 'image', value: string, color?: string, maskSettings?: any }
+    asset: { type: 'icon' | 'image', value: string, color?: string, size?: number, maskSettings?: any }
     isEditMode: boolean
     onUpdate: (data: any) => void
     onTextFocus: (rect: DOMRect) => void
@@ -64,6 +64,7 @@ export function ServiceFlipCard({ title, desc, details, asset, isEditMode, onUpd
                             onUpdate={(updates) => onUpdate({ asset: { ...asset, ...updates } })}
                             isEditMode={isEditMode}
                             color={asset?.color}
+                            size={asset?.size}
                             maskSettings={asset?.maskSettings}
                             folder={folder}
                             className="w-32 h-32 rounded-3xl"
@@ -104,8 +105,8 @@ export function ServiceFlipCard({ title, desc, details, asset, isEditMode, onUpd
 
                 {/* BACK FACE */}
                 <Card className="absolute inset-0 w-full h-full backface-hidden bg-zinc-950 border-accent/40 flex flex-col rotate-y-180 overflow-hidden">
-                    <CardContent className="flex flex-col h-full pt-8">
-                        <div className="flex-1 space-y-4">
+                    <CardContent className="flex flex-col h-full pt-8 justify-center">
+                        <div className="space-y-4">
                             <h4 className="font-bold text-white mb-4 uppercase tracking-tighter flex items-center gap-2">
                                 <Star className="w-4 h-4 text-accent" />
                                 Key Features

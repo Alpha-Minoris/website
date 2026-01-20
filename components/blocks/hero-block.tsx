@@ -216,7 +216,7 @@ export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                 )}>
                     {/* Eyebrow */}
                     <span className={cn(
-                        "inline-flex items-center gap-2 h-7 px-3 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm",
+                        "inline-flex items-center gap-2 h-7 px-3 rounded-lg bg-white/5 border border-white/10 backdrop-blur-sm",
                         localSettings.align === 'left' ? "mr-auto" :
                             localSettings.align === 'right' ? "ml-auto" :
                                 "mx-auto"
@@ -274,7 +274,7 @@ export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                 "justify-center"
                     )}>
                         <div className="relative group">
-                            <Button size="lg" className="h-14 px-10 text-lg bg-white text-black hover:bg-white/90 shadow-[0_0_30px_rgba(255,255,255,0.1)] rounded-full">
+                            <Button size="lg" className="h-14 px-10 text-lg bg-white text-black hover:bg-white/90 shadow-[0_0_30px_rgba(255,255,255,0.1)] rounded-2xl">
                                 <EditableText
                                     value={localSettings.primaryButton?.text || "Button"}
                                     onChange={(v) => handleTextChange('primaryButton', { ...localSettings.primaryButton, text: v })}
@@ -285,7 +285,7 @@ export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                             </Button>
                         </div>
                         <div className="relative group">
-                            <Button variant="outline" size="lg" className="h-14 px-10 text-lg border-white/20 text-white hover:bg-white/10 rounded-full backdrop-blur-sm">
+                            <Button variant="outline" size="lg" className="h-14 px-10 text-lg border-white/20 text-white hover:bg-white/10 rounded-2xl backdrop-blur-sm">
                                 <EditableText
                                     value={localSettings.secondaryButton?.text || "Button"}
                                     onChange={(v) => handleTextChange('secondaryButton', { ...localSettings.secondaryButton, text: v })}
