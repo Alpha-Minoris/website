@@ -6,8 +6,8 @@ import { checkEditRights } from '@/lib/auth-utils'
 import { getSections, getVersions } from '@/lib/cache/page-cache'
 
 // PERFORMANCE: Enable page-level caching for 1 hour
-// This caches the entire page render including all database calls
-// Much simpler than function-level caching and works with cookies()
+// Production: Edit mode disabled → fully cacheable
+// Localhost: Edit mode enabled → dynamic (no caching needed for dev)
 export const revalidate = 3600
 
 export default async function Home() {

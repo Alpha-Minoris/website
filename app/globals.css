@@ -134,3 +134,43 @@
     @apply bg-zinc-700/50 rounded-full hover:bg-zinc-600;
   }
 }
+/* ================================================================
+   PHASE 2: MOBILE SAFARI PERFORMANCE OPTIMIZATIONS
+   ================================================================ */
+
+/* Smooth scrolling with GPU acceleration */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Prevent overscroll bounce on iOS */
+body {
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* GPU acceleration for animated elements */
+[data-animated],
+[data-block-wrapper] {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Optimize scroll containers */
+.scroll-container {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Prevent layout shifts during image loading */
+img {
+  content-visibility: auto;
+}
+
+/* Performance hints for blocks */
+[data-block-id] {
+  contain: layout style paint;
+}

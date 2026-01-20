@@ -2,6 +2,7 @@ import React from 'react'
 import { BlockProps } from './types'
 import { BlockRegistry } from './registry'
 import { EditorBlockWrapper } from '@/components/editor/editor-block-wrapper'
+import { OptimizedBlockWrapper } from '@/components/blocks/optimized-block-wrapper'
 import { cn } from '@/lib/utils'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 
@@ -42,18 +43,25 @@ export function BlockRenderer({ blocks, sectionId, sectionSlug, layoutMode = 'fl
                 "data-block-type": block.type
             }
 
+            const blockContent = (
+                <EditorBlockWrapper
+                    blockId={block.id}
+                    blockType={block.type}
+                    className={layoutMode === 'flow' ? (isContentBlock ? "w-fit mx-auto" : "w-full") : ""}
+                    settings={block.settings}
+                    sectionId={sectionId}
+                    layoutMode={layoutMode}
+                >
+                    <Component {...block} sectionId={sectionId} sectionSlug={sectionSlug || block.sectionSlug || block.slug} />
+                </EditorBlockWrapper>
+            )
+
             return (
                 <Wrapper key={block.id} {...wrapperProps}>
-                    <EditorBlockWrapper
-                        blockId={block.id}
-                        blockType={block.type}
-                        className={layoutMode === 'flow' ? (isContentBlock ? "w-fit mx-auto" : "w-full") : ""}
-                        settings={block.settings}
-                        sectionId={sectionId}
-                        layoutMode={layoutMode}
-                    >
-                        <Component {...block} sectionId={sectionId} sectionSlug={sectionSlug || block.sectionSlug || block.slug} />
-                    </EditorBlockWrapper>
+                    {/* PHASE 2: Optimize rendering for mobile Safari */}
+                    <OptimizedBlockWrapper blockId={block.id} minHeight="300px">
+                        {blockContent}
+                    </OptimizedBlockWrapper>
                 </Wrapper>
             )
         })
