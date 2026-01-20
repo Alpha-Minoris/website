@@ -2,16 +2,12 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { checkEditRights } from '@/lib/auth-utils'
 
 // Update a block (can be nested deeply).
 // For recursive updates, we need to traverse the JSON.
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export async function updateBlock(blockId: string, updates: any) {
-    if (!(await checkEditRights({ sectionId: blockId, actionType: 'update' }))) {
-        throw new Error('Unauthorized')
-    }
     console.log(`[updateBlock] START blockId=${blockId}`)
     const supabase = await createAdminClient()
 
@@ -157,9 +153,6 @@ export async function updateBlock(blockId: string, updates: any) {
 
 // Add a child block to a section OR nested container
 export async function addChildBlock(parentId: string, newBlock: any, targetField: 'content' | 'backContent' = 'content') {
-    if (!(await checkEditRights({ sectionId: parentId, actionType: 'create' }))) {
-        throw new Error('Unauthorized')
-    }
     console.log(`[addChildBlock] START parentId=${parentId}, targetField=${targetField}`)
     const supabase = await createAdminClient()
 
@@ -261,9 +254,6 @@ export async function addChildBlock(parentId: string, newBlock: any, targetField
 
 // Update a specific child block within a section (Recursive)
 export async function updateBlockContent(sectionId: string, blockId: string, updates: any) {
-    if (!(await checkEditRights({ sectionId, actionType: 'update' }))) {
-        throw new Error('Unauthorized')
-    }
     console.log(`[updateBlockContent] START sectionId=${sectionId}, blockId=${blockId}`)
     if (!sectionId || !blockId) {
         console.error(`[updateBlockContent] Missing IDs: sectionId=${sectionId}, blockId=${blockId}`)
@@ -368,9 +358,6 @@ export async function updateBlockContent(sectionId: string, blockId: string, upd
 
 // Delete a child block from a section
 export async function deleteChildBlock(sectionId: string, blockId: string) {
-    if (!(await checkEditRights({ sectionId, actionType: 'delete' }))) {
-        throw new Error('Unauthorized')
-    }
     console.log(`[deleteChildBlock] START sectionId=${sectionId}, blockId=${blockId}`)
     if (!sectionId || !blockId) {
         console.error(`[deleteChildBlock] Missing IDs: sectionId=${sectionId}, blockId=${blockId}`)

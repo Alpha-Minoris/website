@@ -2,16 +2,12 @@
 
 import { createClient, createAdminClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
-import { checkEditRights } from "@/lib/auth-utils"
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 // Move a block (reorder or reparent) within a section
 // Supports deep nesting by traversing the JSON tree
 export async function moveBlock(sectionId: string, activeId: string, overId: string, newSettings?: any) {
-    if (!(await checkEditRights({ sectionId, actionType: 'update' }))) {
-        throw new Error('Unauthorized')
-    }
     console.log(`[moveBlock] START sectionId=${sectionId}, activeId=${activeId}, overId=${overId}`)
     if (!sectionId || !activeId || !overId) {
         console.error(`[moveBlock] Missing arguments: sectionId=${sectionId}, activeId=${activeId}, overId=${overId}`)
