@@ -42,3 +42,6 @@ Samples/
 __tests__/
 scripts/
 supabase/
+
+# Test scripts
+tests/

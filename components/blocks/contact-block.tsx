@@ -4,16 +4,12 @@ import { BlockProps } from './types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { useActionState } from 'react'
 import { submitLead } from '@/actions/submit-lead'
 import { Loader2, ArrowRight } from 'lucide-react'
-
 import { TiltCard } from '@/components/ui/tilt-card'
 
-// ... imports remain the same
-
-// Initial State (unchanged)
 const initialState: {
     message: string
     success: boolean
@@ -40,7 +36,6 @@ export function ContactBlock({ id }: BlockProps) {
             <div className="container mx-auto px-4 max-w-3xl relative z-10">
                 <TiltCard>
                     <Card className="bg-white/5 border-white/10 backdrop-blur-2xl rounded-3xl shadow-2xl overflow-hidden p-2">
-                        {/* Added inner glow/blur effects from hero demo style */}
                         <div className="absolute -inset-4 bg-accent/20 blur-3xl rounded-full opacity-20 pointer-events-none"></div>
 
                         <div className="relative z-10 p-6 md:p-8 space-y-6">

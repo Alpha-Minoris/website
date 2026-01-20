@@ -71,6 +71,22 @@ export async function submitLead(prevState: FormState, formData: FormData): Prom
         }
     }
 
+    // Send email notification (don't block on failure)
+    try {
+        const { sendContactFormEmail } = await import('@/lib/email/contact-form-email')
+
+        await sendContactFormEmail(
+            { firstName, lastName, jobTitle, email, company, message },
+            {
+                from: process.env.SMTP_ALIAS || process.env.SMTP_USER || 'contact-form@alpha-minoris.ai',
+                to: process.env.SMTP_ALERT_USER || 'farbodnezami@gmail.com'
+            }
+        )
+    } catch (emailError) {
+        console.error('Email notification failed (non-blocking):', emailError)
+        // Don't fail the form submission if email fails
+    }
+
     return {
         success: true,
         message: "We will get in touch with you in the coming days.",
