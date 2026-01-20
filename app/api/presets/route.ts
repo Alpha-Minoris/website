@@ -17,7 +17,18 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: error.message }, { status: 500 })
         }
 
-        return NextResponse.json({ presets: presets || [] })
+        // PERFORMANCE: Enable Vercel edge caching
+        // public: cacheable by CDN
+        // s-maxage=600: CDN caches for 10 minutes
+        // stale-while-revalidate=3600: Serve stale data while revalidating for 1 hour
+        return NextResponse.json(
+            { presets: presets || [] },
+            {
+                headers: {
+                    'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=3600'
+                }
+            }
+        )
     } catch (error: any) {
         console.error('Preset fetch error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
