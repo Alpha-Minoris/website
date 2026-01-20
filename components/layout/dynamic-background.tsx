@@ -68,23 +68,23 @@ const FRAGMENT_SHADER = `
 
     // Domain warping to create "silk folds"
     float silkCurtain(vec2 p, float time, float offset, float dir) {
-        // Broad S-curve warping - More movement at the bottom
-        float warpScale = 1.0 + (1.0 - v_uv.y) * 1.2;
-        float warp = fbm(p * 0.25 + time * 0.2 + offset);
-        p.x += (warp - 0.5) * 1.4 * warpScale * dir;
+        // Broad S-curve warping - Pronounced movement
+        float warpScale = 1.0 + (1.0 - v_uv.y) * 1.5;
+        float warp = fbm(p * 0.22 + time * 0.22 + offset);
+        p.x += (warp - 0.5) * 1.8 * warpScale * dir;
         
-        // ribbon base - Broadened for "Wider" feel
+        // ribbon base - Extremely Broadened for high visibility
         float d = abs(p.x - 1.0); 
-        float ribbon = exp(-d * 1.8);
+        float ribbon = exp(-d * 1.0);
         
-        // Vertical Striations (Hair-like textures, extremely subtle)
-        float rays = sin(p.x * 10.0 + warp * 8.0 + time * 0.4);
-        rays = smoothstep(0.3, 0.95, 0.5 + 0.5 * rays);
+        // Vertical Striations (Subtle but visible hair-like textures)
+        float rays = sin(p.x * 8.0 + warp * 10.0 + time * 0.3);
+        rays = smoothstep(0.2, 0.9, 0.5 + 0.5 * rays);
         
         // Height Profile (The rising curtain)
-        float h = smoothstep(0.0, 0.2, v_uv.y) * (1.0 - smoothstep(0.7, 1.0, v_uv.y));
+        float h = smoothstep(0.0, 0.1, v_uv.y) * (1.0 - smoothstep(0.75, 1.0, v_uv.y));
         
-        return ribbon * (0.5 + rays * 0.5) * h;
+        return ribbon * (0.4 + rays * 0.6) * h;
     }
 
     void main() {
@@ -95,55 +95,57 @@ const FRAGMENT_SHADER = `
         
         // Shared Origin Perspective Tilt
         float centerX = aspect * 0.5;
-        p.x = (p.x - centerX) * (1.0 + uv.y * 1.8) + centerX;
+        p.x = (p.x - centerX) * (1.0 + uv.y * 2.0) + centerX;
 
-        float time = u_time * u_speed * 0.2;
+        // 1. Base Night Sky (Deep Dark Satin)
+        vec3 col = vec3(0.0005, 0.0008, 0.0016);
+        col = mix(col * 0.2, col, uv.y);
 
-        // 1. Base Night Sky (Darkened further)
-        vec3 col = vec3(0.0006, 0.001, 0.002);
-        col = mix(col * 0.3, col, uv.y);
-
-        // 2. Dual Warped Silk Ribbons (Primary & Mirrored)
+        // 2. Dual Warped Silk Ribbons (Asymmetric Purple Flow)
         vec3 auroraAccum = vec3(0.0);
         
         for (int i = 0; i < 2; i++) {
             float dir = (i == 0) ? 1.0 : -1.0;
             
-            // Loop for multiple ribbons within each set
+            // Asymmetry: Unique time and X-offset per set
+            float setTime = u_time * u_speed * (0.22 + float(i) * 0.05);
+            float asymShift = float(i) * 0.4;
+            
             for (int j = 0; j < 2; j++) {
                 float idx = float(j);
-                float offset = idx * 7.0 + (i == 1 ? 13.0 : 0.0);
+                float offset = idx * 6.0 + (i == 1 ? 19.5 : 0.0);
                 
-                // Adjust coordinate for mirroring opposite direction
                 vec2 pCurtain = p;
-                if (i == 1) pCurtain.x = centerX - (pCurtain.x - centerX);
+                // Break perfect mirroring with unique shift and scale
+                if (i == 1) {
+                    pCurtain.x = centerX - (pCurtain.x - centerX) * 0.95 + asymShift;
+                }
                 
-                float intens = silkCurtain(pCurtain, time, offset, dir);
+                float intens = silkCurtain(pCurtain, setTime, offset, dir);
                 
-                // Color Mapping
+                // Color Mapping - Restoring Purple/Accent Dominance
                 vec3 c1 = u_colors[0]; // Teal/Green
-                vec3 c2 = u_colors[1]; // Purple/Magenta
+                vec3 c2 = u_colors[1]; // Purple/Accent
                 
-                vec3 mixed = mix(c2, c1, uv.y + intens * 0.3);
-                auroraAccum += mixed * intens * 0.6;
+                vec3 mixed = mix(c1, c2, clamp(uv.y * 0.4 + intens * 0.6, 0.0, 1.0));
+                auroraAccum += mixed * intens * 0.75;
             }
         }
 
-        // 3. Post-Process & Atmosphere (Gradual Top-to-Bottom Fade for Readability)
-        // High intensity at top (uv.y=1), fading out toward bottom (uv.y=0)
-        float verticalFade = smoothstep(0.0, 0.8, uv.y); 
+        // 3. Post-Process & Atmosphere (Full-Height Presence)
+        // Light is "less intense" toward the bottom but still present (0.15 baseline)
+        float verticalFade = 0.15 + 0.85 * smoothstep(0.0, 0.8, uv.y); 
         auroraAccum *= verticalFade;
         
-        // Final intensity calibration - Subtler for readability
         auroraAccum *= u_intensity * 0.6; 
         
         // Gaussian-style bloom
-        float glow = length(auroraAccum) * u_bloom * 0.5;
+        float glow = length(auroraAccum) * u_bloom * 0.55;
         col += auroraAccum;
         col += auroraAccum * glow;
 
-        // Scrim for UI legibility (Clean edge at very bottom/top)
-        float mask = smoothstep(0.0, 0.02, uv.y) * (1.0 - smoothstep(0.95, 1.0, uv.y));
+        // Final Edge Mask (Clean top/bottom edges)
+        float mask = smoothstep(0.0, 0.01, uv.y) * (1.0 - smoothstep(0.98, 1.0, uv.y));
         col *= mask;
         
         gl_FragColor = vec4(clamp(col, 0.0, 1.0), u_opacity);
