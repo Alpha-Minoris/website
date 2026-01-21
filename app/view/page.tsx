@@ -7,7 +7,7 @@ import { BackToEditButton } from '@/components/editor/back-to-edit-button'
 // PUBLIC ROUTE: ISR with on-demand revalidation
 // Static generation with 1-hour cache, invalidated on publish
 // Editing happens at /edit route
-export const revalidate = 3600 // ISR: regenerate every hour OR on revalidatePath
+export const revalidate = 60 // ISR: regenerate every 60 seconds OR on revalidatePath
 
 export default async function Home() {
   // Public page: NEVER has editing (middleware redirects authenticated users to /edit)
