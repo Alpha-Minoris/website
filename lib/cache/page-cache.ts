@@ -31,7 +31,7 @@ export const getSections = unstable_cache(
     },
     ['public-sections'], // Cache key
     {
-        revalidate: 3600, // 1 hour
+        revalidate: 60, // 1 minute
         tags: ['sections'] // Tag for on-demand revalidation
     }
 )
@@ -58,7 +58,7 @@ export const getVersions = unstable_cache(
     },
     ['public-versions'], // Cache key
     {
-        revalidate: 3600, // 1 hour
+        revalidate: 60, // 1 minute
         tags: ['versions'] // Tag for on-demand revalidation
     }
 )
