@@ -21,12 +21,9 @@ export default function proxy(request: NextRequest) {
     const pathname = request.nextUrl.pathname
 
     // LOCALHOST: Auto-redirect root to /edit (but NOT /view - that's for preview)
-    // TEMPORARILY DISABLED FOR TESTING
-    /*
     if (isLocalhost && pathname === '/') {
         return NextResponse.redirect(new URL('/edit', request.url))
     }
-    */
 
     // PRODUCTION /edit: Future auth check goes here
     // For now, allow access (will block when auth is implemented)

@@ -48,11 +48,6 @@ export function EditorBlockWrapper(props: EditorBlockWrapperProps) {
         }
     }
 
-    // Debug logging
-    if (isEditMode && blockType !== 'icon' && blockType !== 'card') {
-        console.log(`[EditorBlockWrapper] ${blockType} (${blockId.slice(0, 8)}): isEditMode=${isEditMode}, isSelected=${selectedBlockId === blockId}, selectedBlockId=${selectedBlockId?.slice(0, 8) || 'none'}`)
-    }
-
     if (layoutMode === 'canvas') {
         return <CanvasBlockWrapper {...commonProps} />
     }
@@ -192,9 +187,9 @@ function BlockFrame({
             // Flow: w-full relative (standard block behavior)
             // Canvas: absolute (implied w-auto). NO FORCED WIDTH.
             className={cn(
-                "group outline-none",
+                "group",
                 layoutMode === 'flow' ? "w-full relative" : "absolute",
-                isSelected ? "ring-2 ring-blue-500 z-10" : "hover:ring-1 hover:ring-blue-500/50",
+                isSelected ? "border-2 border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.5)] z-50" : "hover:border hover:border-blue-500/30 hover:shadow-[0_0_10px_rgba(59,130,246,0.2)]",
                 isEditMode && layoutMode === 'canvas' ? "cursor-move" : "",
                 // Visual feedback for hidden sections - stronger yellow glow
                 isHidden && isEditMode ? "opacity-75 grayscale border-2 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)] outline-none ring-2 ring-yellow-500" : "",
@@ -217,12 +212,12 @@ function BlockFrame({
 
             {isSelected && (
                 <>
-                    {/* Toolbars */}
-                    {!isContentBlock && !isCardBlock && blockType !== 'icon' && blockType !== 'footer' &&
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full pb-2 z-50 cursor-default" onPointerDown={e => e.stopPropagation()}>
+                    {/* TOOLBAR - Below the border */}
+                    {!isContentBlock && !isCardBlock && blockType !== 'icon' && blockType !== 'footer' && (
+                        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[9999]">
                             <FloatingToolbar id={blockId} />
                         </div>
-                    }
+                    )}
 
                     {isContentBlock &&
                         <div

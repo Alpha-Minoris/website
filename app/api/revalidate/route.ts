@@ -7,9 +7,19 @@ import { NextRequest, NextResponse } from 'next/server'
  */
 export async function POST(request: NextRequest) {
     try {
-        // Validate request (optional: add secret token)
-        const body = await request.json()
+        // Validate webhook secret
+        const webhookSecret = request.headers.get('x-webhook-secret')
+        const expectedSecret = process.env.REVALIDATE_SECRET
 
+        if (expectedSecret && webhookSecret !== expectedSecret) {
+            console.error('[Revalidate API] Unauthorized: Invalid webhook secret')
+            return NextResponse.json(
+                { error: 'Unauthorized' },
+                { status: 401 }
+            )
+        }
+
+        const body = await request.json()
         console.log('[Revalidate API] Revalidating cache...')
 
         // Revalidate tags
