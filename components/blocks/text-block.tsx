@@ -3,7 +3,6 @@
 import React, { useRef, useState, useCallback } from 'react'
 import { BlockProps } from './types'
 import { cn } from '@/lib/utils'
-import { updateBlockContent } from '@/actions/block-actions'
 
 interface TextSettings {
     level?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'p' | 'label'
@@ -78,26 +77,12 @@ export function TextBlock({ id, content, settings, sectionId }: BlockProps) {
     }, [])
 
     const handleBlur = useCallback(async (e: React.FocusEvent<HTMLElement>) => {
-        if (!sectionId) return
-
         const newHtml = e.currentTarget.innerHTML
-        // Save if different from what we thought we had
         if (newHtml !== lastContentHtml.current) {
-            try {
-                // Determine complexity: if simple string, save as simple string? 
-                // For now always save as string (which contains HTML tags).
-                await updateBlockContent(sectionId, id, { content: newHtml })
-                lastContentHtml.current = newHtml
-                isDirty.current = false // Reset dirty state after save confirm? 
-                // Actually, safer to keep dirty until prop comes back? 
-                // No, once saved, we expect prop to match eventually. 
-                // But better to leave isDirty=false so we can accept the *next* prop update 
-                // which should match what we just saved.
-            } catch (err) {
-                console.error("Failed to save text", err)
-            }
+            lastContentHtml.current = newHtml
+            isDirty.current = false
         }
-    }, [sectionId, id])
+    }, [id])
 
     return (
         <Tag

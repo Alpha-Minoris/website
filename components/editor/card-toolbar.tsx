@@ -115,7 +115,7 @@ export function CardToolbar({ blockId, sectionId, settings }: CardToolbarProps) 
     }
 
     // Debounce Ref for Server Saving
-    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
 
     // Toggle Mode (Simple <-> Flip)
     const toggleMode = async () => {
@@ -126,17 +126,7 @@ export function CardToolbar({ blockId, sectionId, settings }: CardToolbarProps) 
     }
 
     const handleColorChange = useCallback((key: 'color' | 'backgroundColor' | 'borderColor', value: string) => {
-        // 1. Immediate Client-Side Update (Fast)
         updateStoreBlock(blockId, { settings: { ...settings, [key]: value } })
-
-        // 2. Debounced Server-Side Update (Slow)
-        if (saveTimeoutRef.current) {
-            clearTimeout(saveTimeoutRef.current)
-        }
-
-        saveTimeoutRef.current = setTimeout(async () => {
-            await updateBlock(blockId, { settings: { ...settings, [key]: value } })
-        }, 1000)
     }, [blockId, settings, updateStoreBlock])
 
     return (

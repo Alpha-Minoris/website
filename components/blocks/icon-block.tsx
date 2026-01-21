@@ -51,9 +51,6 @@ export function IconBlock({ id, settings, sectionSlug, slug }: BlockProps) {
     const handleUpdate = (updates: any) => {
         const newSettings = { ...settings, ...updates }
         updateBlock(id, { settings: newSettings })
-        import('@/actions/block-actions').then(({ updateBlockContent }) => {
-            updateBlockContent(sectionSlug || slug || id, id, { settings: newSettings })
-        })
     }
 
     const handleChange = (type: 'icon' | 'image', value: string) => {
@@ -64,9 +61,6 @@ export function IconBlock({ id, settings, sectionSlug, slug }: BlockProps) {
             iconName: type === 'icon' ? value : undefined
         }
         updateBlock(id, { settings: newSettings })
-        import('@/actions/block-actions').then(({ updateBlockContent }) => {
-            updateBlockContent(sectionSlug || slug || id, id, { settings: newSettings })
-        })
     }
 
     return (

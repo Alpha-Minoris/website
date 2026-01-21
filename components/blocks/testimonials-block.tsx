@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { TestimonialCarousel } from './testimonials/testimonial-carousel'
 import { useEditorStore } from '@/lib/stores/editor-store'
-import { updateBlock as updateBlockAction } from '@/actions/block-actions'
 import { EditableText } from '@/components/editor/editable-text'
 import { TextToolbar } from '@/components/editor/text-toolbar'
 
@@ -21,7 +20,7 @@ export function TestimonialsBlock({ id, settings }: BlockProps) {
         title: 'Client Stories',
         ...settings
     })
-    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
 
     useEffect(() => {
         if (settings) {
@@ -32,15 +31,6 @@ export function TestimonialsBlock({ id, settings }: BlockProps) {
     const saveSettings = useCallback((newSettings: any) => {
         setLocalSettings(newSettings)
         updateBlock(id, { settings: newSettings })
-
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-        saveTimeoutRef.current = setTimeout(async () => {
-            try {
-                await updateBlockAction(id, newSettings)
-            } catch (err) {
-                console.error("Failed to save testimonials settings:", err)
-            }
-        }, 800)
     }, [id, updateBlock])
 
     const handleTextChange = (key: string, value: string) => {

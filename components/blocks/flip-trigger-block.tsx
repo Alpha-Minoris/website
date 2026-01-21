@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { useEditorStore } from '@/lib/stores/editor-store'
 
 export function FlipTriggerBlock({ id, content, settings, sectionId }: BlockProps) {
-    const { isEditMode, setSelectedBlockId } = useEditorStore()
+    const { isEditMode, setSelectedBlockId, updateBlock } = useEditorStore()
     const textContent = typeof content === 'string' ? content : "Learn more →"
     const action = settings?.action || 'flip' // flip | reverse
 
@@ -43,14 +43,10 @@ export function FlipTriggerBlock({ id, content, settings, sectionId }: BlockProp
                     )}
                     contentEditable={isEditMode}
                     suppressContentEditableWarning
-                    onBlur={async (e) => {
+                    onBlur={(e) => {
                         if (sectionId) {
                             const newText = e.currentTarget.textContent
-                            if (newText !== textContent) {
-                                try {
-                                    await updateBlockContent(sectionId, id, { content: newText })
-                                } catch (err) { console.error(err) }
-                            }
+                            updateBlock(id, { content: newText })
                         }
                     }}
                     onClick={(e) => {

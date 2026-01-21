@@ -94,7 +94,8 @@ export default async function EditPage() {
             id: section.id,
             type: blockType as BlockType,
             content: hasLayoutContent ? layoutContent : (version?.content_html || []),
-            settings: version?.layout_json || {},
+            // Merge layout_json root with nested settings for backward compatibility  
+            settings: version?.layout_json ? { ...version.layout_json, ...version.layout_json.settings } : {},
             is_enabled: section.is_enabled,
             title: section.title,
             slug: section.slug

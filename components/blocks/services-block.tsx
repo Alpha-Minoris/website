@@ -3,7 +3,6 @@
 import { BlockProps } from './types'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/lib/stores/editor-store'
-import { updateBlock as updateBlockAction } from '@/actions/block-actions'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { ServiceFlipCard } from './service-flip-card'
 import { Eye, EyeOff } from 'lucide-react'
@@ -31,7 +30,6 @@ export function ServicesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
 
     // Local state
     const [localSettings, setLocalSettings] = useState<any>({ ...defaultData, ...settings })
-    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
     // Sync from props
     useEffect(() => {
@@ -43,15 +41,6 @@ export function ServicesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
     const saveSettings = useCallback((newSettings: any) => {
         setLocalSettings(newSettings)
         updateBlock(id, { settings: newSettings })
-
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-        saveTimeoutRef.current = setTimeout(async () => {
-            try {
-                await updateBlockAction(id, newSettings)
-            } catch (err) {
-                console.error("Failed to save services:", err)
-            }
-        }, 800)
     }, [id, updateBlock])
 
     const handleTextChange = useCallback((key: string, value: string) => {

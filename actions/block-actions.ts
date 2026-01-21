@@ -9,7 +9,10 @@ import { getOrCreateDraftVersion } from '@/lib/staging/staging-utils'
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export async function updateBlock(blockId: string, updates: any) {
-    console.log(`[updateBlock] START blockId=${blockId}`)
+    console.log('='.repeat(80))
+    console.log(`[updateBlock] ===== START ===== blockId=${blockId}`)
+    console.log(`[updateBlock] Updates received:`, JSON.stringify(updates, null, 2))
+    console.log('='.repeat(80))
     const supabase = await createAdminClient()
 
     // 1. Check if blockId is a UUID. If not, treat as a slug.
@@ -51,6 +54,16 @@ export async function updateBlock(blockId: string, updates: any) {
         const currentLayout = draftVersion.layout_json || {}
         const newLayout = { ...currentLayout, ...updates }
 
+        console.log(`[updateBlock] Section-level update:`, {
+            currentLayoutKeys: Object.keys(currentLayout),
+            updateKeys: Object.keys(updates),
+            newLayoutKeys: Object.keys(newLayout),
+            hasCurrentServices: !!currentLayout.settings?.services,
+            hasUpdateServices: !!updates.settings?.services,
+            currentServicesCount: currentLayout.settings?.services?.length || 0,
+            updateServicesCount: updates.settings?.services?.length || 0
+        })
+
         const { error: updateError } = await supabase
             .from('website_section_versions')
             .update({ layout_json: newLayout })
@@ -68,18 +81,18 @@ export async function updateBlock(blockId: string, updates: any) {
 
     console.log(`[updateBlock] No direct section match for ${blockId}. Searching nested content...`)
 
-    // If not a section, find the section containing the block
-    const { data: allVersions, error: allVersionsError } = await supabase
+    // If not a section, find the section containing the block by searching published versions
+    const { data: allPublishedVersions, error: publishedError } = await supabase
         .from('website_section_versions')
         .select('id, section_id, layout_json')
         .eq('status', 'published')
 
-    if (allVersionsError) {
-        console.error(`[updateBlock] Error fetching all versions:`, allVersionsError)
-        throw allVersionsError
+    if (publishedError) {
+        console.error(`[updateBlock] Error fetching published versions:`, publishedError)
+        throw publishedError
     }
 
-    let foundVersion = null
+    let foundSectionId = null
     const findBlockInTree = (blocks: any[], targetId: string): boolean => {
         for (const b of blocks) {
             if (b.id === targetId) return true
@@ -93,22 +106,31 @@ export async function updateBlock(blockId: string, updates: any) {
         return false
     }
 
-    if (allVersions) {
-        for (const v of allVersions) {
+    if (allPublishedVersions) {
+        for (const v of allPublishedVersions) {
             const content = Array.isArray(v.layout_json?.content) ? v.layout_json.content : []
             if (findBlockInTree(content, blockId)) {
-                foundVersion = v
+                foundSectionId = v.section_id
+                console.log(`[updateBlock] Block found in section ${foundSectionId}`)
                 break
             }
         }
     }
 
-    if (!foundVersion) {
+    if (!foundSectionId) {
         console.error(`[updateBlock] Block ${blockId} not found in any published section tree.`)
         throw new Error("Block's container section not found")
     }
 
-    console.log(`[updateBlock] Block found in version ${foundVersion.id} (section ID: ${foundVersion.section_id})`)
+    // Get or create draft version for the section containing this block
+    console.log(`[updateBlock] Calling getOrCreateDraftVersion for section ${foundSectionId}`)
+    const draftVersion = await getOrCreateDraftVersion(foundSectionId)
+    console.log(`[updateBlock] Draft version retrieved:`, {
+        id: draftVersion.id,
+        section_id: draftVersion.section_id,
+        status: draftVersion.status,
+        hasLayout: !!draftVersion.layout_json
+    })
 
     const updateRecursive = (blocks: any[]): any[] => {
         return blocks.map(b => {
@@ -125,22 +147,34 @@ export async function updateBlock(blockId: string, updates: any) {
         })
     }
 
-    const currentContent = Array.isArray(foundVersion.layout_json?.content) ? foundVersion.layout_json.content : []
+    const currentContent = Array.isArray(draftVersion.layout_json?.content) ? draftVersion.layout_json.content : []
     const newContent = updateRecursive(currentContent)
-    const newLayout = { ...(foundVersion.layout_json || {}), content: newContent }
+    const newLayout = { ...(draftVersion.layout_json || {}), content: newContent }
+
+    console.log(`[updateBlock] About to update database:`, {
+        draftVersionId: draftVersion.id,
+        hasNewLayout: !!newLayout,
+        newContentLength: newContent.length
+    })
 
     const { error: finalUpdateError } = await supabase
         .from('website_section_versions')
         .update({ layout_json: newLayout })
-        .eq('id', foundVersion.id)
+        .eq('id', draftVersion.id)
 
     if (finalUpdateError) {
-        console.error(`[updateBlock] Error saving nested update to version ${foundVersion.id}:`, finalUpdateError)
+        console.error('='.repeat(80))
+        console.error(`[updateBlock] DATABASE UPDATE FAILED!`)
+        console.error(`[updateBlock] Error:`, finalUpdateError)
+        console.error('='.repeat(80))
         throw finalUpdateError
     }
 
-    console.log(`[updateBlock] Success: Recursive update for ${blockId}`)
-    revalidatePath('/')
+    console.log('='.repeat(80))
+    console.log(`[updateBlock] ===== SUCCESS =====`)
+    console.log(`[updateBlock] Updated draft version ${draftVersion.id} for block ${blockId}`)
+    console.log('='.repeat(80))
+    // NO revalidatePath here - only on publish!
     return { success: true }
 }
 

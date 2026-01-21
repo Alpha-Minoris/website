@@ -100,9 +100,6 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
     const handleTextSave = (face: 'front' | 'back', html: string) => {
         const key = face === 'front' ? 'linkTextFront' : 'linkTextBack'
         updateBlock(id, { settings: { ...settings, [key]: html } })
-        import('@/actions/block-actions').then(({ updateBlockContent }) => {
-            if (sectionId) updateBlockContent(sectionId, id, { settings: { ...settings, [key]: html } })
-        })
     }
 
     const handleLinkUpdate = (face: 'front' | 'back' | null, updates: any) => {
@@ -110,9 +107,6 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
         const key = face === 'front' ? 'linkFrontSettings' : 'linkBackSettings'
         const newSettings = { ...settings, [key]: { ...(settings?.[key] || {}), ...updates } }
         updateBlock(id, { settings: newSettings })
-        import('@/actions/block-actions').then(({ updateBlockContent }) => {
-            if (sectionId) updateBlockContent(sectionId, id, { settings: newSettings })
-        })
     }
 
     const handleIconUpdate = (face: 'front' | 'back' | null, updates: any) => {
@@ -120,9 +114,6 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
         const key = face === 'front' ? 'iconFrontSettings' : 'iconBackSettings'
         const newSettings = { ...settings, [key]: { ...(settings?.[key] || {}), ...updates } }
         updateBlock(id, { settings: newSettings })
-        import('@/actions/block-actions').then(({ updateBlockContent }) => {
-            if (sectionId) updateBlockContent(sectionId, id, { settings: newSettings })
-        })
     }
 
     // Resize is now handled by EditorBlockWrapper

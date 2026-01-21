@@ -966,51 +966,13 @@ export function TextToolbar({ blockId }: TextToolbarProps) {
     }, [block?.settings])
 
     // Save timeout ref
-    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
 
     // Optimistic Update wrapper
     const handleUpdate = (updates: any) => {
-        // 1. Update State
         const newSettings = { ...localSettings, ...updates }
         setLocalSettings(newSettings)
-
-        // 2. Update Store Immediately (Snappy UI)
         updateStoreBlock(blockId, { settings: newSettings })
-
-        // 3. Queue Server Save (Debounced)
-        if (saveTimeoutRef.current) {
-            clearTimeout(saveTimeoutRef.current)
-        }
-
-        saveTimeoutRef.current = setTimeout(async () => {
-            const sectionId = findParentSectionId(blockId)
-
-            // If we can't find a parent section (and it's not in the tree as a child),
-            // it might BE the section itself (like Footer).
-            // findParentSectionId returns the ID of the section containing the block.
-            // If blockId IS the section, it returns the section ID (itself) if implemented deeply, 
-            // but the current implementation of findParentSectionId might return itself?
-            // Let's check findParentSectionId implementation lines 294-314 in view_file 883.
-            // It iterates `blocks`. If `block.id === childId` returns `block.id`.
-            // So yes, if Footer is root, sectionId === blockId.
-
-            if (!sectionId) return
-
-            try {
-                if (sectionId === blockId) {
-                    // It is a root section. Use updateBlock (Section Level)
-                    // Dynamic import to avoid cycles if needed, or stick to what we have.
-                    // block-actions exports updateBlock.
-                    const { updateBlock } = await import('@/actions/block-actions')
-                    await updateBlock(blockId, newSettings)
-                } else {
-                    // It is a child. Use updateBlockContent.
-                    await updateBlockContent(sectionId, blockId, { settings: newSettings })
-                }
-            } catch (err) {
-                console.error("Failed to save text settings", err)
-            }
-        }, 500)
     }
 
     // Handlers

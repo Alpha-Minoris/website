@@ -48,7 +48,7 @@ export function FloatingToolbar({ id }: FloatingToolbarProps) {
     const settings = block?.settings || {}
 
     // Debounce ref for color changes
-    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
 
     const handleMove = async (direction: 'up' | 'down') => {
         const currentIndex = blocks.findIndex(b => b.id === id)
@@ -90,44 +90,12 @@ export function FloatingToolbar({ id }: FloatingToolbarProps) {
 
     const handleBackgroundColorChange = useCallback((color: string) => {
         const newSettings = { ...settings, backgroundColor: color }
-
-        // Immediate update to store (UI feedback)
         updateBlockLocal(id, { settings: newSettings })
-
-        // Debounced save to server
-        // For sections, layout_json IS the settings, so pass backgroundColor directly
-        if (saveTimeoutRef.current) {
-            clearTimeout(saveTimeoutRef.current)
-        }
-
-        saveTimeoutRef.current = setTimeout(async () => {
-            try {
-                // Pass backgroundColor at root level for sections (layout_json = settings)
-                await updateBlock(id, { backgroundColor: color })
-            } catch (err) {
-                console.error("Failed to update section background", err)
-            }
-        }, 500)
     }, [id, settings, updateBlockLocal])
 
     const handleGridSizeChange = useCallback((size: number) => {
         const newSettings = { ...settings, gridSnapSize: size }
-
-        // Immediate update to store
         updateBlockLocal(id, { settings: newSettings })
-
-        // Debounced save to server
-        if (saveTimeoutRef.current) {
-            clearTimeout(saveTimeoutRef.current)
-        }
-
-        saveTimeoutRef.current = setTimeout(async () => {
-            try {
-                await updateBlock(id, { gridSnapSize: size })
-            } catch (err) {
-                console.error("Failed to update grid size", err)
-            }
-        }, 500)
     }, [id, settings, updateBlockLocal])
 
     const handleToggleVisibility = async () => {

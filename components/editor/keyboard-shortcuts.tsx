@@ -6,7 +6,7 @@ import { deleteChildBlock } from '@/actions/block-actions'
 import { deleteSection } from '@/actions/section-actions'
 
 export function KeyboardShortcuts() {
-    const { isEditMode, selectedBlockId, blocks, removeBlock, setSelectedBlockId, undo, redo } = useEditorStore()
+    const { isEditMode, selectedBlockId, blocks, removeBlock, setSelectedBlockId, undo, redo, saveToServer } = useEditorStore()
 
     useEffect(() => {
         if (!isEditMode) return
@@ -15,6 +15,13 @@ export function KeyboardShortcuts() {
             const isMod = e.ctrlKey || e.metaKey
             const target = e.target as HTMLElement
             const isTyping = target.isContentEditable || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA'
+
+            // --- SAVE (Ctrl+S / Cmd+S) ---
+            if (isMod && e.key === 's') {
+                e.preventDefault()
+                saveToServer()
+                return
+            }
 
             // --- UNDO / REDO (Global) ---
             if (isMod && e.key === 'z') {

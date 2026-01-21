@@ -3,7 +3,6 @@
 import { BlockProps } from './types'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/lib/stores/editor-store'
-import { updateBlock as updateBlockAction } from '@/actions/block-actions'
 import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { TextToolbar } from '@/components/editor/text-toolbar'
@@ -28,7 +27,6 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
 
     // Local state
     const [localSettings, setLocalSettings] = useState(settings || {})
-    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const footerRef = useRef<HTMLElement>(null)
 
     // Toolbar Positioning
@@ -40,53 +38,24 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
     }, [settings])
 
     const saveSettings = useCallback((newSettings: any) => {
-        // This function is now primarily for initial default setup or full object replacement.
-        // Individual text/list changes use their own debounced save logic.
         setLocalSettings(newSettings)
         updateBlock(id, { settings: newSettings })
-
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-        saveTimeoutRef.current = setTimeout(async () => {
-            try {
-                await updateBlockAction(id, newSettings)
-            } catch (err) {
-                console.error("Failed to save footer:", err)
-            }
-        }, 800)
     }, [id, updateBlock])
 
     const handleTextChange = useCallback((key: string, value: string) => {
-        // We use the current localSettings directly. 
-        // Since EditableText only fires onBlur, this is not a high-freq update that needs functional set state for intermediate values.
         if (localSettings[key] === value) return
-
         const newSettings = { ...localSettings, [key]: value }
         setLocalSettings(newSettings)
-
-        // Optimistic update
         updateBlock(id, { settings: newSettings })
-
-        // Debounced Save
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-        saveTimeoutRef.current = setTimeout(async () => {
-            await updateBlockAction(id, newSettings)
-        }, 800)
     }, [id, localSettings, updateBlock])
 
     const handleListChange = useCallback((listKey: string, index: number, value: string) => {
         const list = [...(localSettings[listKey] || [])]
         if (list[index] === value) return
-
         list[index] = value
         const newSettings = { ...localSettings, [listKey]: list }
-
         setLocalSettings(newSettings)
         updateBlock(id, { settings: newSettings })
-
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-        saveTimeoutRef.current = setTimeout(async () => {
-            await updateBlockAction(id, newSettings)
-        }, 800)
     }, [id, localSettings, updateBlock])
 
     const handleAddItem = (listKey: string) => {
@@ -107,11 +76,6 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
         const newSettings = { ...localSettings, logoType: type, logoValue: value }
         setLocalSettings(newSettings)
         updateBlock(id, { settings: newSettings })
-
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-        saveTimeoutRef.current = setTimeout(async () => {
-            await updateBlockAction(id, newSettings)
-        }, 800)
     }
 
     // Initialize defaults

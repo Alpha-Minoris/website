@@ -223,12 +223,6 @@ export function GenericSectionBlock({ id, content, settings, slug }: BlockProps)
 
         // Default: just update position
         updateBlockLocal(active.id as string, { settings: newSettings })
-        try {
-            const { updateBlockContent } = await import('@/actions/block-actions')
-            await updateBlockContent(id, active.id as string, { settings: newSettings })
-        } catch (e) {
-            console.error("Failed to update block position", e)
-        }
     }
 
     // Droppable for section canvas

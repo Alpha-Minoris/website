@@ -2,7 +2,6 @@ import { BlockProps } from './types'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/lib/stores/editor-store'
-import { updateBlock as updateBlockAction } from '@/actions/block-actions'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Plus } from 'lucide-react'
 import { TextToolbar } from '@/components/editor/text-toolbar'
@@ -43,7 +42,6 @@ export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
 
     // Local state
     const [localSettings, setLocalSettings] = useState<any>({ ...defaultData, ...settings })
-    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
     // Sync from props
     useEffect(() => {
@@ -55,15 +53,6 @@ export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
     const saveSettings = useCallback((newSettings: any) => {
         setLocalSettings(newSettings)
         updateBlock(id, { settings: newSettings })
-
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-        saveTimeoutRef.current = setTimeout(async () => {
-            try {
-                await updateBlockAction(id, newSettings)
-            } catch (err) {
-                console.error("Failed to save hero:", err)
-            }
-        }, 800)
     }, [id, updateBlock])
 
     const handleTextChange = useCallback((key: string, value: string) => {

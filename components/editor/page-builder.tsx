@@ -21,11 +21,14 @@ export function PageBuilder({ initialBlocks, isEditMode = false }: PageBuilderPr
 
     // Sync initial blocks to store
     useEffect(() => {
+        console.log(`[PageBuilder] Setting ${initialBlocks.length} blocks to store, isEditMode=${isEditMode}`)
+        console.log(`[PageBuilder] First block:`, initialBlocks[0])
         setBlocks(initialBlocks)
     }, [initialBlocks, setBlocks])
 
     // Use store blocks if available (client-side state), otherwise prop blocks
     const renderBlocks = blocks.length > 0 ? blocks : initialBlocks
+    console.log(`[PageBuilder] Rendering ${renderBlocks.length} blocks, using ${blocks.length > 0 ? 'STORE' : 'PROPS'}`)
 
     return (
         <div className="flex flex-col w-full min-h-screen">

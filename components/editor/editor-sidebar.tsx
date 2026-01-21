@@ -4,7 +4,7 @@ import { useEditorStore } from '@/lib/stores/editor-store'
 import { createGenericSection } from '@/actions/section-actions'
 import { addChildBlock, updateBlock } from '@/actions/block-actions'
 import { cn } from '@/lib/utils'
-import { Layers, Box, Settings, Plus, LayoutTemplate, Monitor, Smartphone, Tablet, Type, Palette, Square, Link, Eye, EyeOff, Trash2 } from 'lucide-react'
+import { Layers, Box, Settings, Plus, LayoutTemplate, Monitor, Smartphone, Tablet, Type, Palette, Square, Link, Eye, EyeOff, Trash2, Save, Clock } from 'lucide-react'
 import { v4 as uuidv4 } from 'uuid'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -23,7 +23,19 @@ import { publishChangesAction, getUnpublishedCountAction } from '@/actions/publi
 import { Upload } from 'lucide-react'
 
 export function EditorSidebar() {
-    const { isEditMode, selectedBlockId, setSelectedBlockId, addBlock, blocks } = useEditorStore()
+    const {
+        isEditMode,
+        selectedBlockId,
+        setSelectedBlockId,
+        addBlock,
+        blocks,
+        autoSaveEnabled,
+        toggleAutoSave,
+        saveToServer,
+        dirtyBlockIds,
+        saveInProgress,
+        lastSavedAt
+    } = useEditorStore()
     const router = useRouter()
     const [activeTab, setActiveTab] = useState<'components' | 'layers' | 'settings' | 'theme' | null>(null)
     const [unpublishedCount, setUnpublishedCount] = useState(0)
@@ -227,6 +239,83 @@ export function EditorSidebar() {
                             {unpublishedCount > 0
                                 ? `${unpublishedCount} unpublished section${unpublishedCount > 1 ? 's' : ''}`
                                 : 'All changes published'}
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+
+                {/* Auto-Save Toggle */}
+                <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={toggleAutoSave}
+                                className={cn(
+                                    "rounded-full h-8 w-8 p-0 transition-all",
+                                    autoSaveEnabled
+                                        ? "text-green-400 hover:text-green-300"
+                                        : "text-zinc-600 hover:text-zinc-500"
+                                )}
+                            >
+                                <Clock className="w-4 h-4" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="bg-zinc-900 border-white/10 text-xs">
+                            <div className="text-center">
+                                <div className="font-medium">
+                                    Auto-save {autoSaveEnabled ? 'enabled' : 'disabled'}
+                                </div>
+                                <div className="text-zinc-500 text-[10px] mt-0.5">
+                                    {autoSaveEnabled ? 'Saves after 5s' : 'Click to enable'}
+                                </div>
+                            </div>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+
+                {/* Save Status & Manual Save Button */}
+                <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => saveToServer()}
+                                disabled={dirtyBlockIds.size === 0 || saveInProgress}
+                                className={cn(
+                                    "rounded-full h-8 px-3 text-xs gap-1.5 transition-all",
+                                    dirtyBlockIds.size > 0
+                                        ? "bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/30"
+                                        : "bg-zinc-800/50 text-zinc-500"
+                                )}
+                            >
+                                {saveInProgress ? (
+                                    <>
+                                        <div className="w-3 h-3 border-2 border-yellow-300 border-t-transparent rounded-full animate-spin" />
+                                        Saving...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save className="w-3 h-3" />
+                                        {dirtyBlockIds.size > 0 ? `${dirtyBlockIds.size} unsaved` : 'Saved'}
+                                    </>
+                                )}
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="bg-zinc-900 border-white/10 text-xs">
+                            <div className="text-center">
+                                <div className="font-medium">
+                                    {dirtyBlockIds.size > 0
+                                        ? `${dirtyBlockIds.size} unsaved change${dirtyBlockIds.size > 1 ? 's' : ''}`
+                                        : 'All changes saved'}
+                                </div>
+                                {lastSavedAt && (
+                                    <div className="text-zinc-500 text-[10px] mt-0.5">
+                                        Last saved {new Date(lastSavedAt).toLocaleTimeString()}
+                                    </div>
+                                )}
+                            </div>
                         </TooltipContent>
                     </Tooltip>
                 </TooltipProvider>
