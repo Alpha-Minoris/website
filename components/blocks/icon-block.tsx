@@ -23,6 +23,27 @@ export function IconDisplay({ name, className, style, color }: { name: string, c
     }, [name])
 
     const isHexColor = color?.startsWith('#')
+    const isGradient = color?.startsWith('linear-gradient') || color?.startsWith('radial-gradient')
+
+    // For gradients, we need to use background-clip technique
+    if (isGradient) {
+        return (
+            <Suspense fallback={<div className={cn("bg-accent/10 animate-pulse rounded", className)} />}>
+                <div
+                    className={cn(className, "inline-flex")}
+                    style={{
+                        ...style,
+                        backgroundImage: color,  // Use backgroundImage instead of background
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                    }}
+                >
+                    <LucideIcon className="w-full h-full" />
+                </div>
+            </Suspense>
+        )
+    }
 
     return (
         <Suspense fallback={<div className={cn("bg-accent/10 animate-pulse rounded", className)} />}>
