@@ -66,15 +66,17 @@ export function ContactBlock({ id }: BlockProps) {
                                                 {state.errors?.lastName && <p className="text-red-400 text-xs">{state.errors.lastName}</p>}
                                             </div>
                                         </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="job-title">Job Title</Label>
-                                            <Input name="job-title" id="job-title" placeholder="CEO" className="bg-white/5 border-white/10 h-12" required />
-                                            {state.errors?.jobTitle && <p className="text-red-400 text-xs">{state.errors.jobTitle}</p>}
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="company">Company Name</Label>
-                                            <Input name="company" id="company" placeholder="Company Name" className="bg-white/5 border-white/10 h-12" required />
-                                            {state.errors?.company && <p className="text-red-400 text-xs">{state.errors.company}</p>}
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="job-title">Job Title</Label>
+                                                <Input name="job-title" id="job-title" placeholder="CEO" className="bg-white/5 border-white/10 h-12" required />
+                                                {state.errors?.jobTitle && <p className="text-red-400 text-xs">{state.errors.jobTitle}</p>}
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="company">Company Name</Label>
+                                                <Input name="company" id="company" placeholder="Company Name" className="bg-white/5 border-white/10 h-12" required />
+                                                {state.errors?.company && <p className="text-red-400 text-xs">{state.errors.company}</p>}
+                                            </div>
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="email">Work Email</Label>
