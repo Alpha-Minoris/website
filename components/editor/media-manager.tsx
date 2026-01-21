@@ -29,6 +29,8 @@ import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import { uploadAsset, deleteAsset, listAssets, renameAsset } from "../../actions/storage-actions"
 import { DeleteButton } from "@/components/editor/editable-list-controls"
+import { autoOptimize } from "@/lib/utils/image-utils"
+import { Zap } from "lucide-react"
 
 interface MediaManagerProps {
     open: boolean
@@ -54,6 +56,7 @@ export function MediaManager({ open, onOpenChange, onSelect, folder }: MediaMana
     const [editingPath, setEditingPath] = React.useState<string | null>(null)
     const [newName, setNewName] = React.useState("")
     const [allFolders, setAllFolders] = React.useState<string[]>([])
+    const [optimizing, setOptimizing] = React.useState(false)
 
     const supabase = createClient()
 
@@ -93,8 +96,21 @@ export function MediaManager({ open, onOpenChange, onSelect, folder }: MediaMana
     }, [open, activeTab, currentPath, fetchLibrary, allFolders.length])
 
     const handleUpload = async (file: File) => {
-        if (file.size > 5 * 1024 * 1024) {
+        // Only optimize if it's an image and not already a small SVG/optimized file
+        let fileToUpload = file
+        if (file.type.startsWith('image/') && !file.name.endsWith('.svg')) {
+            try {
+                setUploading(true)
+                setHeaderError(null)
+                fileToUpload = await autoOptimize(file)
+            } catch (err) {
+                console.warn("Optimization failed, uploading original:", err)
+            }
+        }
+
+        if (fileToUpload.size > 5 * 1024 * 1024) {
             setHeaderError("File too large. Max 5MB.")
+            setUploading(false)
             return
         }
 
@@ -103,7 +119,7 @@ export function MediaManager({ open, onOpenChange, onSelect, folder }: MediaMana
             setHeaderError(null)
 
             const formData = new FormData()
-            formData.append('file', file)
+            formData.append('file', fileToUpload)
             formData.append('folder', currentPath || folder || "")
 
             const result = await uploadAsset(formData)
@@ -124,7 +140,7 @@ export function MediaManager({ open, onOpenChange, onSelect, folder }: MediaMana
                     setSelectedLibraryItem({
                         name: shortName,
                         created_at: new Date().toISOString(),
-                        metadata: { size: file.size }
+                        metadata: { size: fileToUpload.size }
                     } as any)
                 }
             }
@@ -133,6 +149,57 @@ export function MediaManager({ open, onOpenChange, onSelect, folder }: MediaMana
             setHeaderError(err.message || "Error uploading image.")
         } finally {
             setUploading(false)
+        }
+    }
+
+    const handleOptimizeSelected = async () => {
+        if (!selectedLibraryItem) return
+
+        const fullPath = currentPath ? `${currentPath}/${selectedLibraryItem.name}` : selectedLibraryItem.name
+        const { data: { publicUrl } } = supabase.storage.from('site-assets').getPublicUrl(fullPath)
+
+        setOptimizing(true)
+        setHeaderError(null)
+
+        try {
+            // 1. Fetch the image
+            const response = await fetch(publicUrl)
+            const blob = await response.blob()
+
+            // 2. Wrap in File object
+            const originalName = selectedLibraryItem.name.replace(/\.[^/.]+$/, "")
+            const file = new File([blob], `${originalName}-optimized.webp`, { type: blob.type })
+
+            // 3. Optimize
+            const optimizedFile = await autoOptimize(file)
+
+            // 4. Upload
+            const formData = new FormData()
+            formData.append('file', optimizedFile)
+            formData.append('folder', currentPath || "")
+
+            const result = await uploadAsset(formData)
+
+            if (result.error) throw new Error(result.error)
+
+            // 5. Success - Refresh
+            await fetchLibrary(currentPath)
+
+            // 6. Select the new optimized one
+            if (result.fileName) {
+                const shortName = result.fileName.split('/').pop() || result.fileName
+                setSelectedLibraryItem({
+                    name: shortName,
+                    created_at: new Date().toISOString(),
+                    metadata: { size: optimizedFile.size }
+                } as any)
+            }
+
+        } catch (err: any) {
+            console.error("Manual optimization error:", err)
+            setHeaderError("Failed to optimize: " + (err.message || "Unknown error"))
+        } finally {
+            setOptimizing(false)
         }
     }
 
@@ -464,6 +531,23 @@ export function MediaManager({ open, onOpenChange, onSelect, folder }: MediaMana
                                                             strokeWidth={2.5}
                                                             className="h-12 w-12 rounded-2xl flex items-center justify-center opacity-100 group-hover:opacity-100 bg-red-500/20"
                                                         />
+
+                                                        {selectedLibraryItem.name.toLowerCase().match(/\.(jpg|jpeg|png|webp)$/) && !selectedLibraryItem.name.includes('-optimized') && (
+                                                            <Button
+                                                                variant="outline"
+                                                                className="h-12 px-6 border-white/10 bg-white/5 text-zinc-300 hover:text-white hover:bg-white/10 rounded-2xl flex items-center gap-2"
+                                                                onClick={handleOptimizeSelected}
+                                                                disabled={optimizing}
+                                                            >
+                                                                {optimizing ? (
+                                                                    <Loader2 className="w-4 h-4 animate-spin text-accent" />
+                                                                ) : (
+                                                                    <Zap className="w-4 h-4 text-accent" />
+                                                                )}
+                                                                {optimizing ? 'Wait...' : 'Optimize'}
+                                                            </Button>
+                                                        )}
+
                                                         <Button
                                                             className="h-12 flex-1 bg-accent hover:bg-accent/90 text-white font-bold rounded-2xl shadow-lg shadow-accent/20 transition-all active:scale-95 flex items-center justify-center gap-2"
                                                             onClick={() => {
