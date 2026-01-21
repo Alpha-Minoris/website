@@ -164,7 +164,7 @@ Choose the level of support that matches your goals, timeline, and internal capa
 The Team
 
 **Subheading**  
-A small, focused team combining business leadership, AI research, and hands-on delivery.
+Team combining business leadership, AI research, and hands-on delivery.
 
 ### Udey Singh Thakur  
 **Founder**  
