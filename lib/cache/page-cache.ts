@@ -5,47 +5,60 @@
  * For edit mode cache with cookies, see edit-cache.ts
  */
 
+import { unstable_cache } from 'next/cache'
 import { createCacheCompatibleClient } from '@/lib/supabase/server'
 
 /**
  * Get sections from database (PUBLIC - no auth)
- * Used by production public page (/)
- * Cached at page level via revalidate setting
+ * Used by production public page (/view)
+ * Cached via unstable_cache with 1-hour revalidation
  */
-export async function getSections() {
-    console.log('[Cache] Fetching sections from database...')
+export const getSections = unstable_cache(
+    async () => {
+        console.log('[Cache] Fetching sections from database...')
 
-    // Always use cache-compatible client (no cookies!)
-    const supabase = createCacheCompatibleClient()
+        const supabase = createCacheCompatibleClient()
 
-    const { data: sections, error } = await supabase
-        .from('website_sections')
-        .select('*')
-        .order('sort_order', { ascending: true })
+        const { data: sections, error } = await supabase
+            .from('website_sections')
+            .select('*')
+            .order('sort_order', { ascending: true })
 
-    if (error) throw error
+        if (error) throw error
 
-    console.log(`[Cache] Fetched ${sections?.length || 0} sections`)
-    return sections
-}
+        console.log(`[Cache] Fetched ${sections?.length || 0} sections`)
+        return sections
+    },
+    ['public-sections'], // Cache key
+    {
+        revalidate: 3600, // 1 hour
+        tags: ['sections'] // Tag for on-demand revalidation
+    }
+)
 
 /**
  * Get PUBLISHED section versions from database (PUBLIC - no auth)
- * Used by production public page (/)
- * Cached at page level via revalidate setting
+ * Used by production public page (/view)
+ * Cached via unstable_cache with 1-hour revalidation
  */
-export async function getVersions(sectionIds: string[]) {
-    console.log('[Cache] Fetching versions from database...')
+export const getVersions = unstable_cache(
+    async (sectionIds: string[]) => {
+        console.log('[Cache] Fetching versions from database...')
 
-    // Always use cache-compatible client (no cookies!)
-    const supabase = createCacheCompatibleClient()
+        const supabase = createCacheCompatibleClient()
 
-    const { data: versions } = await supabase
-        .from('website_section_versions')
-        .select('section_id, layout_json')
-        .eq('status', 'published')
-        .in('section_id', sectionIds)
+        const { data: versions } = await supabase
+            .from('website_section_versions')
+            .select('section_id, layout_json')
+            .eq('status', 'published')
+            .in('section_id', sectionIds)
 
-    console.log(`[Cache] Fetched ${versions?.length || 0} versions`)
-    return versions
-}
+        console.log(`[Cache] Fetched ${versions?.length || 0} versions`)
+        return versions
+    },
+    ['public-versions'], // Cache key
+    {
+        revalidate: 3600, // 1 hour
+        tags: ['versions'] // Tag for on-demand revalidation
+    }
+)

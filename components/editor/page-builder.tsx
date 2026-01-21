@@ -8,10 +8,16 @@ import { KeyboardShortcuts } from './keyboard-shortcuts'
 
 interface PageBuilderProps {
     initialBlocks: BlockProps[]
+    isEditMode?: boolean // Default to false for safety
 }
 
-export function PageBuilder({ initialBlocks }: PageBuilderProps) {
-    const { blocks, setBlocks } = useEditorStore()
+export function PageBuilder({ initialBlocks, isEditMode = false }: PageBuilderProps) {
+    const { blocks, setBlocks, setEditMode } = useEditorStore()
+
+    // Set edit mode based on prop
+    useEffect(() => {
+        setEditMode(isEditMode)
+    }, [isEditMode, setEditMode])
 
     // Sync initial blocks to store
     useEffect(() => {

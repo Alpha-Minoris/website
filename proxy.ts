@@ -7,8 +7,7 @@ import type { NextRequest } from 'next/server'
  * ========================================================================
  * 
  * ARCHITECTURE:
- * - /           → This proxy runs, handles auth redirects (can be dynamic)
- * - /view       → NO proxy, fully static with ISR caching
+ * - /           → Public page, NO proxy (enables caching)
  * - /edit       → Protected by this proxy, auth required
  * 
  * LOCALHOST: Redirect / → /edit
@@ -21,7 +20,7 @@ export default function proxy(request: NextRequest) {
     const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1')
     const pathname = request.nextUrl.pathname
 
-    // LOCALHOST: Auto-redirect root to /edit
+    // LOCALHOST: Auto-redirect root to /edit (but NOT /view - that's for preview)
     if (isLocalhost && pathname === '/') {
         return NextResponse.redirect(new URL('/edit', request.url))
     }
@@ -32,7 +31,7 @@ export default function proxy(request: NextRequest) {
         // TODO: Check authentication
         // const session = await getSession(request)
         // if (!session) {
-        //   return NextResponse.redirect(new URL('/view', request.url))
+        //   return NextResponse.redirect(new URL('/', request.url))
         // }
     }
 
@@ -40,8 +39,7 @@ export default function proxy(request: NextRequest) {
 }
 
 /**
- * Apply proxy to / and /edit routes ONLY
- * /view is intentionally excluded to enable ISR caching
+ * Apply proxy to / (localhost redirect only) and /edit routes
  */
 export const config = {
     matcher: ['/', '/edit/:path*'],

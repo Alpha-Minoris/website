@@ -55,7 +55,7 @@ export default async function EditPage() {
         return (
             <main className="min-h-screen bg-transparent text-foreground selection:bg-accent/30">
                 <Navbar sections={[]} />
-                <PageBuilder initialBlocks={[]} />
+                <PageBuilder initialBlocks={[]} isEditMode={true} />
                 <EditorToggle />
                 <EditorSidebar />
             </main>
@@ -106,7 +106,7 @@ export default async function EditPage() {
     return (
         <main className="min-h-screen bg-transparent text-foreground selection:bg-accent/30">
             <Navbar sections={sections} />
-            <PageBuilder initialBlocks={blocks} />
+            <PageBuilder initialBlocks={blocks} isEditMode={true} />
             <EditorToggle />
             <EditorSidebar />
         </main>

@@ -8,6 +8,7 @@ interface EditorState {
     blocks: BlockProps[]
 
     toggleEditMode: () => void
+    setEditMode: (enabled: boolean) => void
     setSelectedBlockId: (id: string | null) => void
     setActiveDragId: (id: string | null) => void
     setBlocks: (blocks: BlockProps[]) => void
@@ -33,6 +34,7 @@ export const useEditorStore = create<EditorState>((set) => ({
     blocks: [],
 
     toggleEditMode: () => set((state) => ({ isEditMode: !state.isEditMode })),
+    setEditMode: (enabled: boolean) => set({ isEditMode: enabled }),
     setSelectedBlockId: (id) => set({ selectedBlockId: id }),
     setActiveDragId: (id) => set({ activeDragId: id }),
     setBlocks: (blocks) => set((state) => {

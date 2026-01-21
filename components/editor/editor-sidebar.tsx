@@ -37,6 +37,17 @@ export function EditorSidebar() {
         }
     }, [isEditMode, blocks]) // Re-check when blocks change
 
+    // Poll for unpublished changes every 2 seconds while in edit mode
+    useEffect(() => {
+        if (!isEditMode) return
+
+        const interval = setInterval(() => {
+            getUnpublishedCountAction().then(setUnpublishedCount)
+        }, 2000)
+
+        return () => clearInterval(interval)
+    }, [isEditMode])
+
     const handlePublish = async () => {
         if (isPublishing) return
         setIsPublishing(true)
@@ -216,6 +227,34 @@ export function EditorSidebar() {
                             {unpublishedCount > 0
                                 ? `${unpublishedCount} unpublished section${unpublishedCount > 1 ? 's' : ''}`
                                 : 'All changes published'}
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+
+                {/* Preview Button */}
+                <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                    const currentPath = window.location.pathname
+                                    if (currentPath.startsWith('/edit')) {
+                                        const viewPath = currentPath.replace('/edit', '/view')
+                                        router.push(viewPath)
+                                    } else {
+                                        router.push('/view')
+                                    }
+                                }}
+                                className="rounded-full px-3 h-8 text-xs gap-1.5 bg-blue-500/20 text-blue-300 hover:bg-blue-500/30"
+                            >
+                                <Eye className="w-3 h-3" />
+                                Preview
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="bg-zinc-900 border-white/10 text-xs">
+                            View published version
                         </TooltipContent>
                     </Tooltip>
                 </TooltipProvider>

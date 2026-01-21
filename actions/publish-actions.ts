@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { publishAllChanges, getUnpublishedCount } from '@/lib/staging/staging-utils'
 
 /**
@@ -19,21 +19,22 @@ export async function publishChangesAction() {
     try {
         const result = await publishAllChanges()
 
-        // Invalidate cache ONCE after publishing
+        // Invalidate cache even if no changes (to be safe)
+        // revalidateTag in Next.js 16 requires options object as second param
+        await revalidateTag('sections', {})
+        await revalidateTag('versions', {})
+
+        // Also invalidate the full route cache for /
         revalidatePath('/')
 
-        console.log(`[publishChangesAction] Published ${result.publishedCount} sections, cache invalidated`)
+        console.log(`[Publish] Cache invalidated, published ${result.publishedCount} sections`)
 
         return {
-            success: true,
-            publishedCount: result.publishedCount,
-            message: `Successfully published ${result.publishedCount} section(s)`
+            success: result.success,
+            publishedCount: result.publishedCount
         }
-    } catch (error) {
-        console.error('[publishChangesAction] Error publishing:', error)
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error'
-        }
+    } catch (error: any) {
+        console.error('[Publish] Error:', error)
+        return { success: false, error: error.message }
     }
 }

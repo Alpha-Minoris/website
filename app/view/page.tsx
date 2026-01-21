@@ -2,6 +2,7 @@ import { BlockProps, BlockType } from '@/components/blocks/types'
 import { PageBuilder } from '@/components/editor/page-builder'
 import { Navbar } from '@/components/layout/navbar'
 import { getSections, getVersions } from '@/lib/cache/page-cache'
+import { BackToEditButton } from '@/components/editor/back-to-edit-button'
 
 // PUBLIC ROUTE: ISR with on-demand revalidation
 // Static generation with 1-hour cache, invalidated on publish
@@ -11,7 +12,7 @@ export const revalidate = 3600 // ISR: regenerate every hour OR on revalidatePat
 export default async function Home() {
   // Public page: NEVER has editing (middleware redirects authenticated users to /edit)
 
-  // PERFORMANCE: Database calls are cached via page-level revalidate = 3600
+  // PERFORMANCE: Database calls are cached via unstable_cache
   let sections
   let error
   try {
@@ -38,7 +39,8 @@ export default async function Home() {
     return (
       <main className="min-h-screen bg-transparent text-foreground selection:bg-accent/30">
         <Navbar sections={[]} />
-        <PageBuilder initialBlocks={[]} />
+        <PageBuilder initialBlocks={[]} isEditMode={false} />
+        <BackToEditButton />
       </main>
     )
   }
@@ -96,10 +98,12 @@ export default async function Home() {
     <main className="min-h-screen bg-transparent text-foreground selection:bg-accent/30">
       <Navbar sections={sections} />
       {/* 
-        This is the new PageBuilder that handles Editor wrappers.
-        It accepts initialBlocks for hydration.
+        Public view route - READ ONLY
+        This is the ISR-cached published version.
+        Edit mode is DISABLED.
       */}
-      <PageBuilder initialBlocks={blocks} />
+      <PageBuilder initialBlocks={blocks} isEditMode={false} />
+      <BackToEditButton />
     </main>
   )
 }
