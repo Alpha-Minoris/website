@@ -48,6 +48,11 @@ export function EditorBlockWrapper(props: EditorBlockWrapperProps) {
         }
     }
 
+    // Debug logging
+    if (isEditMode && blockType !== 'icon' && blockType !== 'card') {
+        console.log(`[EditorBlockWrapper] ${blockType} (${blockId.slice(0, 8)}): isEditMode=${isEditMode}, isSelected=${selectedBlockId === blockId}, selectedBlockId=${selectedBlockId?.slice(0, 8) || 'none'}`)
+    }
+
     if (layoutMode === 'canvas') {
         return <CanvasBlockWrapper {...commonProps} />
     }
