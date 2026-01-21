@@ -7,12 +7,14 @@ interface EditorState {
     selectedBlockId: string | null
     activeDragId: string | null
     blocks: BlockProps[]
+    originalBlocks: BlockProps[]  // Store original blocks for discard
 
     toggleEditMode: () => void
     setEditMode: (enabled: boolean) => void
     setSelectedBlockId: (id: string | null) => void
     setActiveDragId: (id: string | null) => void
     setBlocks: (blocks: BlockProps[]) => void
+    resetToOriginal: () => void  // Reset blocks to original state (discard changes)
 
     addBlock: (block: BlockProps) => void
     removeBlock: (id: string) => void
@@ -45,6 +47,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     selectedBlockId: null,
     activeDragId: null,
     blocks: [],
+    originalBlocks: [],  // Store original blocks for discard functionality
 
     // Save Management State
     dirtyBlockIds: new Set<string>(),
@@ -75,7 +78,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         console.log(`[setBlocks] Loaded ${validatedBlocks.length} blocks (no cleanup needed with new save strategy)`)
 
         state.pushToHistory(validatedBlocks)
-        return { blocks: validatedBlocks }
+        return {
+            blocks: validatedBlocks,
+            originalBlocks: validatedBlocks  // Store original for discard
+        }
+    }),
+
+    resetToOriginal: () => set((state) => {
+        console.log('[resetToOriginal] Restoring original blocks, discarding changes')
+        // Clear dirty blocks
+        state.dirtyBlockIds.clear()
+        // Reset to original
+        state.pushToHistory(state.originalBlocks)
+        return { blocks: state.originalBlocks }
     }),
 
     addBlock: (block: BlockProps) => set((state) => ({

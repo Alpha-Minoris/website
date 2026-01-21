@@ -19,7 +19,7 @@ import {
 
 export function EditorToggle() {
     const router = useRouter()
-    const { isEditMode, toggleEditMode, dirtyBlockIds } = useEditorStore()
+    const { isEditMode, toggleEditMode, dirtyBlockIds, resetToOriginal } = useEditorStore()
     const [showExitDialog, setShowExitDialog] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
 
@@ -58,16 +58,12 @@ export function EditorToggle() {
     }
 
     const handleDiscardAndExit = () => {
-        // Clear dirty blocks
-        const state = useEditorStore.getState()
-        state.dirtyBlockIds.clear()
+        // Reset blocks to original state (before any edits)
+        resetToOriginal()
 
         // Exit edit mode
         toggleEditMode()
         setShowExitDialog(false)
-
-        // Refresh from server to discard changes
-        router.refresh()
     }
 
     return (
