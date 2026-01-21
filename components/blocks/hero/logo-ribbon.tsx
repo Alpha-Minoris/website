@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { IconDisplay } from '@/components/blocks/icon-block'
@@ -82,11 +83,64 @@ export function LogoRibbon({ logos = [] }: LogoRibbonProps) {
 
     const activeLogos = logos.length > 0 ? logos : defaultLogos
 
+    // State to hold randomized/shuffled data to prevent hydration mismatch
+    const [rowConfigs, setRowConfigs] = useState<{ logos: LogoItem[], speed: number, direction: 'left' | 'right' }[]>([])
+
+    useEffect(() => {
+        const shuffleArray = (array: LogoItem[]) => {
+            const newArray = [...array]
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]]
+            }
+            return newArray
+        }
+
+        const shuffledMaster = shuffleArray(activeLogos)
+
+        // Chunk logos into 3 groups
+        const total = shuffledMaster.length
+        const chunkSize = Math.ceil(total / 3)
+
+        const chunks = [
+            shuffledMaster.slice(0, chunkSize),
+            shuffledMaster.slice(chunkSize, chunkSize * 2),
+            shuffledMaster.slice(chunkSize * 2)
+        ]
+
+        // Randomize speeds (capped at current speeds, which means duration >= baseline)
+        setRowConfigs([
+            {
+                logos: chunks[0],
+                speed: 60 + Math.random() * 20,
+                direction: 'left'
+            },
+            {
+                logos: chunks[1],
+                speed: 80 + Math.random() * 30,
+                direction: 'right'
+            },
+            {
+                logos: chunks[2],
+                speed: 70 + Math.random() * 20,
+                direction: 'left'
+            }
+        ])
+    }, [activeLogos])
+
+    if (rowConfigs.length === 0) return null
+
     return (
         <div className="absolute inset-x-0 bottom-0 pointer-events-none select-none flex flex-col gap-2 pb-12 overflow-hidden mask-vertical">
-            <LogoRow direction="left" speed={60} row={1} logos={activeLogos} />
-            <LogoRow direction="right" speed={80} row={2} logos={activeLogos} />
-            <LogoRow direction="left" speed={70} row={3} logos={activeLogos} />
+            {rowConfigs.map((config: any, idx: number) => (
+                <LogoRow
+                    key={idx}
+                    direction={config.direction}
+                    speed={config.speed}
+                    row={idx + 1}
+                    logos={config.logos}
+                />
+            ))}
         </div>
     )
 }

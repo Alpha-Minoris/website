@@ -34,6 +34,10 @@ interface EditorState {
     lastSavedAt: Date | null
     toggleAutoSave: () => void
     saveToServer: () => Promise<void>
+
+    // Version Manager
+    isVersionManagerOpen: boolean
+    setIsVersionManagerOpen: (open: boolean) => void
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
@@ -47,6 +51,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     autoSaveEnabled: true,  // Default: auto-save ON
     saveInProgress: false,
     lastSavedAt: null,
+
+    // Version Manager State
+    isVersionManagerOpen: false,
 
     toggleEditMode: () => set((state) => ({ isEditMode: !state.isEditMode })),
     setEditMode: (enabled: boolean) => set({ isEditMode: enabled }),
@@ -241,6 +248,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             throw error
         }
     },
+
+    // Version Manager Actions
+    setIsVersionManagerOpen: (open: boolean) => set({ isVersionManagerOpen: open }),
 }))
 
 // Auto-save watcher (5s debounce)

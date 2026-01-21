@@ -6,6 +6,8 @@ import { Navbar } from '@/components/layout/navbar'
 import { getSections, getDraftVersions } from '@/lib/cache/edit-cache'
 import { EditorToggle } from '@/components/editor/editor-toggle'
 import { EditorSidebar } from '@/components/editor/editor-sidebar'
+import { VersionManager } from '@/components/editor/version-manager'
+import VersionManagerWrapper from '@/components/editor/version-manager-wrapper'
 
 // AUTHENTICATED ROUTE: Dynamic rendering for editing
 export const dynamic = 'force-dynamic'
@@ -110,6 +112,7 @@ export default async function EditPage() {
             <PageBuilder initialBlocks={blocks} isEditMode={false} />
             <EditorToggle />
             <EditorSidebar />
+            <VersionManagerWrapper />
         </main>
     )
 }

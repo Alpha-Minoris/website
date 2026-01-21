@@ -20,7 +20,8 @@ import {
 import { useRouter } from 'next/navigation'
 
 import { publishChangesAction, getUnpublishedCountAction } from '@/actions/publish-actions'
-import { Upload } from 'lucide-react'
+import { Upload, History as HistoryIcon } from 'lucide-react'
+import { VersionManager } from './version-manager'
 
 export function EditorSidebar() {
     const {
@@ -34,7 +35,9 @@ export function EditorSidebar() {
         saveToServer,
         dirtyBlockIds,
         saveInProgress,
-        lastSavedAt
+        lastSavedAt,
+        isVersionManagerOpen,
+        setIsVersionManagerOpen
     } = useEditorStore()
     const router = useRouter()
     const [activeTab, setActiveTab] = useState<'components' | 'layers' | 'settings' | 'theme' | null>(null)
@@ -270,6 +273,26 @@ export function EditorSidebar() {
                                     {autoSaveEnabled ? 'Saves after 5s' : 'Click to enable'}
                                 </div>
                             </div>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+
+                {/* Version Control Button */}
+                <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setIsVersionManagerOpen(true)}
+                                className="rounded-full h-8 w-8 p-0 text-zinc-400 hover:text-white hover:bg-white/10"
+                            >
+                                <HistoryIcon className="w-4 h-4" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="bg-zinc-900 border-white/10 text-xs text-center">
+                            <div className="font-medium">Version Control</div>
+                            <div className="text-zinc-500 text-[10px] mt-0.5">History & Backups</div>
                         </TooltipContent>
                     </Tooltip>
                 </TooltipProvider>

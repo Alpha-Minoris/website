@@ -1,3 +1,5 @@
+'use client'
+
 import React from 'react'
 import { BlockProps } from './types'
 import { BlockRegistry } from './registry'
