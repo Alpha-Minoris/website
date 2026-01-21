@@ -6,7 +6,7 @@ import { getSections, getVersions } from '@/lib/cache/page-cache'
 // PUBLIC ROUTE: ISR with on-demand revalidation
 // Static generation with 1-hour cache, invalidated on publish
 // Editing happens at /edit route
-export const revalidate = 60 // ISR: regenerate every 60 seconds OR on revalidatePath
+export const revalidate = 21600 // ISR: 6 hours (webhook handles instant updates)
 
 export default async function Home() {
   // Public page: NEVER has editing (middleware redirects authenticated users to /edit)
