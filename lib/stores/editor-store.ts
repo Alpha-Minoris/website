@@ -78,9 +78,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         console.log(`[setBlocks] Loaded ${validatedBlocks.length} blocks (no cleanup needed with new save strategy)`)
 
         state.pushToHistory(validatedBlocks)
+
+        // CRITICAL: Deep copy to prevent mutations from affecting originalBlocks
+        const originalCopy = JSON.parse(JSON.stringify(validatedBlocks))
+
         return {
             blocks: validatedBlocks,
-            originalBlocks: validatedBlocks  // Store original for discard
+            originalBlocks: originalCopy  // Store deep copy for discard
         }
     }),
 
