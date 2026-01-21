@@ -22,19 +22,30 @@ export async function publishChangesAction() {
         const result = await publishAllChanges()
         console.log(`[Publish] publishAllChanges result:`, result)
 
-        // Invalidate cache even if no changes (to be safe)
-        // revalidateTag in Next.js 16 requires options object as second param
-        console.log('[Publish] Invalidating cache tags...')
-        await revalidateTag('sections', {})
-        await revalidateTag('versions', {})
+        // Call production revalidation API
+        // This ensures the PRODUCTION server invalidates its own cache
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+        console.log('[Publish] Calling revalidation API at:', `${siteUrl}/api/revalidate`)
 
-        // Also invalidate the full route cache for / and /view
-        // Using 'layout' type forces client-side router cache clear
-        console.log('[Publish] Revalidating paths / and /view')
-        revalidatePath('/', 'layout')
-        revalidatePath('/view', 'layout')
+        try {
+            const revalidateRes = await fetch(`${siteUrl}/api/revalidate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ timestamp: Date.now() })
+            })
 
-        console.log(`[Publish] ✅ SUCCESS! Published ${result.publishedCount} sections, cache invalidated`)
+            if (revalidateRes.ok) {
+                const data = await revalidateRes.json()
+                console.log('[Publish] ✅ Cache revalidated:', data)
+            } else {
+                console.error('[Publish] ⚠️ Revalidation API error:', await revalidateRes.text())
+            }
+        } catch (fetchError: any) {
+            console.error('[Publish] ⚠️ Failed to call revalidation API:', fetchError.message)
+            console.log('[Publish] This is normal on localhost - production will revalidate on deployment')
+        }
+
+        console.log(`[Publish] ✅ SUCCESS! Published ${result.publishedCount} sections`)
         console.log('='.repeat(80))
 
         return {
