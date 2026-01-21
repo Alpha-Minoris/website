@@ -28,9 +28,11 @@ export async function publishChangesAction() {
         await revalidateTag('sections', {})
         await revalidateTag('versions', {})
 
-        // Also invalidate the full route cache for /
-        console.log('[Publish] Revalidating path /')
-        revalidatePath('/')
+        // Also invalidate the full route cache for / and /view
+        // Using 'layout' type forces client-side router cache clear
+        console.log('[Publish] Revalidating paths / and /view')
+        revalidatePath('/', 'layout')
+        revalidatePath('/view', 'layout')
 
         console.log(`[Publish] ✅ SUCCESS! Published ${result.publishedCount} sections, cache invalidated`)
         console.log('='.repeat(80))
