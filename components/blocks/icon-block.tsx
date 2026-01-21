@@ -34,33 +34,34 @@ export function IconDisplay({ name, className, style, color }: { name: string, c
     )
 }
 
-export function IconBlock({ id, settings, sectionSlug, slug }: BlockProps) {
-    const folder = sectionSlug || slug
+export function IconBlock(block: BlockProps) {
+    const { id, slug } = block
+    const folder = slug
     const { isEditMode, updateBlock } = useEditorStore()
 
-    const iconName = settings?.iconName || settings?.icon || 'sparkles'
-    const assetType = settings?.type || 'icon'
-    const assetValue = settings?.value || iconName
-    const color = settings?.color
-    const linkUrl = settings?.linkUrl
-    const isHidden = settings?.isHidden
-    const maskSettings = settings?.maskSettings
+    const iconName = block?.iconName || block?.icon || 'sparkles'
+    const assetType = block?.type || 'icon'
+    const assetValue = block?.value || iconName
+    const color = block?.color
+    const linkUrl = block?.linkUrl
+    const isHidden = block?.isHidden
+    const maskSettings = block?.maskSettings
 
     if (isHidden && !isEditMode) return null
 
     const handleUpdate = (updates: any) => {
-        const newSettings = { ...settings, ...updates }
-        updateBlock(id, { settings: newSettings })
+        const newblock = { ...block, ...updates }
+        updateBlock(id, { block: newblock })
     }
 
     const handleChange = (type: 'icon' | 'image', value: string) => {
-        const newSettings = {
-            ...settings,
+        const newblock = {
+            ...block,
             type,
             value,
             iconName: type === 'icon' ? value : undefined
         }
-        updateBlock(id, { settings: newSettings })
+        updateBlock(id, { block: newblock })
     }
 
     return (
@@ -70,7 +71,7 @@ export function IconBlock({ id, settings, sectionSlug, slug }: BlockProps) {
             isEditMode && isHidden && "opacity-30 grayscale"
         )}>
             <EditableAsset
-                type={assetType}
+                type={assetType as 'icon' | 'image'}
                 value={assetValue}
                 onChange={handleChange}
                 onUpdate={handleUpdate}
@@ -80,12 +81,12 @@ export function IconBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                 color={color}
                 maskSettings={maskSettings}
                 folder={folder}
-                size={settings?.size}
+                size={block?.size}
                 className={cn(
                     "transition-all group-hover:scale-110",
-                    !settings?.size && "w-full h-full"
+                    !block?.size && "w-full h-full"
                 )}
-                iconClassName={!settings?.size ? "w-full h-full" : undefined}
+                iconClassName={!block?.size ? "w-full h-full" : undefined}
             />
             {isEditMode && isHidden && (
                 <Icons.EyeOff className="absolute w-4 h-4 text-white/50 top-1 right-1" />
@@ -93,3 +94,7 @@ export function IconBlock({ id, settings, sectionSlug, slug }: BlockProps) {
         </div>
     )
 }
+
+
+
+

@@ -36,22 +36,23 @@ const IconDisplay = ({ name, className, style, size }: { name?: string, classNam
     )
 }
 
-export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
+export function CardBlock(block: BlockProps) {
+    const { id, content, sectionId } = block
     const { isEditMode, selectedBlockId, updateBlock, activeDragId } = useEditorStore()
     const [isFlipped, setIsFlipped] = useState(false)
     const [activeEdit, setActiveEdit] = useState<'front' | 'back' | null>(null)
     const [activeIconEdit, setActiveIconEdit] = useState<'front' | 'back' | null>(null)
 
-    // Parse settings
-    const mode = settings?.mode || 'simple' // 'simple' | 'flip'
-    const variant = settings?.variant || 'glass'
-    const width = settings?.width || '100%'
-    const minHeight = settings?.minHeight || '200px'
-    const bgColor = settings?.backgroundColor
-    const textColor = settings?.color
+    // Parse settings from block
+    const mode = block.mode || 'simple' // 'simple' | 'flip'
+    const variant = block.variant || 'glass'
+    const width = block.width || '100%'
+    const minHeight = block.minHeight || '200px'
+    const bgColor = block.backgroundColor
+    const textColor = block.color
 
     const frontBlocks = Array.isArray(content) ? content : []
-    const backBlocks = Array.isArray(settings?.backContent) ? settings.backContent : []
+    const backBlocks = Array.isArray(block.backContent) ? block.backContent : []
 
     const cardClasses = cn(
         "relative transition-all duration-300 rounded-xl",
@@ -77,8 +78,8 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
             cardId: id,
             face: 'front',
             // Pass current relative coordinates to help drop logic
-            x: settings?.x || 0,
-            y: settings?.y || 0
+            x: block.x || 0,
+            y: block.y || 0
         },
         disabled: !isEditMode || activeDragId === id
     })
@@ -99,21 +100,21 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
     // Helpers
     const handleTextSave = (face: 'front' | 'back', html: string) => {
         const key = face === 'front' ? 'linkTextFront' : 'linkTextBack'
-        updateBlock(id, { settings: { ...settings, [key]: html } })
+        updateBlock(id, { ...block, [key]: html })
     }
 
     const handleLinkUpdate = (face: 'front' | 'back' | null, updates: any) => {
         if (!face) return
         const key = face === 'front' ? 'linkFrontSettings' : 'linkBackSettings'
-        const newSettings = { ...settings, [key]: { ...(settings?.[key] || {}), ...updates } }
-        updateBlock(id, { settings: newSettings })
+        const newBlock = { ...block, [key]: { ...(block[key] || {}), ...updates } }
+        updateBlock(id, newBlock)
     }
 
     const handleIconUpdate = (face: 'front' | 'back' | null, updates: any) => {
         if (!face) return
         const key = face === 'front' ? 'iconFrontSettings' : 'iconBackSettings'
-        const newSettings = { ...settings, [key]: { ...(settings?.[key] || {}), ...updates } }
-        updateBlock(id, { settings: newSettings })
+        const newBlock = { ...block, [key]: { ...(block[key] || {}), ...updates } }
+        updateBlock(id, newBlock)
     }
 
     // Resize is now handled by EditorBlockWrapper
@@ -150,7 +151,7 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
             {isEditMode && activeEdit && (
                 <div className="absolute top-full mt-4 left-0 right-0 z-[100] flex justify-center">
                     <TextToolbarUI
-                        settings={activeEdit === 'front' ? (settings?.linkFrontSettings || {}) : (settings?.linkBackSettings || {})}
+                        block={activeEdit === 'front' ? (block.linkFrontSettings || {}) : (block.linkBackSettings || {})}
                         onUpdate={(u) => handleLinkUpdate(activeEdit, u)}
                     />
                 </div>
@@ -160,7 +161,7 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
             {isEditMode && activeIconEdit && (
                 <div className="absolute top-full mt-4 right-0 z-[100]">
                     <IconToolbar
-                        settings={activeIconEdit === 'front' ? (settings?.iconFrontSettings || {}) : (settings?.iconBackSettings || {})}
+                        block={activeIconEdit === 'front' ? (block.iconFrontSettings || {}) : (block.iconBackSettings || {})}
                         onUpdate={(u) => handleIconUpdate(activeIconEdit, u)}
                     />
                 </div>
@@ -172,7 +173,7 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                     minHeight,
                     backgroundColor: mode === 'flip' ? undefined : bgColor,
                     color: textColor,
-                    borderColor: mode === 'flip' ? undefined : settings?.borderColor,
+                    borderColor: mode === 'flip' ? undefined : block.borderColor,
                     transformStyle: mode === 'flip' ? 'preserve-3d' : undefined
                 }}
             >
@@ -225,12 +226,12 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                                             contentEditable
                                             className="uppercase tracking-widest text-[10px] w-auto min-w-[20px] focus:outline-none focus:ring-1 focus:ring-blue-500/50 rounded px-1 transition-all"
                                             style={{
-                                                ...(settings?.linkFrontSettings || {}),
-                                                color: settings?.linkFrontSettings?.color,
-                                                fontSize: settings?.linkFrontSettings?.fontSize,
-                                                backgroundColor: settings?.linkFrontSettings?.backgroundColor,
+                                                ...(block.linkFrontSettings || {}),
+                                                color: block.linkFrontSettings?.color,
+                                                fontSize: block.linkFrontSettings?.fontSize,
+                                                backgroundColor: block.linkFrontSettings?.backgroundColor,
                                             }}
-                                            dangerouslySetInnerHTML={{ __html: settings?.linkTextFront || "FLIP" }}
+                                            dangerouslySetInnerHTML={{ __html: block.linkTextFront || "FLIP" }}
                                             onFocus={(e) => {
                                                 e.stopPropagation()
                                                 setActiveEdit('front')
@@ -246,8 +247,8 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                                     ) : (
                                         <span
                                             className="uppercase tracking-widest text-[10px]"
-                                            style={settings?.linkFrontSettings}
-                                            dangerouslySetInnerHTML={{ __html: settings?.linkTextFront || "FLIP" }}
+                                            style={block.linkFrontSettings}
+                                            dangerouslySetInnerHTML={{ __html: block.linkTextFront || "FLIP" }}
                                         />
                                     )}
                                     <div
@@ -261,10 +262,10 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                                         className="transition-transform hover:scale-110"
                                     >
                                         <IconDisplay
-                                            name={settings?.iconFrontSettings?.iconName}
-                                            className={cn("transition-transform", !settings?.iconFrontSettings?.size && "w-3 h-3")}
-                                            size={settings?.iconFrontSettings?.size}
-                                            style={{ color: settings?.iconFrontSettings?.color || settings?.linkFrontSettings?.color }}
+                                            name={block.iconFrontSettings?.iconName}
+                                            className={cn("transition-transform", !block.iconFrontSettings?.size && "w-3 h-3")}
+                                            size={block.iconFrontSettings?.size}
+                                            style={{ color: block.iconFrontSettings?.color || block.linkFrontSettings?.color }}
                                         />
                                     </div>
                                 </div>
@@ -314,12 +315,12 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                                             contentEditable
                                             className="uppercase tracking-widest text-[10px] w-auto min-w-[20px] focus:outline-none focus:ring-1 focus:ring-blue-500/50 rounded px-1 transition-all"
                                             style={{
-                                                ...(settings?.linkBackSettings || {}),
-                                                color: settings?.linkBackSettings?.color,
-                                                fontSize: settings?.linkBackSettings?.fontSize,
-                                                backgroundColor: settings?.linkBackSettings?.backgroundColor,
+                                                ...(block.linkBackSettings || {}),
+                                                color: block.linkBackSettings?.color,
+                                                fontSize: block.linkBackSettings?.fontSize,
+                                                backgroundColor: block.linkBackSettings?.backgroundColor,
                                             }}
-                                            dangerouslySetInnerHTML={{ __html: settings?.linkTextBack || "BACK" }}
+                                            dangerouslySetInnerHTML={{ __html: block.linkTextBack || "BACK" }}
                                             onFocus={(e) => {
                                                 e.stopPropagation()
                                                 setActiveEdit('back')
@@ -335,8 +336,8 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                                     ) : (
                                         <span
                                             className="uppercase tracking-widest text-[10px]"
-                                            style={settings?.linkBackSettings}
-                                            dangerouslySetInnerHTML={{ __html: settings?.linkTextBack || "BACK" }}
+                                            style={block.linkBackSettings}
+                                            dangerouslySetInnerHTML={{ __html: block.linkTextBack || "BACK" }}
                                         />
                                     )}
                                     <div
@@ -350,10 +351,10 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
                                         className="transition-transform hover:scale-110"
                                     >
                                         <IconDisplay
-                                            name={settings?.iconBackSettings?.iconName}
-                                            className={cn("transition-transform rotate-180", !settings?.iconBackSettings?.size && "w-3 h-3")}
-                                            size={settings?.iconBackSettings?.size}
-                                            style={{ color: settings?.iconBackSettings?.color || settings?.linkBackSettings?.color }}
+                                            name={block.iconBackSettings?.iconName}
+                                            className={cn("transition-transform rotate-180", !block.iconBackSettings?.size && "w-3 h-3")}
+                                            size={block.iconBackSettings?.size}
+                                            style={{ color: block.iconBackSettings?.color || block.linkBackSettings?.color }}
                                         />
                                     </div>
                                 </div>
@@ -365,3 +366,5 @@ export function CardBlock({ id, content, settings, sectionId }: BlockProps) {
         </div>
     )
 }
+
+

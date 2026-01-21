@@ -10,8 +10,9 @@ import { TextToolbar } from '@/components/editor/text-toolbar'
 import { EditableText } from '@/components/editor/editable-text'
 import { AddButton, DeleteButton } from '@/components/editor/editable-list-controls'
 
-export function ServicesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
-    const folder = sectionSlug || slug
+export function ServicesBlock(block: BlockProps) {
+    const { id, slug } = block
+    const folder = block.sectionSlug || slug
     const { isEditMode, updateBlock } = useEditorStore()
     const sectionRef = useRef<HTMLElement>(null)
     const [activeToolbarPos, setActiveToolbarPos] = useState<{ top: number, left: number } | null>(null)
@@ -28,33 +29,27 @@ export function ServicesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
         ]
     }
 
-    // Local state
-    const [localSettings, setLocalSettings] = useState<any>({ ...defaultData, ...settings })
+    // Local state stores ENTIRE FLAT block
+    const [localBlock, setLocalBlock] = useState<any>({ ...defaultData, ...block })
 
-    // Sync from props
-    useEffect(() => {
-        if (settings) {
-            setLocalSettings((prev: any) => ({ ...prev, ...settings }))
-        }
-    }, [settings])
-
-    const saveSettings = useCallback((newSettings: any) => {
-        setLocalSettings(newSettings)
-        updateBlock(id, { settings: newSettings })
-    }, [id, updateBlock])
+    const saveBlock = useCallback((updates: any) => {
+        const updatedBlock = { ...localBlock, ...updates }
+        setLocalBlock(updatedBlock)
+        updateBlock(id, updatedBlock)  // Send entire FLAT block
+    }, [id, localBlock, updateBlock])
 
     const handleTextChange = useCallback((key: string, value: string) => {
-        saveSettings({ ...localSettings, [key]: value })
-    }, [localSettings, saveSettings])
+        saveBlock({ [key]: value })
+    }, [saveBlock])
 
     const handleServiceUpdate = useCallback((index: number, data: any) => {
-        const services = [...(localSettings.services || [])]
+        const services = [...(localBlock.services || [])]
         services[index] = { ...services[index], ...data }
-        saveSettings({ ...localSettings, services })
-    }, [localSettings, saveSettings])
+        saveBlock({ services })
+    }, [localBlock, saveBlock])
 
     const handleAddService = () => {
-        const services = [...(localSettings.services || []), {
+        const services = [...(localBlock.services || []), {
             id: Math.random().toString(36).substr(2, 9),
             title: 'New Service',
             asset: { type: 'icon', value: 'Zap' },
@@ -62,13 +57,13 @@ export function ServicesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
             details: ['Feature 1', 'Feature 2'],
             isHidden: false
         }]
-        saveSettings({ ...localSettings, services })
+        saveBlock({ services })
     }
 
     const handleRemoveService = (index: number) => {
-        const services = [...(localSettings.services || [])]
+        const services = [...(localBlock.services || [])]
         services.splice(index, 1)
-        saveSettings({ ...localSettings, services })
+        saveBlock({ services })
     }
 
     const onTextFocus = useCallback((rect: DOMRect) => {
@@ -119,42 +114,42 @@ export function ServicesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
             <div className="container mx-auto px-4">
                 <div className={cn(
                     "max-w-3xl mx-auto mb-16 space-y-4",
-                    localSettings.align === 'left' ? "text-left ml-0 mr-auto" :
-                        localSettings.align === 'right' ? "text-right mr-0 ml-auto" :
+                    localBlock.align === 'left' ? "text-left ml-0 mr-auto" :
+                        localBlock.align === 'right' ? "text-right mr-0 ml-auto" :
                             "text-center mx-auto"
                 )}>
                     <EditableText
-                        tagName={localSettings.level || 'h2'}
-                        value={localSettings.title}
+                        tagName={localBlock.level || 'h2'}
+                        value={localBlock.title}
                         onChange={(v) => handleTextChange('title', v)}
                         isEditMode={isEditMode}
                         onFocus={onTextFocus}
                         onBlur={onTextBlur}
                         className="text-3xl md:text-5xl font-bold font-heading"
                         style={{
-                            fontFamily: localSettings.fontFamily,
-                            fontSize: localSettings.fontSize,
-                            color: localSettings.color
+                            fontFamily: localBlock.fontFamily,
+                            fontSize: localBlock.fontSize,
+                            color: localBlock.color
                         }}
                     />
                     <EditableText
                         tagName="p"
-                        value={localSettings.tagline}
+                        value={localBlock.tagline}
                         onChange={(v) => handleTextChange('tagline', v)}
                         isEditMode={isEditMode}
                         onFocus={onTextFocus}
                         onBlur={onTextBlur}
                         className="text-muted-foreground text-lg"
                         style={{
-                            fontFamily: localSettings.fontFamily,
-                            fontSize: localSettings.fontSize,
-                            color: localSettings.color
+                            fontFamily: localBlock.fontFamily,
+                            fontSize: localBlock.fontSize,
+                            color: localBlock.color
                         }}
                     />
                 </div>
 
                 <div className="flex flex-wrap justify-center gap-6">
-                    {localSettings.services?.map((service: any, i: number) => {
+                    {localBlock.services?.map((service: any, i: number) => {
                         if (service.isHidden && !isEditMode) return null
 
                         return (
@@ -203,3 +198,4 @@ export function ServicesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
         </section>
     )
 }
+

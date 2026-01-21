@@ -50,7 +50,7 @@ export function BlockRenderer({ blocks, sectionId, sectionSlug, layoutMode = 'fl
                     blockId={block.id}
                     blockType={block.type}
                     className={layoutMode === 'flow' ? (isContentBlock ? "w-fit mx-auto" : "w-full") : ""}
-                    settings={block.settings}
+                    block={block}
                     sectionId={sectionId}
                     layoutMode={layoutMode}
                 >

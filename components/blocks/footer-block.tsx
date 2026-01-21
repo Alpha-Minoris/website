@@ -11,7 +11,8 @@ import { EditableText } from '@/components/editor/editable-text'
 import { AddButton, DeleteButton } from '@/components/editor/editable-list-controls'
 import { EditableAsset } from '@/components/editor/editable-asset'
 
-export function FooterBlock({ id, settings, sectionId }: BlockProps) {
+export function FooterBlock(block: BlockProps) {
+    const { id, slug } = block
     const { isEditMode, updateBlock } = useEditorStore()
     const year = new Date().getFullYear()
 
@@ -25,8 +26,8 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
         '<a href="#">GitHub</a>'
     ]
 
-    // Local state
-    const [localSettings, setLocalSettings] = useState(settings || {})
+    // Local state - entire block
+    const [localBlock, setLocalBlock] = useState(block || {})
     const footerRef = useRef<HTMLElement>(null)
 
     // Toolbar Positioning
@@ -34,72 +35,67 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
 
     // Sync from props
     useEffect(() => {
-        setLocalSettings(settings || {})
-    }, [settings])
+        setLocalBlock(block || {})
+    }, [block])
 
-    const saveSettings = useCallback((newSettings: any) => {
-        setLocalSettings(newSettings)
-        updateBlock(id, { settings: newSettings })
-    }, [id, updateBlock])
+    const saveBlock = useCallback((updates: any) => {
+        const updatedBlock = { ...localBlock, ...updates }
+        setLocalBlock(updatedBlock)
+        updateBlock(id, updatedBlock)
+    }, [id, localBlock, updateBlock])
 
     const handleTextChange = useCallback((key: string, value: string) => {
-        if (localSettings[key] === value) return
-        const newSettings = { ...localSettings, [key]: value }
-        setLocalSettings(newSettings)
-        updateBlock(id, { settings: newSettings })
-    }, [id, localSettings, updateBlock])
+        if (localBlock[key] === value) return
+        saveBlock({ [key]: value })
+    }, [localBlock, saveBlock])
 
     const handleListChange = useCallback((listKey: string, index: number, value: string) => {
-        const list = [...(localSettings[listKey] || [])]
+        const list = [...(localBlock[listKey] || [])]
         if (list[index] === value) return
         list[index] = value
-        const newSettings = { ...localSettings, [listKey]: list }
-        setLocalSettings(newSettings)
-        updateBlock(id, { settings: newSettings })
-    }, [id, localSettings, updateBlock])
+        saveBlock({ [listKey]: list })
+    }, [localBlock, saveBlock])
 
     const handleAddItem = (listKey: string) => {
         const defaultValue = "New Item"
-        const list = [...(localSettings[listKey] || [])]
+        const list = [...(localBlock[listKey] || [])]
         const newItem = `<a href="#">${defaultValue}</a>`
         list.push(newItem)
-        saveSettings({ ...localSettings, [listKey]: list })
+        saveBlock({ ...localBlock, [listKey]: list })
     }
 
     const handleRemoveItem = (listKey: string, index: number) => {
-        const list = [...(localSettings[listKey] || [])]
+        const list = [...(localBlock[listKey] || [])]
         list.splice(index, 1)
-        saveSettings({ ...localSettings, [listKey]: list })
+        saveBlock({ ...localBlock, [listKey]: list })
     }
 
     const handleLogoUpdate = (type: 'icon' | 'image', value: string) => {
-        const newSettings = { ...localSettings, logoType: type, logoValue: value }
-        setLocalSettings(newSettings)
-        updateBlock(id, { settings: newSettings })
+        saveBlock({ logoType: type, logoValue: value })
     }
 
     // Initialize defaults
     useEffect(() => {
         const updates: any = {}
-        if (!localSettings.legalLinks) updates.legalLinks = defaultLegal.map(t => `<a href="#">${t}</a>`)
-        if (!localSettings.sitemapLinks) updates.sitemapLinks = defaultSitemap.map(t => `<a href="#">${t}</a>`)
-        if (!localSettings.companyLines) updates.companyLines = defaultCompany
-        if (!localSettings.socialLinks) updates.socialLinks = defaultSocial
-        if (!localSettings.brandTitle) updates.brandTitle = "Alpha Minoris"
-        if (!localSettings.logoType) {
+        if (!localBlock.legalLinks) updates.legalLinks = defaultLegal.map(t => `<a href="#">${t}</a>`)
+        if (!localBlock.sitemapLinks) updates.sitemapLinks = defaultSitemap.map(t => `<a href="#">${t}</a>`)
+        if (!localBlock.companyLines) updates.companyLines = defaultCompany
+        if (!localBlock.socialLinks) updates.socialLinks = defaultSocial
+        if (!localBlock.brandTitle) updates.brandTitle = "Alpha Minoris"
+        if (!localBlock.logoType) {
             updates.logoType = 'image'
             updates.logoValue = ''
         }
 
         if (Object.keys(updates).length > 0) {
             // Only apply if missing keys
-            const merged = { ...localSettings, ...updates }
+            const merged = { ...localBlock, ...updates }
             // Check if actually different to avoid loop
-            if (JSON.stringify(merged) !== JSON.stringify(localSettings)) {
-                saveSettings(merged)
+            if (JSON.stringify(merged) !== JSON.stringify(localBlock)) {
+                saveBlock(merged)
             }
         }
-    }, [localSettings, defaultLegal, defaultSitemap, defaultCompany, defaultSocial, saveSettings])
+    }, [localBlock, defaultLegal, defaultSitemap, defaultCompany, defaultSocial, saveBlock])
 
     const handleFooterClick = useCallback((e: React.MouseEvent) => {
         if (isEditMode) {
@@ -165,22 +161,22 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
 
             <div className={cn(
                 "container mx-auto px-4 grid md:grid-cols-4 gap-12 mb-16",
-                localSettings.align === 'left' ? "text-left" :
-                    localSettings.align === 'right' ? "text-right" :
+                localBlock.align === 'left' ? "text-left" :
+                    localBlock.align === 'right' ? "text-right" :
                         "text-center md:text-left" // Default footer behavior
             )}>
 
                 {/* Column 1: Brand & Tagline */}
                 <div className={cn(
                     "space-y-6",
-                    localSettings.align === 'left' ? "flex flex-col items-start" :
-                        localSettings.align === 'right' ? "flex flex-col items-end" :
+                    localBlock.align === 'left' ? "flex flex-col items-start" :
+                        localBlock.align === 'right' ? "flex flex-col items-end" :
                             "flex flex-col items-center md:items-start"
                 )}>
                     <div className="w-32 h-32 relative">
                         <EditableAsset
-                            type={localSettings.logoType || 'image'}
-                            value={localSettings.logoValue || ''}
+                            type={localBlock.logoType || 'image'}
+                            value={localBlock.logoValue || ''}
                             onChange={handleLogoUpdate}
                             isEditMode={isEditMode}
                             placeholderText="LOGO"
@@ -189,30 +185,30 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
                     </div>
                     <div className="space-y-4">
                         <EditableText
-                            tagName={localSettings.level || 'h3'}
-                            value={localSettings.brandTitle || "Alpha Minoris"}
+                            tagName={localBlock.level || 'h3'}
+                            value={localBlock.brandTitle || "Alpha Minoris"}
                             onChange={(v) => handleTextChange('brandTitle', v)}
                             className="text-xl font-bold text-white font-heading"
                             isEditMode={isEditMode}
                             onFocus={onTextFocus}
                             onBlur={onTextBlur}
                             style={{
-                                fontFamily: localSettings.fontFamily,
-                                fontSize: localSettings.fontSize,
-                                color: localSettings.color
+                                fontFamily: localBlock.fontFamily,
+                                fontSize: localBlock.fontSize,
+                                color: localBlock.color
                             }}
                         />
                         <EditableText
-                            value={localSettings.tagline || "Building the automated future, one agent at a time."}
+                            value={localBlock.tagline || "Building the automated future, one agent at a time."}
                             onChange={(v) => handleTextChange('tagline', v)}
                             className="leading-relaxed focus:text-white block"
                             isEditMode={isEditMode}
                             onFocus={onTextFocus}
                             onBlur={onTextBlur}
                             style={{
-                                fontFamily: localSettings.fontFamily,
-                                fontSize: localSettings.fontSize,
-                                color: localSettings.color
+                                fontFamily: localBlock.fontFamily,
+                                fontSize: localBlock.fontSize,
+                                color: localBlock.color
                             }}
                         />
                     </div>
@@ -223,21 +219,21 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
                     <div className="flex items-center">
                         <EditableText
                             tagName="h4"
-                            value={localSettings.legalTitle || "Legal"}
+                            value={localBlock.legalTitle || "Legal"}
                             onChange={(v) => handleTextChange('legalTitle', v)}
                             className="font-bold text-white uppercase tracking-wider text-xs w-fit"
                             isEditMode={isEditMode}
                             onFocus={onTextFocus}
                             onBlur={onTextBlur}
                             style={{
-                                fontFamily: localSettings.fontFamily,
-                                fontSize: localSettings.fontSize,
-                                color: localSettings.color
+                                fontFamily: localBlock.fontFamily,
+                                fontSize: localBlock.fontSize,
+                                color: localBlock.color
                             }}
                         />
                         <AddButton onClick={() => handleAddItem('legalLinks')} isEditMode={isEditMode} />
                     </div>
-                    {Array.isArray(localSettings.legalLinks) && localSettings.legalLinks.map((html: string, i: number) => (
+                    {Array.isArray(localBlock.legalLinks) && localBlock.legalLinks.map((html: string, i: number) => (
                         <div key={i} className="flex items-center group/item w-fit">
                             <EditableText
                                 value={html}
@@ -247,9 +243,9 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
                                 onFocus={onTextFocus}
                                 onBlur={onTextBlur}
                                 style={{
-                                    fontFamily: localSettings.fontFamily,
-                                    fontSize: localSettings.fontSize,
-                                    color: localSettings.color
+                                    fontFamily: localBlock.fontFamily,
+                                    fontSize: localBlock.fontSize,
+                                    color: localBlock.color
                                 }}
                             />
                             <DeleteButton onClick={() => handleRemoveItem('legalLinks', i)} isEditMode={isEditMode} />
@@ -262,21 +258,21 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
                     <div className="flex items-center">
                         <EditableText
                             tagName="h4"
-                            value={localSettings.companyTitle || "Company"}
+                            value={localBlock.companyTitle || "Company"}
                             onChange={(v) => handleTextChange('companyTitle', v)}
                             className="font-bold text-white uppercase tracking-wider text-xs w-fit"
                             isEditMode={isEditMode}
                             onFocus={onTextFocus}
                             onBlur={onTextBlur}
                             style={{
-                                fontFamily: localSettings.fontFamily,
-                                fontSize: localSettings.fontSize,
-                                color: localSettings.color
+                                fontFamily: localBlock.fontFamily,
+                                fontSize: localBlock.fontSize,
+                                color: localBlock.color
                             }}
                         />
                         <AddButton onClick={() => handleAddItem('companyLines')} isEditMode={isEditMode} />
                     </div>
-                    {Array.isArray(localSettings.companyLines) && localSettings.companyLines.map((html: string, i: number) => (
+                    {Array.isArray(localBlock.companyLines) && localBlock.companyLines.map((html: string, i: number) => (
                         <div key={i} className="flex items-center group/item w-fit">
                             <EditableText
                                 value={html}
@@ -286,9 +282,9 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
                                 onFocus={onTextFocus}
                                 onBlur={onTextBlur}
                                 style={{
-                                    fontFamily: localSettings.fontFamily,
-                                    fontSize: localSettings.fontSize,
-                                    color: localSettings.color
+                                    fontFamily: localBlock.fontFamily,
+                                    fontSize: localBlock.fontSize,
+                                    color: localBlock.color
                                 }}
                             />
                             <DeleteButton onClick={() => handleRemoveItem('companyLines', i)} isEditMode={isEditMode} />
@@ -302,7 +298,7 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
                         <h4 className="font-bold text-white uppercase tracking-wider text-xs">Sitemap</h4>
                         <AddButton onClick={() => handleAddItem('sitemapLinks')} isEditMode={isEditMode} />
                     </div>
-                    {Array.isArray(localSettings.sitemapLinks) && localSettings.sitemapLinks.map((html: string, i: number) => (
+                    {Array.isArray(localBlock.sitemapLinks) && localBlock.sitemapLinks.map((html: string, i: number) => (
                         <div key={i} className="flex items-center group/item w-fit">
                             <EditableText
                                 value={html}
@@ -312,9 +308,9 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
                                 onFocus={onTextFocus}
                                 onBlur={onTextBlur}
                                 style={{
-                                    fontFamily: localSettings.fontFamily,
-                                    fontSize: localSettings.fontSize,
-                                    color: localSettings.color
+                                    fontFamily: localBlock.fontFamily,
+                                    fontSize: localBlock.fontSize,
+                                    color: localBlock.color
                                 }}
                             />
                             <DeleteButton onClick={() => handleRemoveItem('sitemapLinks', i)} isEditMode={isEditMode} />
@@ -326,7 +322,7 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
             <div className="container mx-auto px-4 pt-8 border-t border-white/5 text-xs text-center md:text-left flex flex-col md:flex-row justify-between items-center gap-4">
                 <p>&copy; {year} Alpha Minoris. All rights reserved.</p>
                 <div className="flex gap-4 items-center">
-                    {Array.isArray(localSettings.socialLinks) && localSettings.socialLinks.map((html: string, i: number) => (
+                    {Array.isArray(localBlock.socialLinks) && localBlock.socialLinks.map((html: string, i: number) => (
                         <div key={i} className="flex items-center group/item">
                             <EditableText
                                 value={html}
@@ -336,9 +332,9 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
                                 onFocus={onTextFocus}
                                 onBlur={onTextBlur}
                                 style={{
-                                    fontFamily: localSettings.fontFamily,
-                                    fontSize: localSettings.fontSize,
-                                    color: localSettings.color
+                                    fontFamily: localBlock.fontFamily,
+                                    fontSize: localBlock.fontSize,
+                                    color: localBlock.color
                                 }}
                             />
                             <DeleteButton onClick={() => handleRemoveItem('socialLinks', i)} isEditMode={isEditMode} />
@@ -350,3 +346,5 @@ export function FooterBlock({ id, settings, sectionId }: BlockProps) {
         </footer>
     )
 }
+
+

@@ -21,11 +21,13 @@ export type BlockType =
 export interface BlockProps {
     id: string
     type: BlockType
-    content: any
-    settings?: any
-    is_enabled?: boolean // Track visibility status
-    title?: string // Section/Block display name
+    content?: any
+    is_enabled?: boolean
+    title?: string
     sectionId?: string
     slug?: string
     sectionSlug?: string
+
+    // Allow any other flat properties
+    [key: string]: any
 }

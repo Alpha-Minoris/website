@@ -60,8 +60,22 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     setSelectedBlockId: (id) => set({ selectedBlockId: id }),
     setActiveDragId: (id) => set({ activeDragId: id }),
     setBlocks: (blocks) => set((state) => {
-        state.pushToHistory(blocks)
-        return { blocks }
+        // With new save strategy, blocks from DB should ALWAYS be clean
+        // Server filters metadata and flattens settings on save
+        // No need for complex recursive cleanup logic anymore
+
+        // Simple validation to ensure required fields exist
+        const validatedBlocks = blocks.map(block => ({
+            ...block,
+            id: block.id || crypto.randomUUID(), // Fallback if missing
+            type: block.type || 'generic-section',  // Fallback if missing
+            content: block.content || []  // Ensure content array exists
+        }))
+
+        console.log(`[setBlocks] Loaded ${validatedBlocks.length} blocks (no cleanup needed with new save strategy)`)
+
+        state.pushToHistory(validatedBlocks)
+        return { blocks: validatedBlocks }
     }),
 
     addBlock: (block: BlockProps) => set((state) => ({
@@ -76,17 +90,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const updateRecursive = (blocks: BlockProps[]): BlockProps[] => {
             return blocks.map((block) => {
                 if (block.id === id) {
-                    // Update target block
-                    // Merge settings deeply if needed, but for now shallow merge of top props
-                    // Special handling for settings merge?
-                    const newSettings = updates.settings ? { ...block.settings, ...updates.settings } : block.settings
-                    return { ...block, ...updates, settings: newSettings }
+                    // Replace entire block with updates - blocks are FLAT, no settings wrapper
+                    return { ...block, ...updates }
                 }
                 // Recurse into content
                 if (Array.isArray(block.content)) {
-                    // If content is BlockProps[], recurse.
-                    // Note: content might be string (html) for some blocks via mismatch, but usually array for containers.
-                    // The type says BlockProps[].
                     return { ...block, content: updateRecursive(block.content as BlockProps[]) }
                 }
                 return block
@@ -98,6 +106,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         // Mark this block as dirty
         const newDirtyIds = new Set(state.dirtyBlockIds)
         newDirtyIds.add(id)
+
+        console.log(`[updateBlock] Updated ${id}, marked dirty`)
 
         return { blocks: newBlocks, dirtyBlockIds: newDirtyIds }
     }),
@@ -204,34 +214,27 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         console.log('[SaveToServer] Starting save process...')
 
         try {
-            // Save each dirty block to database
+            // Save each dirty block to database SEQUENTIALLY to avoid race conditions
             const dirtyIds = Array.from(state.dirtyBlockIds)
-            console.log(`[SaveToServer] Processing ${dirtyIds.length} dirty blocks`)
+            console.log(`[SaveToServer] Processing ${dirtyIds.length} dirty blocks SEQUENTIALLY`)
 
-            const savePromises = dirtyIds.map(async (blockId) => {
+            const results = []
+            for (const blockId of dirtyIds) {
                 const block = state.blocks.find(b => b.id === blockId)
                 if (!block) {
                     console.warn(`[SaveToServer] Block ${blockId} not found in store`)
-                    return
+                    continue
                 }
 
-                console.log(`[SaveToServer] Saving block ${blockId}:`, {
-                    type: block.type,
-                    hasContent: !!block.content,
-                    hasSettings: !!block.settings
-                })
+                console.log(`[SaveToServer] Saving ${block.slug} - sending exact block`)
 
-                // Save to database (creates draft version)
-                const result = await updateBlockServer(blockId, {
-                    settings: block.settings,
-                    content: block.content
-                })
+                // Send EXACT block to server - no transformations
+                const result = await updateBlockServer(blockId, block)
 
-                console.log(`[SaveToServer] Block ${blockId} saved successfully:`, result)
-                return result
-            })
+                console.log(`[SaveToServer] ${block.slug} saved successfully`)
+                results.push(result)
+            }
 
-            const results = await Promise.all(savePromises)
             console.log('[SaveToServer] All blocks saved successfully:', results)
 
             // Clear dirty state on success

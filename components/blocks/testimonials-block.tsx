@@ -8,33 +8,28 @@ import { useEditorStore } from '@/lib/stores/editor-store'
 import { EditableText } from '@/components/editor/editable-text'
 import { TextToolbar } from '@/components/editor/text-toolbar'
 
-export function TestimonialsBlock({ id, settings }: BlockProps) {
+export function TestimonialsBlock(block: BlockProps) {
+    const { id, slug } = block
     const { isEditMode, updateBlock } = useEditorStore()
     const sectionRef = useRef<HTMLElement>(null)
     const [activeToolbarPos, setActiveToolbarPos] = useState<{ top: number, left: number } | null>(null)
     const [testimonials, setTestimonials] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
 
-    // Local state for settings (title)
-    const [localSettings, setLocalSettings] = useState<any>({
+    // Local state - entire block
+    const [localBlock, setLocalBlock] = useState({
         title: 'Client Stories',
-        ...settings
+        ...block
     })
 
-
-    useEffect(() => {
-        if (settings) {
-            setLocalSettings((prev: any) => ({ ...prev, ...settings }))
-        }
-    }, [settings])
-
-    const saveSettings = useCallback((newSettings: any) => {
-        setLocalSettings(newSettings)
-        updateBlock(id, { settings: newSettings })
-    }, [id, updateBlock])
+    const saveBlock = useCallback((updates: any) => {
+        const updatedBlock = { ...localBlock, ...updates }
+        setLocalBlock(updatedBlock)
+        updateBlock(id, updatedBlock)
+    }, [id, localBlock, updateBlock])
 
     const handleTextChange = (key: string, value: string) => {
-        saveSettings({ ...localSettings, [key]: value })
+        saveBlock({ ...localBlock, [key]: value })
     }
 
     const onTextFocus = useCallback((rect: DOMRect) => {
@@ -93,7 +88,7 @@ export function TestimonialsBlock({ id, settings }: BlockProps) {
                 <div className="text-center mb-16 relative">
                     <EditableText
                         tagName="h2"
-                        value={localSettings.title}
+                        value={localBlock.title}
                         onChange={(v) => handleTextChange('title', v)}
                         isEditMode={isEditMode}
                         onFocus={onTextFocus}
@@ -107,3 +102,5 @@ export function TestimonialsBlock({ id, settings }: BlockProps) {
         </section>
     )
 }
+
+

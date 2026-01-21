@@ -80,13 +80,9 @@ export default async function Home() {
     const hasLayoutContent = Array.isArray(layoutContent) && layoutContent.length > 0
 
     const block: BlockProps = {
+      ...(version?.layout_json || {}),
       id: section.id,
       type: blockType as BlockType,
-      content: hasLayoutContent ? layoutContent : (version?.content_html || []),
-      // Merge layout_json root with nested settings for backward compatibility
-      settings: version?.layout_json ? { ...version.layout_json, ...version.layout_json.settings } : {},
-      is_enabled: section.is_enabled,
-      title: section.title,
       slug: section.slug
     }
 
@@ -104,3 +100,4 @@ export default async function Home() {
     </main>
   )
 }
+

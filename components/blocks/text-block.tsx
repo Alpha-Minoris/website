@@ -17,10 +17,10 @@ interface TextSettings {
 
 import { useEditorStore } from '@/lib/stores/editor-store'
 
-export function TextBlock({ id, content, settings, sectionId }: BlockProps) {
+export function TextBlock(block: BlockProps) {
+    const { id, content } = block
     const { isEditMode } = useEditorStore()
-    const s = settings as TextSettings || {}
-    const Tag = (s.level === 'label' ? 'span' : s.level) || 'h2'
+    const Tag = (block.level === 'label' ? 'span' : block.level) || 'h2'
 
     // HTML from props (source of truth from DB)
     const contentHtml = typeof content === 'string' ? content : 'Heading Text'
@@ -92,27 +92,27 @@ export function TextBlock({ id, content, settings, sectionId }: BlockProps) {
             className={cn(
                 "w-fit max-w-full outline-none transition-colors duration-200 min-w-[1em] empty:before:content-['Type...'] empty:before:text-gray-400",
                 {
-                    'text-left': s.align === 'left',
-                    'text-center': s.align === 'center' || !s.align,
-                    'text-right': s.align === 'right',
-                    'text-justify': s.align === 'justify',
-                    'font-bold': s.bold,
-                    'italic': s.italic,
+                    'text-left': block.align === 'left',
+                    'text-center': block.align === 'center' || !block.align,
+                    'text-right': block.align === 'right',
+                    'text-justify': block.align === 'justify',
+                    'font-bold': block.bold,
+                    'italic': block.italic,
                     'text-4xl font-extrabold': Tag === 'h1',
                     'text-3xl font-bold': Tag === 'h2',
                     'text-2xl font-semibold': Tag === 'h3',
                     'text-xl font-medium': Tag === 'h4',
                     'text-lg font-medium': Tag === 'h5',
-                    'text-base font-medium': s.level === 'h6',
-                    'text-base font-normal max-w-prose leading-relaxed': s.level === 'p',
-                    'text-xs font-semibold uppercase tracking-wider text-muted-foreground': s.level === 'label',
+                    'text-base font-medium': block.level === 'h6',
+                    'text-base font-normal max-w-prose leading-relaxed': block.level === 'p',
+                    'text-xs font-semibold uppercase tracking-wider text-muted-foreground': block.level === 'label',
                 }
             )}
             style={{
-                color: s.color,
-                fontSize: s.fontSize,
-                backgroundColor: s.backgroundColor,
-                fontFamily: s.fontFamily
+                color: block.color,
+                fontSize: block.fontSize,
+                backgroundColor: block.backgroundColor,
+                fontFamily: block.fontFamily
             }}
             contentEditable={isEditMode}
             suppressContentEditableWarning
@@ -146,3 +146,5 @@ export function TextBlock({ id, content, settings, sectionId }: BlockProps) {
         />
     )
 }
+
+

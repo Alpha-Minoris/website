@@ -79,6 +79,20 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
     const [allVersionsMap, setAllVersionsMap] = useState<Map<string, any[]>>(new Map())
     const [backupName, setBackupName] = useState('')
 
+    // Backup Options State
+    const [backupOptions, setBackupOptions] = useState({
+        includePublished: true,
+        includeDraft: false
+    })
+
+    // Restore Options State
+    const [restoreModalOpen, setRestoreModalOpen] = useState(false)
+    const [restoreOptions, setRestoreOptions] = useState<{
+        backupId: string
+        restorePublished: boolean
+        restoreDraft: boolean
+    } | null>(null)
+
     // Confirmation Modal State
     const [confOpen, setConfOpen] = useState(false)
     const [confAction, setConfAction] = useState<{
@@ -154,8 +168,9 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
         if (!backupName.trim()) return
         setLoading(true)
         try {
-            await createPageBackup(backupName)
+            await createPageBackup(backupName, backupOptions)
             setBackupName('')
+            setBackupOptions({ includePublished: true, includeDraft: false })
             await refreshData()
         } catch (err) {
             console.error(err)
@@ -179,8 +194,7 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
                     window.location.reload()
                     break
                 case 'restore':
-                    await restoreFromBackup(confAction.id)
-                    window.location.reload()
+                    // Should not reach here - restore now uses modal
                     break
                 case 'delete-v':
                     await deleteVersion(confAction.id)
@@ -196,6 +210,24 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
         } finally {
             setLoading(false)
             setConfOpen(false)
+        }
+    }
+
+    const handleRestore = async () => {
+        if (!restoreOptions) return
+        setLoading(true)
+        try {
+            await restoreFromBackup(restoreOptions.backupId, {
+                restorePublished: restoreOptions.restorePublished,
+                restoreDraft: restoreOptions.restoreDraft
+            })
+            setRestoreModalOpen(false)
+            setRestoreOptions(null)
+            window.location.reload()
+        } catch (err) {
+            alert(err instanceof Error ? err.message : "Restore failed")
+        } finally {
+            setLoading(false)
         }
     }
 
@@ -513,22 +545,52 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
                                                 <p className="text-xs text-zinc-500 mt-2">Capture the state of all sections in a single point in time</p>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-3 bg-black/40 p-2 pl-4 rounded-full ring-1 ring-white/10 focus-within:ring-blue-500/50 transition-all">
-                                            <Input
-                                                placeholder="Label this snapshot..."
-                                                className="h-8 w-64 bg-transparent border-0 text-sm focus-visible:ring-0 placeholder:text-zinc-600 font-medium"
-                                                value={backupName}
-                                                onChange={(e) => setBackupName(e.target.value)}
-                                            />
-                                            <Button
-                                                size="sm"
-                                                onClick={handleCreateBackup}
-                                                disabled={loading || !backupName.trim()}
-                                                className="h-8 px-4 bg-indigo-500 hover:bg-indigo-400 text-white font-bold rounded-full shadow-lg transition-all disabled:opacity-30"
-                                            >
-                                                <Download className="w-3.5 h-3.5 mr-2" />
-                                                Snapshot
-                                            </Button>
+                                        <div className="flex flex-col gap-3">
+                                            {/* Backup Options */}
+                                            <div className="flex items-center gap-4 bg-black/40 p-3 rounded-2xl ring-1 ring-white/10">
+                                                <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Include:</span>
+                                                <label className="flex items-center gap-2 cursor-pointer group">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={backupOptions.includePublished}
+                                                        onChange={(e) => setBackupOptions({ ...backupOptions, includePublished: e.target.checked })}
+                                                        className="w-4 h-4 rounded border-white/20 bg-white/5 text-green-500 focus:ring-green-500/50"
+                                                    />
+                                                    <span className="text-xs text-zinc-400 group-hover:text-white transition-colors">
+                                                        Published <span className="text-green-500">(Production)</span>
+                                                    </span>
+                                                </label>
+                                                <label className="flex items-center gap-2 cursor-pointer group">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={backupOptions.includeDraft}
+                                                        onChange={(e) => setBackupOptions({ ...backupOptions, includeDraft: e.target.checked })}
+                                                        className="w-4 h-4 rounded border-white/20 bg-white/5 text-yellow-500 focus:ring-yellow-500/50"
+                                                    />
+                                                    <span className="text-xs text-zinc-400 group-hover:text-white transition-colors">
+                                                        Draft <span className="text-yellow-500">(Staging)</span>
+                                                    </span>
+                                                </label>
+                                            </div>
+
+                                            {/* Backup Name Input */}
+                                            <div className="flex items-center gap-3 bg-black/40 p-2 pl-4 rounded-full ring-1 ring-white/10 focus-within:ring-blue-500/50 transition-all">
+                                                <Input
+                                                    placeholder="Label this snapshot..."
+                                                    className="h-8 w-64 bg-transparent border-0 text-sm focus-visible:ring-0 placeholder:text-zinc-600 font-medium"
+                                                    value={backupName}
+                                                    onChange={(e) => setBackupName(e.target.value)}
+                                                />
+                                                <Button
+                                                    size="sm"
+                                                    onClick={handleCreateBackup}
+                                                    disabled={loading || !backupName.trim() || (!backupOptions.includePublished && !backupOptions.includeDraft)}
+                                                    className="h-8 px-4 bg-indigo-500 hover:bg-indigo-400 text-white font-bold rounded-full shadow-lg transition-all disabled:opacity-30"
+                                                >
+                                                    <Download className="w-3.5 h-3.5 mr-2" />
+                                                    Snapshot
+                                                </Button>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -560,12 +622,14 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
                                                         variant="secondary"
                                                         size="sm"
                                                         className="flex-1 bg-white/10 hover:bg-emerald-500/20 hover:text-emerald-400 border-0 text-white font-bold text-xs h-10 rounded-2xl transition-all backdrop-blur-sm"
-                                                        onClick={() => triggerConfirm(
-                                                            'restore',
-                                                            b.id,
-                                                            'Global Restore?',
-                                                            'DANGER: This will forcefully roll back the ENTIRE PAGE to this exact snapshot. Any work done since this backup will be archived.'
-                                                        )}
+                                                        onClick={() => {
+                                                            setRestoreOptions({
+                                                                backupId: b.id,
+                                                                restorePublished: true,
+                                                                restoreDraft: false
+                                                            })
+                                                            setRestoreModalOpen(true)
+                                                        }}
                                                     >
                                                         <RotateCcw className="w-4 h-4 mr-2" />
                                                         Restore Point
@@ -637,6 +701,93 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
                     )}
                 </AnimatePresence>
             </motion.div>
+
+            {/* Restore Options Modal */}
+            <AnimatePresence>
+                {restoreModalOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[110] flex items-center justify-center p-4"
+                        onClick={() => setRestoreModalOpen(false)}
+                    >
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+                        <motion.div
+                            initial={{ scale: 0.95 }}
+                            animate={{ scale: 1 }}
+                            exit={{ scale: 0.95 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="relative bg-zinc-900/95 border border-white/20 rounded-3xl p-8 max-w-md w-full shadow-2xl"
+                        >
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="p-2 bg-emerald-500/20 rounded-xl">
+                                    <RotateCcw className="w-5 h-5 text-emerald-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-white">Restore Options</h3>
+                                    <p className="text-xs text-zinc-500">Select what to restore from this backup</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4 mb-6">
+                                <label className="flex items-start gap-3 p-4 bg-white/5 rounded-2xl cursor-pointer hover:bg-white/10 transition-colors group">
+                                    <input
+                                        type="checkbox"
+                                        checked={restoreOptions?.restorePublished ?? true}
+                                        onChange={(e) => setRestoreOptions(restoreOptions ? {
+                                            ...restoreOptions,
+                                            restorePublished: e.target.checked
+                                        } : null)}
+                                        className="w-5 h-5 mt-0.5 rounded border-white/20 bg-white/5 text-green-500 focus:ring-green-500/50"
+                                    />
+                                    <div className="flex-1">
+                                        <div className="font-bold text-white text-sm group-hover:text-green-300 transition-colors">
+                                            Restore Published <span className="text-green-500">(Production)</span>
+                                        </div>
+                                        <p className="text-xs text-zinc-500 mt-1">Replaces current live production version</p>
+                                    </div>
+                                </label>
+
+                                <label className="flex items-start gap-3 p-4 bg-white/5 rounded-2xl cursor-pointer hover:bg-white/10 transition-colors group">
+                                    <input
+                                        type="checkbox"
+                                        checked={restoreOptions?.restoreDraft ?? false}
+                                        onChange={(e) => setRestoreOptions(restoreOptions ? {
+                                            ...restoreOptions,
+                                            restoreDraft: e.target.checked
+                                        } : null)}
+                                        className="w-5 h-5 mt-0.5 rounded border-white/20 bg-white/5 text-yellow-500 focus:ring-yellow-500/50"
+                                    />
+                                    <div className="flex-1">
+                                        <div className="font-bold text-white text-sm group-hover:text-yellow-300 transition-colors">
+                                            Restore Draft <span className="text-yellow-500">(Staging)</span>
+                                        </div>
+                                        <p className="text-xs text-zinc-500 mt-1">Replaces current draft/staging version</p>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => setRestoreModalOpen(false)}
+                                    className="flex-1 bg-white/5 hover:bg-white/10 text-white rounded-2xl"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={handleRestore}
+                                    disabled={loading || (!restoreOptions?.restorePublished && !restoreOptions?.restoreDraft)}
+                                    className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-2xl disabled:opacity-30"
+                                >
+                                    {loading ? 'Restoring...' : 'Restore'}
+                                </Button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Confirmation Dialog */}
             <ConfirmationModal

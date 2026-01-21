@@ -51,22 +51,18 @@ export async function updateBlock(blockId: string, updates: any) {
         const draftVersion = await getOrCreateDraftVersion(sectionRow.id)
         console.log(`[updateBlock] Using draft version ${draftVersion.id}`)
 
-        const currentLayout = draftVersion.layout_json || {}
-        const newLayout = { ...currentLayout, ...updates }
+        // SIMPLE: Client sends clean flat data, just filter metadata and save
+        const { id, slug, type, ...layoutData } = updates
 
-        console.log(`[updateBlock] Section-level update:`, {
-            currentLayoutKeys: Object.keys(currentLayout),
-            updateKeys: Object.keys(updates),
-            newLayoutKeys: Object.keys(newLayout),
-            hasCurrentServices: !!currentLayout.settings?.services,
-            hasUpdateServices: !!updates.settings?.services,
-            currentServicesCount: currentLayout.settings?.services?.length || 0,
-            updateServicesCount: updates.settings?.services?.length || 0
-        })
+        console.log(`[SERVER updateBlock] ===== SAVE for ${sectionRow.slug} =====`)
+        console.log(`[SERVER updateBlock] Received:`, JSON.stringify(updates, null, 2))
+        console.log(`[SERVER updateBlock] Saving:`, JSON.stringify(layoutData, null, 2))
+        console.log(`[SERVER updateBlock] =============================================`)
 
+        // Save directly - NO transformation needed, client already sent clean data
         const { error: updateError } = await supabase
             .from('website_section_versions')
-            .update({ layout_json: newLayout })
+            .update({ layout_json: layoutData })
             .eq('id', draftVersion.id)
 
         if (updateError) {
@@ -99,8 +95,8 @@ export async function updateBlock(blockId: string, updates: any) {
             if (Array.isArray(b.content)) {
                 if (findBlockInTree(b.content, targetId)) return true
             }
-            if (b.settings && Array.isArray(b.settings.backContent)) {
-                if (findBlockInTree(b.settings.backContent, targetId)) return true
+            if (b.backContent && Array.isArray(b.backContent)) {
+                if (findBlockInTree(b.backContent, targetId)) return true
             }
         }
         return false
@@ -140,8 +136,8 @@ export async function updateBlock(blockId: string, updates: any) {
             if (Array.isArray(b.content)) {
                 b.content = updateRecursive(b.content)
             }
-            if (b.settings && Array.isArray(b.settings.backContent)) {
-                b.settings.backContent = updateRecursive(b.settings.backContent)
+            if (b.backContent && Array.isArray(b.backContent)) {
+                b.backContent = updateRecursive(b.backContent)
             }
             return b
         })
@@ -210,7 +206,7 @@ export async function addChildBlock(parentId: string, newBlock: any, targetField
                 for (const b of blocks) {
                     if (b.id === parentId) return true
                     if (Array.isArray(b.content) && matches(b.content)) return true
-                    if (b.settings?.backContent && matches(b.settings.backContent)) return true
+                    if (b.backContent && matches(b.backContent)) return true
                 }
                 return false
             }
@@ -242,13 +238,10 @@ export async function addChildBlock(parentId: string, newBlock: any, targetField
                     // Found the container block!
                     // Check if we are targeting backContent
                     if (targetField === 'backContent') {
-                        const currentBack = Array.isArray(b.settings?.backContent) ? b.settings.backContent : []
+                        const currentBack = Array.isArray(b.backContent) ? b.backContent : []
                         return {
                             ...b,
-                            settings: {
-                                ...b.settings,
-                                backContent: [...currentBack, newBlock]
-                            }
+                            backContent: [...currentBack, newBlock]
                         }
                     }
                     // Default to content
@@ -258,8 +251,8 @@ export async function addChildBlock(parentId: string, newBlock: any, targetField
                 if (Array.isArray(b.content)) {
                     return { ...b, content: insertRecursive(b.content) }
                 }
-                if (b.settings?.backContent) {
-                    return { ...b, settings: { ...b.settings, backContent: insertRecursive(b.settings.backContent) } }
+                if (b.backContent) {
+                    return { ...b, backContent: insertRecursive(b.backContent) }
                 }
                 return b
             })
@@ -343,13 +336,10 @@ export async function updateBlockContent(sectionId: string, blockId: string, upd
             }
 
             // Back Content (Flip Cards)
-            if (b.settings && Array.isArray(b.settings.backContent)) {
+            if (b.backContent && Array.isArray(b.backContent)) {
                 return {
                     ...b,
-                    settings: {
-                        ...b.settings,
-                        backContent: updateRecursive(b.settings.backContent)
-                    }
+                    backContent: updateRecursive(b.backContent)
                 }
             }
 

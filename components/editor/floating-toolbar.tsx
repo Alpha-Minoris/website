@@ -43,9 +43,8 @@ export function FloatingToolbar({ id }: FloatingToolbarProps) {
     const { blocks, removeBlock, setSelectedBlockId, updateBlock: updateBlockLocal } = useEditorStore()
     const router = useRouter()
 
-    // Find the block to get its settings
-    const block = blocks.find(b => b.id === id)
-    const settings = block?.settings || {}
+    // Find the block
+    const currentBlock = blocks.find(b => b.id === id)
 
     // Debounce ref for color changes
 
@@ -89,14 +88,14 @@ export function FloatingToolbar({ id }: FloatingToolbarProps) {
     }
 
     const handleBackgroundColorChange = useCallback((color: string) => {
-        const newSettings = { ...settings, backgroundColor: color }
-        updateBlockLocal(id, { settings: newSettings })
-    }, [id, settings, updateBlockLocal])
+        const newBlock = { ...currentBlock, backgroundColor: color }
+        updateBlockLocal(id, newBlock)
+    }, [id, currentBlock, updateBlockLocal])
 
     const handleGridSizeChange = useCallback((size: number) => {
-        const newSettings = { ...settings, gridSnapSize: size }
-        updateBlockLocal(id, { settings: newSettings })
-    }, [id, settings, updateBlockLocal])
+        const newBlock = { ...currentBlock, gridSnapSize: size }
+        updateBlockLocal(id, newBlock)
+    }, [id, currentBlock, updateBlockLocal])
 
     const handleToggleVisibility = async () => {
         // Toggle current state
@@ -119,11 +118,11 @@ export function FloatingToolbar({ id }: FloatingToolbarProps) {
         }
     }
 
-    const isSectionEnabled = block?.is_enabled ?? true
-    const isPreDefined = ['hero', 'mission', 'team', 'services', 'packages', 'how-we-work', 'testimonials', 'case-studies', 'faq', 'contact'].includes(block?.slug || '')
+    const isSectionEnabled = currentBlock?.is_enabled ?? true
+    const isPreDefined = ['hero', 'mission', 'team', 'services', 'packages', 'how-we-work', 'testimonials', 'case-studies', 'faq', 'contact'].includes(currentBlock?.slug || '')
 
-    const displayColor = settings?.backgroundColor || 'transparent'
-    const currentGridSize = settings?.gridSnapSize || 0
+    const displayColor = currentBlock?.backgroundColor || 'transparent'
+    const currentGridSize = currentBlock?.gridSnapSize || 0
 
     return (
         <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-zinc-900/80 text-white p-1.5 rounded-full shadow-2xl border border-white/10 backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-200 z-[60]">

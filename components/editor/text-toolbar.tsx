@@ -33,13 +33,13 @@ interface TextToolbarProps {
 }
 
 interface TextToolbarUIProps {
-    settings: any
+    block: any  // Renamed from 'settings' for consistency
     onUpdate: (updates: any) => void
     onDelete?: () => void
     formatState?: { bold: boolean, italic: boolean, isLink?: boolean }
 }
 
-export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: TextToolbarUIProps) {
+export function TextToolbarUI({ block, onUpdate, onDelete, formatState }: TextToolbarUIProps) {
     const [localFormatState, setLocalFormatState] = useState<{
         bold: boolean;
         italic: boolean;
@@ -367,7 +367,7 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
             <Select
                 value={(() => {
                     // Normalize the font family value
-                    let font = (localFormatState as any).fontFamily || settings.fontFamily || 'Inter, sans-serif';
+                    let font = (localFormatState as any).fontFamily || block.fontFamily || 'Inter, sans-serif';
                     // Remove quotes if present
                     font = font.replace(/['"]/g, '');
                     return font;
@@ -405,7 +405,7 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
                         const hasSelection = selection && selection.toString().trim().length > 0;
 
                         // Get current font size more reliably
-                        let currentVal = settings.fontSize || '16px';
+                        let currentVal = block.fontSize || '16px';
                         if (hasSelection && (localFormatState as any).fontSize) {
                             currentVal = (localFormatState as any).fontSize;
                         }
@@ -435,7 +435,7 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
                         const selection = window.getSelection();
                         const hasSelection = selection && selection.toString().trim().length > 0;
 
-                        let currentVal = settings.fontSize || '16px';
+                        let currentVal = block.fontSize || '16px';
                         if (hasSelection && (localFormatState as any).fontSize) {
                             currentVal = (localFormatState as any).fontSize;
                         }
@@ -522,7 +522,7 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
                         const hasSelection = selection && selection.toString().trim().length > 0;
 
                         // Get current font size more reliably
-                        let currentVal = settings.fontSize || '16px';
+                        let currentVal = block.fontSize || '16px';
                         if (hasSelection && (localFormatState as any).fontSize) {
                             currentVal = (localFormatState as any).fontSize;
                         }
@@ -759,7 +759,7 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
             <div className="flex items-center gap-1.5 px-1">
                 <ColorControl
                     label="Text Color"
-                    value={localFormatState.color || settings.color}
+                    value={localFormatState.color || block.color}
                     isExecCommand={true}
                     defaultHex="#000000"
                     onChange={(v) => {
@@ -838,7 +838,7 @@ export function TextToolbarUI({ settings, onUpdate, onDelete, formatState }: Tex
 
                 <ColorControl
                     label="Background"
-                    value={settings.backgroundColor}
+                    value={block.backgroundColor}
                     defaultHex="transparent"
                     onChange={(v) => {
                         const selection = window.getSelection();
@@ -927,10 +927,10 @@ export function TextToolbar({ blockId }: TextToolbarProps) {
                     const found = findSection(block.content, currentSectionId)
                     if (found) return found
                 }
-                if (block.settings?.backContent && Array.isArray(block.settings.backContent)) {
+                if (block.backContent && Array.isArray(block.backContent)) {
                     const currentSectionId = parentSectionId || block.id
-                    if (block.settings.backContent.some((c: any) => c.id === childId)) return currentSectionId
-                    const found = findSection(block.settings.backContent, currentSectionId)
+                    if (block.backContent.some((c: any) => c.id === childId)) return currentSectionId
+                    const found = findSection(block.backContent, currentSectionId)
                     if (found) return found
                 }
             }
@@ -953,26 +953,26 @@ export function TextToolbar({ blockId }: TextToolbarProps) {
 
     const block = findBlock(blockId, blocks)
 
-    // Local state
-    const [localSettings, setLocalSettings] = useState(block?.settings || {})
-    const prevSettingsRef = useRef(block?.settings)
+    // Local state - FLAT BLOCK PATTERN
+    const [localBlock, setLocalBlock] = useState(block || {} as any)
+    const prevBlockRef = useRef(block)
 
     // Sync external changes to local state
     useEffect(() => {
-        if (JSON.stringify(block?.settings) !== JSON.stringify(prevSettingsRef.current)) {
-            setLocalSettings(block?.settings || {})
-            prevSettingsRef.current = block?.settings
+        if (JSON.stringify(block) !== JSON.stringify(prevBlockRef.current)) {
+            setLocalBlock(block || {} as any)
+            prevBlockRef.current = block
         }
-    }, [block?.settings])
+    }, [block])
 
     // Save timeout ref
 
 
-    // Optimistic Update wrapper
+    // Optimistic Update wrapper - FLAT BLOCK
     const handleUpdate = (updates: any) => {
-        const newSettings = { ...localSettings, ...updates }
-        setLocalSettings(newSettings)
-        updateStoreBlock(blockId, { settings: newSettings })
+        const newBlock = { ...localBlock, ...updates }
+        setLocalBlock(newBlock)
+        updateStoreBlock(blockId, newBlock)
     }
 
     // Handlers
@@ -992,7 +992,7 @@ export function TextToolbar({ blockId }: TextToolbarProps) {
 
     return (
         <TextToolbarUI
-            settings={localSettings}
+            block={localBlock}
             onUpdate={handleUpdate}
             onDelete={handleDelete}
         />

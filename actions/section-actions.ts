@@ -45,7 +45,7 @@ export async function createGenericSection() {
         .insert({
             section_id: section.id,
             status: 'published',
-            layout_json: { type: 'generic-section', content: [], settings: {} },
+            layout_json: { type: 'generic-section', content: [] },
             created_by: user?.id ?? null
         })
         .select()

@@ -132,8 +132,8 @@ export function EditorSidebar() {
                         const found = findBlock(node.content)
                         if (found) return found
                     }
-                    if (Array.isArray(node.settings?.backContent)) {
-                        const found = findBlock(node.settings.backContent)
+                    if (Array.isArray(node.backContent)) {
+                        const found = findBlock(node.backContent)
                         if (found) return found
                     }
                 }
@@ -158,11 +158,11 @@ export function EditorSidebar() {
                             const found = findParent(node.content, node.id)
                             if (found) return found
                         }
-                        if (Array.isArray(node.settings?.backContent)) {
+                        if (Array.isArray(node.backContent)) {
                             // If found in backContent, returns parent=node.id, field='backContent'?
                             // No, recursive call needs to know context.
                             // Let's refactor findParent to be smarter.
-                            const found = findParentInArray(node.settings.backContent, node.id, 'backContent')
+                            const found = findParentInArray(node.backContent, node.id, 'backContent')
                             if (found) return found
                         }
                     }
@@ -178,8 +178,8 @@ export function EditorSidebar() {
                             const found = findParentInArray(node.content, node.id, 'content')
                             if (found) return found
                         }
-                        if (Array.isArray(node.settings?.backContent)) {
-                            const found = findParentInArray(node.settings.backContent, node.id, 'backContent')
+                        if (Array.isArray(node.backContent)) {
+                            const found = findParentInArray(node.backContent, node.id, 'backContent')
                             if (found) return found
                         }
                     }
@@ -481,7 +481,8 @@ export function EditorSidebar() {
                                                             id: uuidv4(),
                                                             type: 'heading',
                                                             content: 'New Heading',
-                                                            settings: { level: 'h2', align: 'center' }
+                                                            level: 'h2',
+                                                            align: 'center'
                                                         }
                                                         try {
                                                             await addChildBlock(targetParentId, newHeading, targetField)
@@ -517,12 +518,10 @@ export function EditorSidebar() {
                                                             id: uuidv4(),
                                                             type: 'card',
                                                             content: [],
-                                                            settings: {
-                                                                mode: 'simple',
-                                                                variant: 'default',
-                                                                width: '100%',
-                                                                minHeight: '200px'
-                                                            }
+                                                            mode: 'simple',
+                                                            variant: 'default',
+                                                            width: '100%',
+                                                            minHeight: '200px'
                                                         }
                                                         try {
                                                             await addChildBlock(targetParentId, newCard, targetField)
@@ -557,8 +556,10 @@ export function EditorSidebar() {
                                                         const newIcon = {
                                                             id: uuidv4(),
                                                             type: 'icon',
-                                                            content: '', // not used
-                                                            settings: { iconName: 'sparkles', width: '2rem', height: '2rem' }
+                                                            content: '',
+                                                            iconName: 'sparkles',
+                                                            width: '2rem',
+                                                            height: '2rem'
                                                         }
                                                         try {
                                                             await addChildBlock(targetParentId, newIcon, targetField)
@@ -612,7 +613,7 @@ export function EditorSidebar() {
                                     <div className="space-y-3">
                                         {(() => {
                                             const selectedBlock = blocks.find(b => b.id === selectedBlockId)
-                                            const settings = selectedBlock?.settings || {}
+                                            if (!selectedBlock) return null
 
                                             return (
                                                 <>
@@ -622,16 +623,16 @@ export function EditorSidebar() {
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                onClick={() => updateBlock(selectedBlockId, { settings: { ...settings, direction: 'row' } })}
-                                                                className={cn("h-6 flex-1 text-[10px]", settings.direction === 'row' ? "bg-white/10 text-white" : "hover:bg-white/10")}
+                                                                onClick={() => updateBlock(selectedBlockId, { ...selectedBlock!, direction: 'row' })}
+                                                                className={cn("h-6 flex-1 text-[10px]", selectedBlock.direction === 'row' ? "bg-white/10 text-white" : "hover:bg-white/10")}
                                                             >
                                                                 Row
                                                             </Button>
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                onClick={() => updateBlock(selectedBlockId, { settings: { ...settings, direction: 'column' } })}
-                                                                className={cn("h-6 flex-1 text-[10px]", settings.direction === 'column' ? "bg-white/10 text-white" : "hover:bg-white/10")}
+                                                                onClick={() => updateBlock(selectedBlockId, { ...selectedBlock!, direction: 'column' })}
+                                                                className={cn("h-6 flex-1 text-[10px]", selectedBlock.direction === 'column' ? "bg-white/10 text-white" : "hover:bg-white/10")}
                                                             >
                                                                 Col
                                                             </Button>
@@ -641,18 +642,18 @@ export function EditorSidebar() {
                                                     <div className="space-y-1">
                                                         <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Justify</label>
                                                         <div className="flex bg-white/5 rounded-md p-1 gap-1">
-                                                            <Button variant="ghost" size="sm" onClick={() => updateBlock(selectedBlockId, { settings: { ...settings, justify: 'start' } })} className={cn("h-6 flex-1 text-[10px]", settings.justify === 'start' ? "bg-white/10 text-white" : "hover:bg-white/10")}>Start</Button>
-                                                            <Button variant="ghost" size="sm" onClick={() => updateBlock(selectedBlockId, { settings: { ...settings, justify: 'center' } })} className={cn("h-6 flex-1 text-[10px]", settings.justify === 'center' ? "bg-white/10 text-white" : "hover:bg-white/10")}>Center</Button>
-                                                            <Button variant="ghost" size="sm" onClick={() => updateBlock(selectedBlockId, { settings: { ...settings, justify: 'end' } })} className={cn("h-6 flex-1 text-[10px]", settings.justify === 'end' ? "bg-white/10 text-white" : "hover:bg-white/10")}>End</Button>
+                                                            <Button variant="ghost" size="sm" onClick={() => updateBlock(selectedBlockId, { ...selectedBlock!, justify: 'start' })} className={cn("h-6 flex-1 text-[10px]", selectedBlock.justify === 'start' ? "bg-white/10 text-white" : "hover:bg-white/10")}>Start</Button>
+                                                            <Button variant="ghost" size="sm" onClick={() => updateBlock(selectedBlockId, { ...selectedBlock!, justify: 'center' })} className={cn("h-6 flex-1 text-[10px]", selectedBlock.justify === 'center' ? "bg-white/10 text-white" : "hover:bg-white/10")}>Center</Button>
+                                                            <Button variant="ghost" size="sm" onClick={() => updateBlock(selectedBlockId, { ...selectedBlock!, justify: 'end' })} className={cn("h-6 flex-1 text-[10px]", selectedBlock.justify === 'end' ? "bg-white/10 text-white" : "hover:bg-white/10")}>End</Button>
                                                         </div>
                                                     </div>
 
                                                     <div className="space-y-1">
                                                         <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Align</label>
                                                         <div className="flex bg-white/5 rounded-md p-1 gap-1">
-                                                            <Button variant="ghost" size="sm" onClick={() => updateBlock(selectedBlockId, { settings: { ...settings, align: 'start' } })} className={cn("h-6 flex-1 text-[10px]", settings.align === 'start' ? "bg-white/10 text-white" : "hover:bg-white/10")}>Start</Button>
-                                                            <Button variant="ghost" size="sm" onClick={() => updateBlock(selectedBlockId, { settings: { ...settings, align: 'center' } })} className={cn("h-6 flex-1 text-[10px]", settings.align === 'center' ? "bg-white/10 text-white" : "hover:bg-white/10")}>Center</Button>
-                                                            <Button variant="ghost" size="sm" onClick={() => updateBlock(selectedBlockId, { settings: { ...settings, align: 'end' } })} className={cn("h-6 flex-1 text-[10px]", settings.align === 'end' ? "bg-white/10 text-white" : "hover:bg-white/10")}>End</Button>
+                                                            <Button variant="ghost" size="sm" onClick={() => updateBlock(selectedBlockId, { ...selectedBlock!, align: 'start' })} className={cn("h-6 flex-1 text-[10px]", selectedBlock.align === 'start' ? "bg-white/10 text-white" : "hover:bg-white/10")}>Start</Button>
+                                                            <Button variant="ghost" size="sm" onClick={() => updateBlock(selectedBlockId, { ...selectedBlock!, align: 'center' })} className={cn("h-6 flex-1 text-[10px]", selectedBlock.align === 'center' ? "bg-white/10 text-white" : "hover:bg-white/10")}>Center</Button>
+                                                            <Button variant="ghost" size="sm" onClick={() => updateBlock(selectedBlockId, { ...selectedBlock!, align: 'end' })} className={cn("h-6 flex-1 text-[10px]", selectedBlock.align === 'end' ? "bg-white/10 text-white" : "hover:bg-white/10")}>End</Button>
                                                         </div>
                                                     </div>
                                                 </>
@@ -697,8 +698,8 @@ function LayerItem({ block, index, depth, selectedBlockId, onSelect, onRefetch }
     // Collect children
     const children = block.content && Array.isArray(block.content) ? block.content : []
     // Also include back content for cards if present
-    if (block.settings?.backContent && Array.isArray(block.settings.backContent)) {
-        children.push(...block.settings.backContent)
+    if (block.backContent && Array.isArray(block.backContent)) {
+        children.push(...block.backContent)
     }
 
     const handleRename = async () => {

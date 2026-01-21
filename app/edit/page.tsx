@@ -92,14 +92,12 @@ export default async function EditPage() {
         const layoutContent = version?.layout_json?.content
         const hasLayoutContent = Array.isArray(layoutContent) && layoutContent.length > 0
 
+        // CRITICAL: Spread layout_json FIRST, then override only id/type/slug
+        // This preserves ALL data from clean_package.json (title, content, etc.)
         const block: BlockProps = {
-            id: section.id,
+            ...(version?.layout_json || {}),  // ← ALL data from database first
+            id: section.id,                    // ← Then override metadata
             type: blockType as BlockType,
-            content: hasLayoutContent ? layoutContent : (version?.content_html || []),
-            // Merge layout_json root with nested settings for backward compatibility  
-            settings: version?.layout_json ? { ...version.layout_json, ...version.layout_json.settings } : {},
-            is_enabled: section.is_enabled,
-            title: section.title,
             slug: section.slug
         }
 

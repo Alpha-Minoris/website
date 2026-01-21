@@ -13,8 +13,9 @@ import { EditableText } from '@/components/editor/editable-text'
 import { AddButton, DeleteButton } from '@/components/editor/editable-list-controls'
 import { EditableAsset } from '@/components/editor/editable-asset'
 
-export function TeamBlock({ id, settings, sectionSlug, slug }: BlockProps) {
-    const folder = sectionSlug || slug
+export function TeamBlock(block: BlockProps) {
+    const { id, slug } = block
+    const folder = slug
     const { isEditMode, updateBlock } = useEditorStore()
     const sectionRef = useRef<HTMLElement>(null)
     const [activeToolbarPos, setActiveToolbarPos] = useState<{ top: number, left: number } | null>(null)
@@ -32,41 +33,41 @@ export function TeamBlock({ id, settings, sectionSlug, slug }: BlockProps) {
     }
 
     // Local state
-    const [localSettings, setLocalSettings] = useState<any>({ ...defaultData, ...settings })
+    const [localBlock, setlocalBlock] = useState<any>({ ...defaultData, ...block })
 
 
     // Sync from props
     useEffect(() => {
-        if (settings) {
-            setLocalSettings((prev: any) => ({ ...prev, ...settings }))
+        if (block) {
+            setlocalBlock((prev: any) => ({ ...prev, ...block }))
         }
-    }, [settings])
+    }, [block])
 
-    const saveSettings = useCallback((newSettings: any) => {
-        setLocalSettings(newSettings)
-        updateBlock(id, { settings: newSettings })
+    const saveBlock = useCallback((newblock: any) => {
+        setlocalBlock(newblock)
+        updateBlock(id, { block: newblock })
     }, [id, updateBlock])
 
     const handleTextChange = useCallback((key: string, value: string) => {
-        saveSettings({ ...localSettings, [key]: value })
-    }, [localSettings, saveSettings])
+        saveBlock({ ...localBlock, [key]: value })
+    }, [localBlock, saveBlock])
 
     const handleMemberChange = useCallback((index: number, key: string, value: any) => {
-        const members = [...(localSettings.members || [])]
+        const members = [...(localBlock.members || [])]
         members[index] = { ...members[index], [key]: value }
-        saveSettings({ ...localSettings, members })
-    }, [localSettings, saveSettings])
+        saveBlock({ ...localBlock, members })
+    }, [localBlock, saveBlock])
 
     const handleSocialChange = useCallback((memberIdx: number, socialIdx: number, updates: any) => {
-        const members = [...(localSettings.members || [])]
+        const members = [...(localBlock.members || [])]
         const socials = [...(members[memberIdx].socials || [])]
         socials[socialIdx] = { ...socials[socialIdx], ...updates }
         members[memberIdx] = { ...members[memberIdx], socials }
-        saveSettings({ ...localSettings, members })
-    }, [localSettings, saveSettings])
+        saveBlock({ ...localBlock, members })
+    }, [localBlock, saveBlock])
 
     const handleAddSocial = (memberIdx: number) => {
-        const members = [...(localSettings.members || [])]
+        const members = [...(localBlock.members || [])]
         const socials = [...(members[memberIdx].socials || []), {
             id: Math.random().toString(36).substr(2, 9),
             type: 'icon',
@@ -74,19 +75,19 @@ export function TeamBlock({ id, settings, sectionSlug, slug }: BlockProps) {
             url: '#'
         }]
         members[memberIdx] = { ...members[memberIdx], socials }
-        saveSettings({ ...localSettings, members })
+        saveBlock({ ...localBlock, members })
     }
 
     const handleRemoveSocial = (memberIdx: number, socialIdx: number) => {
-        const members = [...(localSettings.members || [])]
+        const members = [...(localBlock.members || [])]
         const socials = [...(members[memberIdx].socials || [])]
         socials.splice(socialIdx, 1)
         members[memberIdx] = { ...members[memberIdx], socials }
-        saveSettings({ ...localSettings, members })
+        saveBlock({ ...localBlock, members })
     }
 
     const handleAddMember = () => {
-        const members = [...(localSettings.members || []), {
+        const members = [...(localBlock.members || []), {
             id: Math.random().toString(36).substr(2, 9),
             name: 'New Member',
             role: 'Expert Role',
@@ -95,13 +96,13 @@ export function TeamBlock({ id, settings, sectionSlug, slug }: BlockProps) {
             isHidden: false,
             socials: []
         }]
-        saveSettings({ ...localSettings, members })
+        saveBlock({ ...localBlock, members })
     }
 
     const handleRemoveMember = (index: number) => {
-        const members = [...(localSettings.members || [])]
+        const members = [...(localBlock.members || [])]
         members.splice(index, 1)
-        saveSettings({ ...localSettings, members })
+        saveBlock({ ...localBlock, members })
     }
 
     const onTextFocus = useCallback((rect: DOMRect) => {
@@ -136,7 +137,7 @@ export function TeamBlock({ id, settings, sectionSlug, slug }: BlockProps) {
         }
     }, [isEditMode])
 
-    const visibleMembersCount = localSettings.members?.filter((m: any) => !m.isHidden || isEditMode).length || 0
+    const visibleMembersCount = localBlock.members?.filter((m: any) => !m.isHidden || isEditMode).length || 0
 
     return (
         <section id={id} ref={sectionRef} onClickCapture={handleTeamClick} className="py-24 bg-transparent relative">
@@ -154,42 +155,42 @@ export function TeamBlock({ id, settings, sectionSlug, slug }: BlockProps) {
             <div className="container mx-auto px-4">
                 <div className={cn(
                     "mb-16 relative",
-                    localSettings.align === 'left' ? "text-left" :
-                        localSettings.align === 'right' ? "text-right" :
+                    localBlock.align === 'left' ? "text-left" :
+                        localBlock.align === 'right' ? "text-right" :
                             "text-center"
                 )}>
                     <EditableText
-                        tagName={localSettings.level || 'h2'}
-                        value={localSettings.title}
+                        tagName={localBlock.level || 'h2'}
+                        value={localBlock.title}
                         onChange={(v) => handleTextChange('title', v)}
                         isEditMode={isEditMode}
                         onFocus={onTextFocus}
                         onBlur={onTextBlur}
                         className="text-3xl md:text-5xl font-bold font-heading mb-4"
                         style={{
-                            fontFamily: localSettings.fontFamily,
-                            fontSize: localSettings.fontSize,
-                            color: localSettings.color
+                            fontFamily: localBlock.fontFamily,
+                            fontSize: localBlock.fontSize,
+                            color: localBlock.color
                         }}
                     />
                     <EditableText
                         tagName="p"
-                        value={localSettings.tagline}
+                        value={localBlock.tagline}
                         onChange={(v) => handleTextChange('tagline', v)}
                         isEditMode={isEditMode}
                         onFocus={onTextFocus}
                         onBlur={onTextBlur}
                         className="text-muted-foreground text-lg"
                         style={{
-                            fontFamily: localSettings.fontFamily,
-                            fontSize: localSettings.fontSize,
-                            color: localSettings.color
+                            fontFamily: localBlock.fontFamily,
+                            fontSize: localBlock.fontSize,
+                            color: localBlock.color
                         }}
                     />
                 </div>
 
                 <div className="flex flex-wrap justify-center gap-6">
-                    {localSettings.members?.map((member: any, i: number) => {
+                    {localBlock.members?.map((member: any, i: number) => {
                         if (member.isHidden && !isEditMode) return null
 
                         return (
@@ -239,9 +240,9 @@ export function TeamBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                         onBlur={onTextBlur}
                                         className="text-xl font-bold font-heading text-white"
                                         style={{
-                                            fontFamily: localSettings.fontFamily,
-                                            fontSize: localSettings.fontSize,
-                                            color: localSettings.color
+                                            fontFamily: localBlock.fontFamily,
+                                            fontSize: localBlock.fontSize,
+                                            color: localBlock.color
                                         }}
                                     />
                                     <EditableText
@@ -253,9 +254,9 @@ export function TeamBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                         onBlur={onTextBlur}
                                         className="text-accent text-sm font-medium uppercase tracking-wider"
                                         style={{
-                                            fontFamily: localSettings.fontFamily,
-                                            fontSize: localSettings.fontSize,
-                                            color: localSettings.color
+                                            fontFamily: localBlock.fontFamily,
+                                            fontSize: localBlock.fontSize,
+                                            color: localBlock.color
                                         }}
                                     />
                                     <EditableText
@@ -267,9 +268,9 @@ export function TeamBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                         onBlur={onTextBlur}
                                         className="text-muted-foreground text-sm leading-relaxed"
                                         style={{
-                                            fontFamily: localSettings.fontFamily,
-                                            fontSize: localSettings.fontSize,
-                                            color: localSettings.color
+                                            fontFamily: localBlock.fontFamily,
+                                            fontSize: localBlock.fontSize,
+                                            color: localBlock.color
                                         }}
                                     />
                                 </CardContent>
@@ -315,3 +316,7 @@ export function TeamBlock({ id, settings, sectionSlug, slug }: BlockProps) {
         </section>
     )
 }
+
+
+
+

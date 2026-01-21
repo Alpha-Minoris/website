@@ -23,13 +23,13 @@ interface GridSectionSettings {
     minHeight?: number
 }
 
-export function GridSectionBlock({ id, content, settings, slug }: BlockProps) {
+export function GridSectionBlock(block: BlockProps) {
+    const { id, content, slug } = block
     const { isEditMode, selectedBlockId, updateBlock: localUpdate } = useEditorStore()
     const containerRef = useRef<HTMLDivElement>(null)
 
-    const s = settings as GridSectionSettings || {}
-    const gap = s.gap || 16
-    const minHeight = s.minHeight || 300
+    const gap = block.gap || 16
+    const minHeight = block.minHeight || 300
 
     // Grid Style
     const gridStyle: React.CSSProperties = {
@@ -105,7 +105,7 @@ export function GridSectionBlock({ id, content, settings, slug }: BlockProps) {
                 >
                     {/* Render Blocks */}
                     {content.map((block: BlockProps) => {
-                        const bs = block.settings as GridBlockSettings || {}
+                        const bs = block as GridBlockSettings || {}
                         const style: React.CSSProperties = {
                             gridColumn: `${bs.colStart || 'auto'} / span ${bs.colSpan || 12}`,
                             gridRow: `${bs.rowStart || 'auto'} / span ${bs.rowSpan || 1}`,
@@ -149,3 +149,5 @@ export function GridSectionBlock({ id, content, settings, slug }: BlockProps) {
         </div>
     )
 }
+
+

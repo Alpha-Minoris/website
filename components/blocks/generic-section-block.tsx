@@ -18,10 +18,11 @@ interface GenericSectionSettings {
     gridSnapSize?: number
 }
 
-export function GenericSectionBlock({ id, content, settings, slug }: BlockProps) {
+export function GenericSectionBlock(block: BlockProps) {
+    const { id, content, slug } = block
     const { isEditMode, updateBlock: updateBlockLocal, blocks, setActiveDragId, selectedBlockId, setSelectedBlockId } = useEditorStore()
     const blockFromStore = blocks.find(b => b.id === id)
-    const s = (blockFromStore?.settings || settings) as GenericSectionSettings || {}
+    const s = (blockFromStore || block) as GenericSectionSettings || {}
 
     const sectionRef = React.useRef<HTMLDivElement>(null)
 
@@ -78,9 +79,9 @@ export function GenericSectionBlock({ id, content, settings, slug }: BlockProps)
         let maxY = 0
         const traverse = (nodes: any[]) => {
             nodes.forEach(node => {
-                if (node.settings?.y !== undefined) {
-                    const h = parseInt(node.settings.height) || parseInt(node.settings.minHeight) || 100
-                    const y = parseInt(node.settings.y) || 0
+                if (node.y !== undefined) {
+                    const h = parseInt(node.height) || parseInt(node.minHeight) || 100
+                    const y = parseInt(node.y) || 0
                     const bottom = y + h
                     if (bottom > maxY) maxY = bottom
                 }
@@ -131,8 +132,8 @@ export function GenericSectionBlock({ id, content, settings, slug }: BlockProps)
             const finalHeight = heightRef.current
 
             try {
-                await updateBlock(id, { settings: { ...s, minHeight: finalHeight } })
-                updateBlockLocal(id, { settings: { ...s, minHeight: finalHeight } })
+                await updateBlock(id, { ...block, minHeight: finalHeight })
+                updateBlockLocal(id, { ...block, minHeight: finalHeight })
             } catch (err) {
                 console.error("Failed to save section height", err)
             }
@@ -155,10 +156,10 @@ export function GenericSectionBlock({ id, content, settings, slug }: BlockProps)
         const activeBlock = findBlockRecursive(content, active.id as string)
         if (!activeBlock) return
 
-        const currentX = parseInt(activeBlock.settings?.x) || 0
-        const currentY = parseInt(activeBlock.settings?.y) || 0
+        const currentX = parseInt(activeBlock.x) || 0
+        const currentY = parseInt(activeBlock.y) || 0
 
-        let newSettings = { ...(activeBlock.settings as any) }
+        let newSettings = { ...activeBlock }
 
         const overData = over?.data.current
         const isDropOnContainer = overData?.type === 'container' || overData?.isCard
@@ -184,7 +185,7 @@ export function GenericSectionBlock({ id, content, settings, slug }: BlockProps)
 
                 if (!isSameParent) {
                     // Reparent
-                    updateBlockLocal(active.id as string, { settings: newSettings })
+                    updateBlockLocal(active.id as string, newSettings)
                     try {
                         const { moveBlock } = await import('@/actions/reorder-blocks')
                         await moveBlock(id, active.id as string, containerId, newSettings)
@@ -210,7 +211,7 @@ export function GenericSectionBlock({ id, content, settings, slug }: BlockProps)
                     newSettings.y = Math.max(0, Math.round(finalTop - sectionRect.top))
                 }
 
-                updateBlockLocal(active.id as string, { settings: newSettings })
+                updateBlockLocal(active.id as string, newSettings)
                 try {
                     const { moveBlock } = await import('@/actions/reorder-blocks')
                     await moveBlock(id, active.id as string, id, newSettings)
@@ -222,7 +223,7 @@ export function GenericSectionBlock({ id, content, settings, slug }: BlockProps)
         }
 
         // Default: just update position
-        updateBlockLocal(active.id as string, { settings: newSettings })
+        updateBlockLocal(active.id as string, newSettings)
     }
 
     // Droppable for section canvas
@@ -284,3 +285,5 @@ export function GenericSectionBlock({ id, content, settings, slug }: BlockProps)
         </div>
     )
 }
+
+
