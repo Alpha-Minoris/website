@@ -6,7 +6,7 @@ interface UseBlockResizeProps {
     blockId: string
     sectionId: string | undefined
     block: BlockProps
-    nodeRef: React.RefObject<HTMLDivElement>
+    nodeRef: React.RefObject<HTMLDivElement | null>
     blockType?: string
 }
 

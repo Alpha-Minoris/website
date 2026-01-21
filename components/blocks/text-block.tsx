@@ -118,7 +118,7 @@ export function TextBlock(block: BlockProps) {
             suppressContentEditableWarning
             onInput={handleInput}
             onBlur={handleBlur}
-            onClick={(e) => {
+            onClick={(e: React.MouseEvent) => {
                 if (!isEditMode) {
                     const link = (e.target as HTMLElement).closest('a')
                     if (link) {
