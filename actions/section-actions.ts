@@ -125,7 +125,7 @@ export async function updateSectionOrder(items: { id: string; sort_order: number
     return { success: true }
 }
 
-export async function updateSection(sectionId: string, updates: { title?: string }) {
+export async function updateSection(sectionId: string, updates: { title?: string, slug?: string }) {
     const supabase = await createAdminClient()
 
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sectionId)

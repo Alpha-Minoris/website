@@ -692,7 +692,8 @@ function LayerItem({ block, index, depth, selectedBlockId, onSelect, onRefetch }
     const router = useRouter()
     const isSelected = selectedBlockId === block.id
     const [isEditing, setIsEditing] = useState(false)
-    const [editValue, setEditValue] = useState(block.slug?.replace(/-/g, ' ') || block.type.replace(/-/g, ' '))
+    // Initialize with actual slug (preserving underscores)
+    const [editValue, setEditValue] = useState(block.slug || block.type)
     const [isHovered, setIsHovered] = useState(false)
 
     // Collect children
@@ -704,17 +705,16 @@ function LayerItem({ block, index, depth, selectedBlockId, onSelect, onRefetch }
 
     const handleRename = async () => {
         setIsEditing(false)
-        if (editValue.trim() !== block.title) {
+        // Compare with slug (what we're actually editing)
+        if (editValue.trim() !== block.slug) {
             // Determine if it's a section (has title in DB usually) or a block
             // Based on our type system, sections are blocks too.
             // We'll try to update section title via server action if it's a root section (depth 0, assuming root blocks are sections)
             if (depth === 0) {
                 try {
-                    await updateSection(block.id, { title: editValue })
-                    // Also update local store? The store might not persist title separate from settings/content.
-                    // We probably need to refresh or update store manually.
-                    // For now, let's assume PageBuilder re-renders on route refresh or we update store.
-                    updateBlock(block.id, { title: editValue }) // Assuming block model has title
+                    // Update both slug (for routing/display) and title (for DB)
+                    await updateSection(block.id, { slug: editValue, title: editValue })
+                    updateBlock(block.id, { slug: editValue, title: editValue })
                     router.refresh()
                 } catch (e) {
                     console.error("Failed to rename section", e)
@@ -801,7 +801,7 @@ function LayerItem({ block, index, depth, selectedBlockId, onSelect, onRefetch }
                         />
                     ) : (
                         <span className={cn("truncate max-w-[120px] select-none", (block.is_enabled === false) && "opacity-50 line-through")}>
-                            {block.slug?.replace(/-/g, ' ') || block.type.replace(/-/g, ' ')}
+                            {block.slug || block.type.replace(/-/g, ' ')}
                         </span>
                     )}
                 </div>
