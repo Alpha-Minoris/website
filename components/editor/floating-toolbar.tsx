@@ -70,7 +70,6 @@ export function FloatingToolbar({ id }: FloatingToolbarProps) {
             await updateSectionOrder(updates)
         } catch (error) {
             console.error("Failed to reorder:", error)
-            alert("Failed to reorder. See console.")
         }
     }
 
@@ -83,7 +82,6 @@ export function FloatingToolbar({ id }: FloatingToolbarProps) {
             }
         } catch (error) {
             console.error("Failed to delete:", error)
-            alert("Failed to delete. Check console for details.")
         }
     }
 

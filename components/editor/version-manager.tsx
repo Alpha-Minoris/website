@@ -203,10 +203,11 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
     // Confirmation Modal State
     const [confOpen, setConfOpen] = useState(false)
     const [confAction, setConfAction] = useState<{
-        type: 'revert' | 'restore' | 'delete-v' | 'delete-b',
-        id: string,
+        type: 'revert' | 'restore' | 'delete-v' | 'delete-b' | 'info' | 'error',
+        id?: string,
         title: string,
-        desc: string
+        desc: string,
+        onConfirm?: () => void
     } | null>(null)
 
     // Sync focusSectionId with selectedBlockId when modal opens if not set
@@ -284,9 +285,11 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
             setBackupName('')
             setBackupSourceType('published')
             await refreshData()
+
+            triggerConfirm('info', '', 'Backup Created', 'The global snapshot has been captured successfully.')
         } catch (err) {
             console.error(err)
-            alert(err instanceof Error ? err.message : 'Failed to create backup')
+            triggerConfirm('error', '', 'Backup Failed', err instanceof Error ? err.message : 'Failed to create backup')
         } finally {
             setLoading(false)
         }
@@ -301,19 +304,15 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
             const text = await file.text()
             const json = JSON.parse(text)
 
-            // Prompt for name 
-            const name = prompt('Enter a name for this imported backup:', file.name.replace('.json', ''))
-            if (!name) {
-                setLoading(false)
-                return
-            }
+            // Auto-generate name based on file name if no prompt is available that fits the UI
+            const name = file.name.replace('.json', '')
 
             await importBackupFromJson(name, json, backupSourceType)
             await refreshData()
-            alert('Backup imported successfully!')
+            triggerConfirm('info', '', 'Backup Imported', `Successfully imported "${name}" as a new snapshot.`)
         } catch (err) {
             console.error(err)
-            alert(err instanceof Error ? err.message : 'Failed to import backup')
+            triggerConfirm('error', '', 'Import Failed', err instanceof Error ? err.message : 'Failed to import backup')
         } finally {
             setLoading(false)
             if (fileInputRef.current) {
@@ -322,34 +321,41 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
         }
     }
 
-    const triggerConfirm = (type: any, id: string, title: string, desc: string) => {
-        setConfAction({ type, id, title, desc })
+    const triggerConfirm = (type: any, id: string, title: string, desc: string, onConfirm?: () => void) => {
+        setConfAction({ type, id, title, desc, onConfirm })
         setConfOpen(true)
     }
 
     const handleConfirmedAction = async () => {
         if (!confAction) return
+
+        // If it's just an info/error modal, just close it
+        if (confAction.type === 'info' || confAction.type === 'error') {
+            setConfOpen(false)
+            return
+        }
+
         setLoading(true)
         try {
             switch (confAction.type) {
                 case 'revert':
-                    await revertToVersion(confAction.id)
+                    await revertToVersion(confAction.id!)
                     window.location.reload()
                     break
                 case 'restore':
                     // Should not reach here - restore now uses modal
                     break
                 case 'delete-v':
-                    await deleteVersion(confAction.id)
+                    await deleteVersion(confAction.id!)
                     await refreshData()
                     break
                 case 'delete-b':
-                    await deleteBackup(confAction.id)
+                    await deleteBackup(confAction.id!)
                     await refreshData()
                     break
             }
         } catch (err) {
-            alert(err instanceof Error ? err.message : "Action failed")
+            triggerConfirm('error', '', 'Action Failed', err instanceof Error ? err.message : "Action failed")
         } finally {
             setLoading(false)
             setConfOpen(false)
@@ -364,9 +370,17 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
             await restoreFromBackup(restoreOptions.backupId)
             setRestoreModalOpen(false)
             setRestoreOptions(null)
-            window.location.reload()
+
+            triggerConfirm('info', '', 'Restoration Complete', 'All sections have been restored as DRAFT versions. Page will now refresh.', () => {
+                window.location.reload()
+            })
+
+            // Short delay to let user see the message before reload if they just click ok
+            setTimeout(() => {
+                window.location.reload()
+            }, 1500)
         } catch (err) {
-            alert(err instanceof Error ? err.message : "Restore failed")
+            triggerConfirm('error', '', 'Restore Failed', err instanceof Error ? err.message : "Restore failed")
         } finally {
             setLoading(false)
         }
@@ -388,7 +402,7 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="w-full max-w-[1800px] h-[85vh] flex flex-col overflow-hidden border border-white/20 bg-zinc-900/95 shadow-[0_0_100px_rgba(0,0,0,0.8)] backdrop-blur-3xl rounded-2xl ring-1 ring-white/10"
+                className="w-full max-w-[1800px] h-[85vh] flex flex-col overflow-hidden border border-white/20 bg-zinc-900/95 shadow-[0_0_100px_rgba(0,0,0,0.8)] backdrop-blur-3xl rounded-3xl ring-1 ring-white/10"
             >
                 {/* Multi-Pane Body wrapped in Tabs Context */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
@@ -494,369 +508,373 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
 
                         {/* Main Content Pane */}
                         <div className="flex-1 flex flex-col min-w-0 bg-transparent">
-                            <TabsContent value="history" className="flex-1 flex flex-col min-h-0 m-0 focus-visible:ring-0">
-                                {focusSectionId ? (
-                                    <div className="flex-1 flex flex-col p-8 gap-6 overflow-hidden">
-                                        {/* Action Bar */}
-                                        <div className="flex items-center justify-between pb-6 border-b border-white/5">
-                                            <div>
-                                                <h3 className="text-lg font-bold text-white leading-none">
-                                                    {blocks.find(b => b.id === focusSectionId)?.displayTitle || blocks.find(b => b.id === focusSectionId)?.slug?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || "Section History"}
-                                                </h3>
-                                                <p className="text-[10px] text-zinc-500 tracking-wider font-mono mt-1">
-                                                    {versions.length} version{versions.length !== 1 ? 's' : ''} ·
-                                                    <span className="text-blue-400 ml-1">
-                                                        {formatBytes(versions.reduce((sum, v) => sum + calculateVersionSize(v), 0))}
-                                                    </span>
-                                                    <span className="text-zinc-600 mx-2">/</span>
-                                                    <span className="text-zinc-500">Total: </span>
-                                                    <span className="text-emerald-400">
-                                                        {formatBytes(
-                                                            Array.from(allVersionsMap.values())
-                                                                .flat()
-                                                                .reduce((sum, v) => sum + calculateVersionSize(v), 0)
-                                                        )}
-                                                    </span>
-                                                </p>
+                            {activeTab === 'history' && (
+                                <TabsContent value="history" className="flex-1 flex flex-col min-h-0 m-0 focus-visible:ring-0">
+                                    {focusSectionId ? (
+                                        <div className="flex-1 flex flex-col p-8 md:p-10 gap-6 overflow-hidden">
+                                            {/* Action Bar */}
+                                            <div className="flex items-center justify-between pb-6 border-b border-white/5">
+                                                <div>
+                                                    <h3 className="text-lg font-bold text-white leading-none">
+                                                        {blocks.find(b => b.id === focusSectionId)?.displayTitle || blocks.find(b => b.id === focusSectionId)?.slug?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || "Section History"}
+                                                    </h3>
+                                                    <p className="text-[10px] text-zinc-500 tracking-wider font-mono mt-1">
+                                                        {versions.length} version{versions.length !== 1 ? 's' : ''} ·
+                                                        <span className="text-blue-400 ml-1">
+                                                            {formatBytes(versions.reduce((sum, v) => sum + calculateVersionSize(v), 0))}
+                                                        </span>
+                                                        <span className="text-zinc-600 mx-2">/</span>
+                                                        <span className="text-zinc-500">Total: </span>
+                                                        <span className="text-emerald-400">
+                                                            {formatBytes(
+                                                                Array.from(allVersionsMap.values())
+                                                                    .flat()
+                                                                    .reduce((sum, v) => sum + calculateVersionSize(v), 0)
+                                                            )}
+                                                        </span>
+                                                    </p>
+                                                </div>
+                                                <div className="flex gap-4">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={refreshData}
+                                                        disabled={loading}
+                                                        className="bg-white/5 border-white/10 hover:bg-white/10 rounded-xl"
+                                                    >
+                                                        <RotateCcw className={cn("w-3.5 h-3.5 mr-2", loading && "animate-spin")} />
+                                                        Sync
+                                                    </Button>
+                                                </div>
                                             </div>
-                                            <div className="flex gap-4">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={refreshData}
-                                                    disabled={loading}
-                                                    className="bg-white/5 border-white/10 hover:bg-white/10 rounded-xl"
-                                                >
-                                                    <RotateCcw className={cn("w-3.5 h-3.5 mr-2", loading && "animate-spin")} />
-                                                    Sync
-                                                </Button>
-                                            </div>
-                                        </div>
 
-                                        {/* Versions Grid/Table */}
-                                        <div className="flex-1 overflow-auto rounded-[2rem] border border-white/10 bg-black/40 shadow-inner group/list custom-scrollbar">
-                                            <table className="w-full text-left border-collapse">
-                                                <thead className="sticky top-0 bg-zinc-900/95 backdrop-blur-md z-20">
-                                                    <tr className="border-b border-white/5 text-[10px] uppercase tracking-widest font-black text-zinc-500">
-                                                        <th className="px-8 py-4">State</th>
-                                                        <th className="px-8 py-4">Modification Date</th>
-                                                        <th className="px-8 py-4">Size</th>
-                                                        <th className="px-8 py-4 text-right">Operations</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-white/5">
-                                                    {versions.map((v) => {
-                                                        const isLive = v.status === 'published'
-                                                        const isDraft = v.status === 'draft'
-                                                        return (
-                                                            <tr key={v.id} className="group hover:bg-white/[0.03] transition-colors relative">
-                                                                <td className="px-8 py-5">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className={cn(
-                                                                            "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ring-1",
-                                                                            isLive ? "bg-green-500/20 text-green-400 ring-green-500/30" :
-                                                                                isDraft ? "bg-yellow-500/20 text-yellow-400 ring-yellow-500/30" :
-                                                                                    "bg-zinc-500/10 text-zinc-500 ring-white/5"
-                                                                        )}>
-                                                                            {v.status}
-                                                                        </span>
-                                                                        {isLive && (
-                                                                            <span className="text-[10px] text-green-500 font-bold ml-2 flex items-center gap-1">
-                                                                                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                                                                                (Live on Production)
+                                            {/* Versions Grid/Table */}
+                                            <div className="flex-1 overflow-auto rounded-[2rem] border border-white/10 bg-black/40 shadow-inner group/list custom-scrollbar">
+                                                <table className="w-full text-left border-collapse">
+                                                    <thead className="sticky top-0 bg-zinc-900/95 backdrop-blur-md z-20">
+                                                        <tr className="border-b border-white/5 text-[10px] uppercase tracking-widest font-black text-zinc-500">
+                                                            <th className="px-8 py-4">State</th>
+                                                            <th className="px-8 py-4">Modification Date</th>
+                                                            <th className="px-8 py-4">Size</th>
+                                                            <th className="px-8 py-4 text-right">Operations</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-white/5">
+                                                        {versions.map((v) => {
+                                                            const isLive = v.status === 'published'
+                                                            const isDraft = v.status === 'draft'
+                                                            return (
+                                                                <tr key={v.id} className="group hover:bg-white/[0.03] transition-colors relative">
+                                                                    <td className="px-8 py-5">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className={cn(
+                                                                                "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ring-1",
+                                                                                isLive ? "bg-green-500/20 text-green-400 ring-green-500/30" :
+                                                                                    isDraft ? "bg-yellow-500/20 text-yellow-400 ring-yellow-500/30" :
+                                                                                        "bg-zinc-500/10 text-zinc-500 ring-white/5"
+                                                                            )}>
+                                                                                {v.status}
                                                                             </span>
-                                                                        )}
-                                                                        {isDraft && (
-                                                                            <span className="text-[10px] text-yellow-500 font-bold ml-2 flex items-center gap-1">
-                                                                                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                                                                                (Active in Staging)
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-8 py-5">
-                                                                    <div className="flex flex-col">
-                                                                        <div className="text-sm font-bold text-white group-hover:text-blue-300 transition-colors">
-                                                                            {formatRelativeTime(new Date(v.created_at))}
+                                                                            {isLive && (
+                                                                                <span className="text-[10px] text-green-500 font-bold ml-2 flex items-center gap-1">
+                                                                                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                                                                                    (Live on Production)
+                                                                                </span>
+                                                                            )}
+                                                                            {isDraft && (
+                                                                                <span className="text-[10px] text-yellow-500 font-bold ml-2 flex items-center gap-1">
+                                                                                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                                                                    (Active in Staging)
+                                                                                </span>
+                                                                            )}
                                                                         </div>
-                                                                        <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
-                                                                            {new Date(v.created_at).toLocaleString('en-US', {
-                                                                                weekday: 'short',
-                                                                                month: 'short',
-                                                                                day: 'numeric',
-                                                                                hour: 'numeric',
-                                                                                minute: 'numeric',
-                                                                                second: 'numeric'
-                                                                            })}
+                                                                    </td>
+                                                                    <td className="px-8 py-5">
+                                                                        <div className="flex flex-col">
+                                                                            <div className="text-sm font-bold text-white group-hover:text-blue-300 transition-colors">
+                                                                                {formatRelativeTime(new Date(v.created_at))}
+                                                                            </div>
+                                                                            <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
+                                                                                {new Date(v.created_at).toLocaleString('en-US', {
+                                                                                    weekday: 'short',
+                                                                                    month: 'short',
+                                                                                    day: 'numeric',
+                                                                                    hour: 'numeric',
+                                                                                    minute: 'numeric',
+                                                                                    second: 'numeric'
+                                                                                })}
+                                                                            </div>
                                                                         </div>
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-8 py-5">
-                                                                    <div className="text-xs font-mono text-zinc-400">
-                                                                        {formatBytes(calculateVersionSize(v))}
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-8 py-5 text-right">
-                                                                    <div className="flex items-center justify-end gap-2 translate-x-2 group-hover:translate-x-0 transition-transform duration-300">
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            className="h-9 w-9 bg-white/5 hover:bg-blue-500/20 text-blue-400 rounded-xl transition-all"
-                                                                            title="Preview this state"
-                                                                            onClick={() => window.open(`/view?preview=${v.id}`, '_blank')}
-                                                                        >
-                                                                            <Eye className="w-4 h-4" />
-                                                                        </Button>
-
-                                                                        {!isLive && !isDraft && (
+                                                                    </td>
+                                                                    <td className="px-8 py-5">
+                                                                        <div className="text-xs font-mono text-zinc-400">
+                                                                            {formatBytes(calculateVersionSize(v))}
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="px-8 py-5 text-right">
+                                                                        <div className="flex items-center justify-end gap-2 translate-x-2 group-hover:translate-x-0 transition-transform duration-300">
                                                                             <Button
                                                                                 variant="ghost"
                                                                                 size="icon"
-                                                                                className="h-9 w-9 bg-white/5 hover:bg-emerald-500/20 text-emerald-400 rounded-xl transition-all"
-                                                                                title="Rollback to this version"
+                                                                                className="h-9 w-9 bg-white/5 hover:bg-blue-500/20 text-blue-400 rounded-xl transition-all"
+                                                                                title="Preview this state"
+                                                                                onClick={() => window.open(`/view?preview=${v.id}`, '_blank')}
+                                                                            >
+                                                                                <Eye className="w-4 h-4" />
+                                                                            </Button>
+
+                                                                            {!isLive && !isDraft && (
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="icon"
+                                                                                    className="h-9 w-9 bg-white/5 hover:bg-emerald-500/20 text-emerald-400 rounded-xl transition-all"
+                                                                                    title="Rollback to this version"
+                                                                                    onClick={() => triggerConfirm(
+                                                                                        'revert',
+                                                                                        v.id,
+                                                                                        'Rollback Section?',
+                                                                                        'This will clone this historical state and set it as the new Live version. Your current Live content will be archived.'
+                                                                                    )}
+                                                                                >
+                                                                                    <RotateCcw className="w-4 h-4" />
+                                                                                </Button>
+                                                                            )}
+
+                                                                            <Button
+                                                                                variant="ghost"
+                                                                                size="icon"
+                                                                                disabled={isLive || isDraft}
+                                                                                className={cn(
+                                                                                    "h-9 w-9 bg-white/5 rounded-xl transition-all",
+                                                                                    (isLive || isDraft)
+                                                                                        ? "text-zinc-500 cursor-not-allowed border border-white/5"
+                                                                                        : "hover:bg-red-500/20 text-red-400"
+                                                                                )}
+                                                                                title={isLive ? "Cannot delete production state" : isDraft ? "Cannot delete staging state" : "Permanently remove"}
                                                                                 onClick={() => triggerConfirm(
-                                                                                    'revert',
+                                                                                    'delete-v',
                                                                                     v.id,
-                                                                                    'Rollback Section?',
-                                                                                    'This will clone this historical state and set it as the new Live version. Your current Live content will be archived.'
+                                                                                    'Purge Version?',
+                                                                                    'This action is irreversible. All data for this specific historical record will be destroyed.'
                                                                                 )}
                                                                             >
-                                                                                <RotateCcw className="w-4 h-4" />
+                                                                                {(isLive || isDraft) ? <Lock className="w-3.5 h-3.5" /> : <Trash2 className="w-4 h-4" />}
                                                                             </Button>
-                                                                        )}
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            )
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                                {versions.length === 0 && !loading && (
+                                                    <div className="flex flex-col items-center justify-center py-32 text-zinc-500 gap-4">
+                                                        <History className="w-16 h-16 opacity-5 opacity-pulse" />
+                                                        <p className="text-sm font-medium">No historical timeline available</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="h-full flex flex-col items-center justify-center p-12 text-zinc-500 gap-6">
+                                            <div className="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center ring-1 ring-white/10 shadow-2xl">
+                                                <Layers className="w-10 h-10 opacity-20" />
+                                            </div>
+                                            <div className="text-center max-w-xs">
+                                                <p className="text-lg font-bold text-white mb-2">Select a Context</p>
+                                                <p className="text-xs leading-relaxed">Choose a section from the sidebar to inspect its evolution and rollback points.</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </TabsContent>
+                            )}
 
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            disabled={isLive || isDraft}
-                                                                            className={cn(
-                                                                                "h-9 w-9 bg-white/5 rounded-xl transition-all",
-                                                                                (isLive || isDraft)
-                                                                                    ? "text-zinc-500 cursor-not-allowed border border-white/5"
-                                                                                    : "hover:bg-red-500/20 text-red-400"
-                                                                            )}
-                                                                            title={isLive ? "Cannot delete production state" : isDraft ? "Cannot delete staging state" : "Permanently remove"}
-                                                                            onClick={() => triggerConfirm(
-                                                                                'delete-v',
-                                                                                v.id,
-                                                                                'Purge Version?',
-                                                                                'This action is irreversible. All data for this specific historical record will be destroyed.'
-                                                                            )}
-                                                                        >
-                                                                            {(isLive || isDraft) ? <Lock className="w-3.5 h-3.5" /> : <Trash2 className="w-4 h-4" />}
-                                                                        </Button>
-                                                                    </div>
-                                                                </td>
-                                                            </tr>
-                                                        )
-                                                    })}
-                                                </tbody>
-                                            </table>
-                                            {versions.length === 0 && !loading && (
-                                                <div className="flex flex-col items-center justify-center py-32 text-zinc-500 gap-4">
-                                                    <History className="w-16 h-16 opacity-5 opacity-pulse" />
-                                                    <p className="text-sm font-medium">No historical timeline available</p>
+                            {activeTab === 'backups' && (
+                                <TabsContent value="backups" className="flex-1 overflow-y-auto m-0 p-8 md:px-12 focus-visible:ring-0 custom-scrollbar">
+                                    <div className="flex flex-col gap-8">
+                                        {/* Backup Header */}
+                                        <div className="flex items-center justify-between p-8 rounded-[2rem] border border-white/10 bg-gradient-to-br from-indigo-500/10 to-transparent shadow-xl">
+                                            <div className="flex items-center gap-4">
+                                                <div className="p-3 bg-indigo-500/20 rounded-2xl shadow-inner ring-1 ring-indigo-500/30">
+                                                    <Database className="w-6 h-6 text-indigo-400" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-lg font-bold text-white leading-none">Global Snapshots</h3>
+                                                    <p className="text-xs text-zinc-500 mt-2">Capture the state of all sections in a single point in time</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col gap-3">
+                                                {/* Source Type Toggle */}
+                                                <div className="flex items-center gap-4 bg-black/40 p-3 rounded-2xl ring-1 ring-white/10">
+                                                    <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Source:</span>
+                                                    <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setBackupSourceType('published')}
+                                                            className={cn(
+                                                                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                                                                backupSourceType === 'published'
+                                                                    ? "bg-green-500/20 text-green-400 ring-1 ring-green-500/30"
+                                                                    : "text-zinc-500 hover:text-white"
+                                                            )}
+                                                        >
+                                                            Published
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setBackupSourceType('draft')}
+                                                            className={cn(
+                                                                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                                                                backupSourceType === 'draft'
+                                                                    ? "bg-yellow-500/20 text-yellow-400 ring-1 ring-yellow-500/30"
+                                                                    : "text-zinc-500 hover:text-white"
+                                                            )}
+                                                        >
+                                                            Draft
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Backup Name Input and Buttons */}
+                                                <div className="flex items-center gap-3 bg-black/40 p-2 pl-4 rounded-full ring-1 ring-white/10 focus-within:ring-blue-500/50 transition-all">
+                                                    <Input
+                                                        placeholder="Label this snapshot..."
+                                                        className="h-8 w-48 bg-transparent border-0 text-sm focus-visible:ring-0 placeholder:text-zinc-600 font-medium"
+                                                        value={backupName}
+                                                        onChange={(e) => setBackupName(e.target.value)}
+                                                    />
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={handleCreateBackup}
+                                                        disabled={loading || !backupName.trim()}
+                                                        className="h-8 px-4 bg-indigo-500 hover:bg-indigo-400 text-white font-bold rounded-full shadow-lg transition-all disabled:opacity-30"
+                                                    >
+                                                        <Download className="w-3.5 h-3.5 mr-2" />
+                                                        Snapshot
+                                                    </Button>
+
+                                                    {/* JSON Import Button */}
+                                                    <input
+                                                        ref={fileInputRef}
+                                                        type="file"
+                                                        accept=".json"
+                                                        className="hidden"
+                                                        onChange={handleImportJson}
+                                                    />
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={() => fileInputRef.current?.click()}
+                                                        disabled={loading}
+                                                        className="h-8 px-3 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 font-bold rounded-full transition-all disabled:opacity-30"
+                                                    >
+                                                        <Upload className="w-3.5 h-3.5 mr-1.5" />
+                                                        Import
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Backup Grid */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-8">
+                                            {backups.map((b) => (
+                                                <Card key={b.id} className="bg-white/5 border-white/5 p-6 flex flex-col gap-6 group hover:border-white/20 hover:bg-white/[0.08] transition-all rounded-[2rem] shadow-xl overflow-hidden relative">
+                                                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                                                        <Package className="w-24 h-24 -mr-8 -mt-8 rotate-12" />
+                                                    </div>
+
+                                                    <div className="flex items-start justify-between relative z-10">
+                                                        <div className="flex flex-col">
+                                                            <h4 className="font-bold text-white group-hover:text-indigo-300 transition-colors text-lg truncate pr-16">{b.name}</h4>
+                                                            <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                                                {/* Backup Type Badge */}
+                                                                <span className={cn(
+                                                                    "px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest ring-1",
+                                                                    b.backup_type === 'published'
+                                                                        ? "bg-green-500/10 text-green-400 ring-green-500/20"
+                                                                        : b.backup_type === 'draft'
+                                                                            ? "bg-yellow-500/10 text-yellow-400 ring-yellow-500/20"
+                                                                            : "bg-blue-500/10 text-blue-400 ring-blue-500/20"
+                                                                )}>
+                                                                    {b.backup_type === 'published' ? '🟢 Production' : b.backup_type === 'draft' ? '🟡 Draft' : '🔵 Both'}
+                                                                </span>
+                                                                <span className="px-2 py-0.5 rounded-md bg-white/5 text-[9px] font-black uppercase tracking-widest text-zinc-500 ring-1 ring-white/5">
+                                                                    {Array.isArray(b.snapshot_json) ? b.snapshot_json.length : 0} Sections
+                                                                </span>
+                                                                <span className="text-[10px] text-zinc-600">•</span>
+                                                                <span className="text-[10px] text-zinc-500 font-mono">
+                                                                    {formatRelativeTime(new Date(b.created_at))}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Download buttons row */}
+                                                    <div className="flex items-center gap-2 relative z-10">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="flex-1 h-8 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 border-0 font-bold text-[10px] uppercase tracking-wider rounded-xl transition-all"
+                                                            onClick={() => downloadBackupAsJson(b)}
+                                                        >
+                                                            <FileJson className="w-3.5 h-3.5 mr-1.5" />
+                                                            JSON
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="flex-1 h-8 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 hover:text-purple-300 border-0 font-bold text-[10px] uppercase tracking-wider rounded-xl transition-all"
+                                                            onClick={() => downloadBackupAsMarkdown(b)}
+                                                        >
+                                                            <FileText className="w-3.5 h-3.5 mr-1.5" />
+                                                            Markdown
+                                                        </Button>
+                                                    </div>
+
+                                                    {/* Action buttons row */}
+                                                    <div className="flex items-center gap-3 mt-auto relative z-10">
+                                                        <Button
+                                                            variant="secondary"
+                                                            size="sm"
+                                                            className="flex-1 bg-white/10 hover:bg-emerald-500/20 hover:text-emerald-400 border-0 text-white font-bold text-xs h-10 rounded-2xl transition-all backdrop-blur-sm"
+                                                            onClick={() => {
+                                                                setRestoreOptions({
+                                                                    backupId: b.id,
+                                                                    restorePublished: false,
+                                                                    restoreDraft: true
+                                                                })
+                                                                setRestoreModalOpen(true)
+                                                            }}
+                                                        >
+                                                            <RotateCcw className="w-4 h-4 mr-2" />
+                                                            Restore Point
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-10 w-10 bg-white/5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-2xl transition-all"
+                                                            onClick={() => triggerConfirm(
+                                                                'delete-b',
+                                                                b.id,
+                                                                'Purge Snapshot?',
+                                                                'This backup point and all its component states will be permanently deleted.'
+                                                            )}
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
+                                                </Card>
+                                            ))}
+                                            {backups.length === 0 && !loading && (
+                                                <div className="col-span-full py-40 border-2 border-dashed border-white/5 rounded-[3rem] flex flex-col items-center justify-center text-zinc-600 gap-4">
+                                                    <AlertCircle className="w-12 h-12 opacity-20" />
+                                                    <p className="font-bold uppercase tracking-widest text-xs">No snapshots preserved</p>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
-                                ) : (
-                                    <div className="h-full flex flex-col items-center justify-center p-12 text-zinc-500 gap-6">
-                                        <div className="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center ring-1 ring-white/10 shadow-2xl">
-                                            <Layers className="w-10 h-10 opacity-20" />
-                                        </div>
-                                        <div className="text-center max-w-xs">
-                                            <p className="text-lg font-bold text-white mb-2">Select a Context</p>
-                                            <p className="text-xs leading-relaxed">Choose a section from the sidebar to inspect its evolution and rollback points.</p>
-                                        </div>
-                                    </div>
-                                )}
-                            </TabsContent>
-
-                            <TabsContent value="backups" className="flex-1 overflow-y-auto p-8 m-0 focus-visible:ring-0 custom-scrollbar">
-                                <div className="flex flex-col gap-8">
-                                    {/* Backup Header */}
-                                    <div className="flex items-center justify-between p-8 rounded-[2rem] border border-white/10 bg-gradient-to-br from-indigo-500/10 to-transparent shadow-xl">
-                                        <div className="flex items-center gap-4">
-                                            <div className="p-3 bg-indigo-500/20 rounded-2xl shadow-inner ring-1 ring-indigo-500/30">
-                                                <Database className="w-6 h-6 text-indigo-400" />
-                                            </div>
-                                            <div>
-                                                <h3 className="text-lg font-bold text-white leading-none">Global Snapshots</h3>
-                                                <p className="text-xs text-zinc-500 mt-2">Capture the state of all sections in a single point in time</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col gap-3">
-                                            {/* Source Type Toggle */}
-                                            <div className="flex items-center gap-4 bg-black/40 p-3 rounded-2xl ring-1 ring-white/10">
-                                                <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Source:</span>
-                                                <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setBackupSourceType('published')}
-                                                        className={cn(
-                                                            "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
-                                                            backupSourceType === 'published'
-                                                                ? "bg-green-500/20 text-green-400 ring-1 ring-green-500/30"
-                                                                : "text-zinc-500 hover:text-white"
-                                                        )}
-                                                    >
-                                                        Published
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setBackupSourceType('draft')}
-                                                        className={cn(
-                                                            "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
-                                                            backupSourceType === 'draft'
-                                                                ? "bg-yellow-500/20 text-yellow-400 ring-1 ring-yellow-500/30"
-                                                                : "text-zinc-500 hover:text-white"
-                                                        )}
-                                                    >
-                                                        Draft
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            {/* Backup Name Input and Buttons */}
-                                            <div className="flex items-center gap-3 bg-black/40 p-2 pl-4 rounded-full ring-1 ring-white/10 focus-within:ring-blue-500/50 transition-all">
-                                                <Input
-                                                    placeholder="Label this snapshot..."
-                                                    className="h-8 w-48 bg-transparent border-0 text-sm focus-visible:ring-0 placeholder:text-zinc-600 font-medium"
-                                                    value={backupName}
-                                                    onChange={(e) => setBackupName(e.target.value)}
-                                                />
-                                                <Button
-                                                    size="sm"
-                                                    onClick={handleCreateBackup}
-                                                    disabled={loading || !backupName.trim()}
-                                                    className="h-8 px-4 bg-indigo-500 hover:bg-indigo-400 text-white font-bold rounded-full shadow-lg transition-all disabled:opacity-30"
-                                                >
-                                                    <Download className="w-3.5 h-3.5 mr-2" />
-                                                    Snapshot
-                                                </Button>
-
-                                                {/* JSON Import Button */}
-                                                <input
-                                                    ref={fileInputRef}
-                                                    type="file"
-                                                    accept=".json"
-                                                    className="hidden"
-                                                    onChange={handleImportJson}
-                                                />
-                                                <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    onClick={() => fileInputRef.current?.click()}
-                                                    disabled={loading}
-                                                    className="h-8 px-3 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 font-bold rounded-full transition-all disabled:opacity-30"
-                                                >
-                                                    <Upload className="w-3.5 h-3.5 mr-1.5" />
-                                                    Import
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Backup Grid */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-8">
-                                        {backups.map((b) => (
-                                            <Card key={b.id} className="bg-white/5 border-white/5 p-6 flex flex-col gap-6 group hover:border-white/20 hover:bg-white/[0.08] transition-all rounded-[2rem] shadow-xl overflow-hidden relative">
-                                                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                                                    <Package className="w-24 h-24 -mr-8 -mt-8 rotate-12" />
-                                                </div>
-
-                                                <div className="flex items-start justify-between relative z-10">
-                                                    <div className="flex flex-col">
-                                                        <h4 className="font-bold text-white group-hover:text-indigo-300 transition-colors text-lg truncate pr-16">{b.name}</h4>
-                                                        <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                                            {/* Backup Type Badge */}
-                                                            <span className={cn(
-                                                                "px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest ring-1",
-                                                                b.backup_type === 'published'
-                                                                    ? "bg-green-500/10 text-green-400 ring-green-500/20"
-                                                                    : b.backup_type === 'draft'
-                                                                        ? "bg-yellow-500/10 text-yellow-400 ring-yellow-500/20"
-                                                                        : "bg-blue-500/10 text-blue-400 ring-blue-500/20"
-                                                            )}>
-                                                                {b.backup_type === 'published' ? '🟢 Production' : b.backup_type === 'draft' ? '🟡 Draft' : '🔵 Both'}
-                                                            </span>
-                                                            <span className="px-2 py-0.5 rounded-md bg-white/5 text-[9px] font-black uppercase tracking-widest text-zinc-500 ring-1 ring-white/5">
-                                                                {Array.isArray(b.snapshot_json) ? b.snapshot_json.length : 0} Sections
-                                                            </span>
-                                                            <span className="text-[10px] text-zinc-600">•</span>
-                                                            <span className="text-[10px] text-zinc-500 font-mono">
-                                                                {formatRelativeTime(new Date(b.created_at))}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Download buttons row */}
-                                                <div className="flex items-center gap-2 relative z-10">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="flex-1 h-8 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 border-0 font-bold text-[10px] uppercase tracking-wider rounded-xl transition-all"
-                                                        onClick={() => downloadBackupAsJson(b)}
-                                                    >
-                                                        <FileJson className="w-3.5 h-3.5 mr-1.5" />
-                                                        JSON
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="flex-1 h-8 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 hover:text-purple-300 border-0 font-bold text-[10px] uppercase tracking-wider rounded-xl transition-all"
-                                                        onClick={() => downloadBackupAsMarkdown(b)}
-                                                    >
-                                                        <FileText className="w-3.5 h-3.5 mr-1.5" />
-                                                        Markdown
-                                                    </Button>
-                                                </div>
-
-                                                {/* Action buttons row */}
-                                                <div className="flex items-center gap-3 mt-auto relative z-10">
-                                                    <Button
-                                                        variant="secondary"
-                                                        size="sm"
-                                                        className="flex-1 bg-white/10 hover:bg-emerald-500/20 hover:text-emerald-400 border-0 text-white font-bold text-xs h-10 rounded-2xl transition-all backdrop-blur-sm"
-                                                        onClick={() => {
-                                                            setRestoreOptions({
-                                                                backupId: b.id,
-                                                                restorePublished: false,
-                                                                restoreDraft: true
-                                                            })
-                                                            setRestoreModalOpen(true)
-                                                        }}
-                                                    >
-                                                        <RotateCcw className="w-4 h-4 mr-2" />
-                                                        Restore as Draft
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-10 w-10 bg-white/5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-2xl transition-all"
-                                                        onClick={() => triggerConfirm(
-                                                            'delete-b',
-                                                            b.id,
-                                                            'Purge Snapshot?',
-                                                            'This backup point and all its component states will be permanently deleted.'
-                                                        )}
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
-                                                </div>
-                                            </Card>
-                                        ))}
-                                        {backups.length === 0 && !loading && (
-                                            <div className="col-span-full py-40 border-2 border-dashed border-white/5 rounded-[3rem] flex flex-col items-center justify-center text-zinc-600 gap-4">
-                                                <AlertCircle className="w-12 h-12 opacity-20" />
-                                                <p className="font-bold uppercase tracking-widest text-xs">No snapshots preserved</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </TabsContent>
+                                </TabsContent>
+                            )}
                         </div>
                     </div>
                 </Tabs>
@@ -995,6 +1013,8 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
                 title={confAction?.title || ''}
                 description={confAction?.desc || ''}
                 loading={loading}
+                variant={confAction?.type === 'error' ? 'danger' : confAction?.type === 'info' ? 'info' : 'warning'}
+                confirmText={confAction?.type === 'info' || confAction?.type === 'error' ? 'OK' : 'Confirm'}
             />
 
             <style jsx global>{`

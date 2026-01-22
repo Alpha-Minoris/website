@@ -120,6 +120,10 @@ export async function createPageBackup(
                 : (s as any).website_section_versions_published
 
             if (publishedVersion) {
+                // Production backups use layout_json/content_html
+                result.layout_json = publishedVersion.layout_json
+                result.content_html = publishedVersion.content_html
+                // Keep backward compatibility if needed, but primary keys are shared
                 result.published_layout_json = publishedVersion.layout_json
                 result.published_content_html = publishedVersion.content_html
             }
@@ -131,6 +135,10 @@ export async function createPageBackup(
                 : (s as any).website_section_versions_draft
 
             if (draftVersion) {
+                // Draft backups now produce the SAME structure as production
+                result.layout_json = draftVersion.layout_json
+                result.content_html = draftVersion.content_html
+                // Keep legacy key for reference
                 result.draft_layout_json = draftVersion.layout_json
                 result.draft_content_html = draftVersion.content_html
             }
@@ -260,22 +268,24 @@ export async function restoreFromBackup(backupId: string) {
 
     // 2. For each snapshot, restore as DRAFT
     for (const snap of snapshots) {
-        // Determine which layout to use - prefer matching backup_type, fallback to other
+        // Determine which layout to use - prefer matching backup_type, fallback to generic or other
         let layoutJson = null
         let contentHtml = null
 
-        if (backupType === 'published' && snap.published_layout_json) {
+        if (snap.layout_json) {
+            // New unified format: data is directly in layout_json
+            layoutJson = snap.layout_json
+            contentHtml = snap.content_html
+        } else if (backupType === 'published' && snap.published_layout_json) {
             layoutJson = snap.published_layout_json
             contentHtml = snap.published_content_html
         } else if (backupType === 'draft' && snap.draft_layout_json) {
             layoutJson = snap.draft_layout_json
             contentHtml = snap.draft_content_html
         } else if (snap.published_layout_json) {
-            // Fallback to published if available
             layoutJson = snap.published_layout_json
             contentHtml = snap.published_content_html
         } else if (snap.draft_layout_json) {
-            // Fallback to draft if available
             layoutJson = snap.draft_layout_json
             contentHtml = snap.draft_content_html
         }
