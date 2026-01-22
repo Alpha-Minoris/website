@@ -692,7 +692,7 @@ function LayerItem({ block, index, depth, selectedBlockId, onSelect, onRefetch }
     const router = useRouter()
     const isSelected = selectedBlockId === block.id
     const [isEditing, setIsEditing] = useState(false)
-    const [editValue, setEditValue] = useState(block.title || block.type)
+    const [editValue, setEditValue] = useState(block.displayTitle || block.title || block.type)
     const [isHovered, setIsHovered] = useState(false)
 
     // Collect children
@@ -704,14 +704,14 @@ function LayerItem({ block, index, depth, selectedBlockId, onSelect, onRefetch }
 
     const handleRename = async () => {
         setIsEditing(false)
-        if (editValue.trim() !== block.title) {
+        if (editValue.trim() !== (block.displayTitle || block.title)) {
             // Determine if it's a section (has title in DB usually) or a block
             // Based on our type system, sections are blocks too.
             // We'll try to update section title via server action if it's a root section (depth 0, assuming root blocks are sections)
             if (depth === 0) {
                 try {
                     await updateSection(block.id, { title: editValue })
-                    updateBlock(block.id, { title: editValue })
+                    updateBlock(block.id, { displayTitle: editValue })
                     router.refresh()
                 } catch (e) {
                     console.error("Failed to rename section", e)
@@ -798,7 +798,7 @@ function LayerItem({ block, index, depth, selectedBlockId, onSelect, onRefetch }
                         />
                     ) : (
                         <span className={cn("truncate max-w-[120px] select-none", (block.is_enabled === false) && "opacity-50 line-through")}>
-                            {block.title || block.type.replace(/-/g, ' ')}
+                            {block.displayTitle || block.title || block.type.replace(/-/g, ' ')}
                         </span>
                     )}
                 </div>

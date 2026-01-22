@@ -125,7 +125,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ p
       ...(version?.layout_json || {}),
       id: section.id,
       type: blockType as BlockType,
-      slug: section.slug
+      slug: section.slug,
+      displayTitle: section.title  // Clean title for UI display
     }
 
     return block
