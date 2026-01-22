@@ -36,6 +36,7 @@ import {
 import { ConfirmationModal } from '@/components/ui/confirmation-modal'
 import { useEditorStore } from '@/lib/stores/editor-store'
 import { cn } from '@/lib/utils'
+import { stripHtmlTags } from '@/lib/utils/html'
 
 // Helper for native relative time
 function formatRelativeTime(date: Date) {
@@ -331,7 +332,7 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
                                                 )}
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-xs font-bold truncate leading-tight">
-                                                        {section.title || section.type.replace('-', ' ')}
+                                                        {section.slug?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || section.type.replace('-', ' ')}
                                                     </p>
                                                     <p className="text-[9px] text-zinc-500 font-mono mt-0.5 opacity-60">
                                                         ID: {section.id.slice(0, 8)}
@@ -360,7 +361,7 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
                                         <div className="flex items-center justify-between pb-6 border-b border-white/5">
                                             <div>
                                                 <h3 className="text-lg font-bold text-white leading-none">
-                                                    {blocks.find(b => b.id === focusSectionId)?.title || "Section History"}
+                                                    {blocks.find(b => b.id === focusSectionId)?.slug?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || "Section History"}
                                                 </h3>
                                                 <p className="text-[10px] text-zinc-500 tracking-wider font-mono mt-1">
                                                     {versions.length} version{versions.length !== 1 ? 's' : ''} ·

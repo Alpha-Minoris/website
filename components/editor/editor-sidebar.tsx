@@ -692,7 +692,7 @@ function LayerItem({ block, index, depth, selectedBlockId, onSelect, onRefetch }
     const router = useRouter()
     const isSelected = selectedBlockId === block.id
     const [isEditing, setIsEditing] = useState(false)
-    const [editValue, setEditValue] = useState(block.title || block.type)
+    const [editValue, setEditValue] = useState(block.slug?.replace(/-/g, ' ') || block.type.replace(/-/g, ' '))
     const [isHovered, setIsHovered] = useState(false)
 
     // Collect children
@@ -801,7 +801,7 @@ function LayerItem({ block, index, depth, selectedBlockId, onSelect, onRefetch }
                         />
                     ) : (
                         <span className={cn("truncate max-w-[120px] capitalize select-none", (block.is_enabled === false) && "opacity-50 line-through")}>
-                            {block.title || block.type.replace('-', ' ')}
+                            {block.slug?.replace(/-/g, ' ') || block.type.replace(/-/g, ' ')}
                         </span>
                     )}
                 </div>
