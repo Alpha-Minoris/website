@@ -92,13 +92,14 @@ export default async function EditPage() {
         const layoutContent = version?.layout_json?.content
         const hasLayoutContent = Array.isArray(layoutContent) && layoutContent.length > 0
 
-        // Spread layout_json for content (including HTML-rich title for rendering)
-        // Then override only metadata fields (id, type, slug)
+        // Spread layout_json for content (including HTML-rich fields for rendering)
+        // Then override metadata fields INCLUDING title from website_sections
         const block: BlockProps = {
             ...(version?.layout_json || {}),
             id: section.id,
             type: blockType as BlockType,
-            slug: section.slug
+            slug: section.slug,
+            title: section.title  // Use clean title from website_sections table
         }
 
         return block
