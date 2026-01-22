@@ -53,8 +53,8 @@ export default async function Home() {
   const knownBlockTypes = [
     'hero', 'mission', 'services', 'packages', 'how-we-work',
     'team', 'testimonials', 'faq', 'contact', 'case-studies',
-    'rich-text', 'generic-section', 'heading', 'card',
-    'flip-trigger', 'grid-section', 'icon'
+    'footer', 'rich-text', 'generic-section', 'heading', 'card',
+    'flip-trigger', 'grid-section', 'icon', 'text'
   ] as const
 
   // 3. Construct BlockProps

@@ -332,7 +332,7 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
                                                 )}
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-xs font-bold truncate leading-tight">
-                                                        {section.slug?.replace(/-/g, ' ') || section.type.replace('-', ' ')}
+                                                        {section.slug?.replace(/-/g, ' ') || section.type?.replace(/-/g, ' ') || 'Untitled'}
                                                     </p>
                                                     <p className="text-[9px] text-zinc-500 font-mono mt-0.5 opacity-60">
                                                         ID: {section.id.slice(0, 8)}

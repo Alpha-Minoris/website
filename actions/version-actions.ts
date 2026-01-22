@@ -103,7 +103,7 @@ export async function createPageBackup(
         .from('website_sections')
         .select(selectFields)
         .eq('is_enabled', true)
-        .order('display_order', { ascending: true })
+        .order('sort_order', { ascending: true })
 
     if (sectionError) throw sectionError
 

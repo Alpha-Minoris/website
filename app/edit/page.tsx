@@ -75,8 +75,8 @@ export default async function EditPage() {
     const knownBlockTypes = [
         'hero', 'mission', 'services', 'packages', 'how-we-work',
         'team', 'testimonials', 'faq', 'contact', 'case-studies',
-        'rich-text', 'generic-section', 'heading', 'card',
-        'flip-trigger', 'grid-section', 'icon'
+        'footer', 'rich-text', 'generic-section', 'heading', 'card',
+        'flip-trigger', 'grid-section', 'icon', 'text'
     ] as const
 
     const blocks: BlockProps[] = sections.map(section => {
@@ -92,11 +92,11 @@ export default async function EditPage() {
         const layoutContent = version?.layout_json?.content
         const hasLayoutContent = Array.isArray(layoutContent) && layoutContent.length > 0
 
-        // CRITICAL: Spread layout_json FIRST, then override only id/type/slug
-        // This preserves ALL data from clean_package.json (title, content, etc.)
+        // Spread layout_json for content (including HTML-rich title for rendering)
+        // Then override only metadata fields (id, type, slug)
         const block: BlockProps = {
-            ...(version?.layout_json || {}),  // ← ALL data from database first
-            id: section.id,                    // ← Then override metadata
+            ...(version?.layout_json || {}),
+            id: section.id,
             type: blockType as BlockType,
             slug: section.slug
         }
