@@ -11,6 +11,10 @@ const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-headi
 export const metadata: Metadata = {
   title: "Alpha Minoris",
   description: "AI Tools and Strategy",
+  icons: {
+    icon: "/icon.png",
+    apple: "/apple-icon.png",
+  },
 };
 
 export default async function RootLayout({
