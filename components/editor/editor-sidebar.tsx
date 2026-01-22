@@ -800,7 +800,7 @@ function LayerItem({ block, index, depth, selectedBlockId, onSelect, onRefetch }
                             onClick={(e) => e.stopPropagation()}
                         />
                     ) : (
-                        <span className={cn("truncate max-w-[120px] capitalize select-none", (block.is_enabled === false) && "opacity-50 line-through")}>
+                        <span className={cn("truncate max-w-[120px] select-none", (block.is_enabled === false) && "opacity-50 line-through")}>
                             {block.slug?.replace(/-/g, ' ') || block.type.replace(/-/g, ' ')}
                         </span>
                     )}
