@@ -92,8 +92,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ p
   const knownBlockTypes = [
     'hero', 'mission', 'services', 'packages', 'how-we-work',
     'team', 'testimonials', 'faq', 'contact', 'case-studies',
-    'rich-text', 'generic-section', 'heading', 'card',
-    'flip-trigger', 'grid-section', 'icon'
+    'footer', 'rich-text', 'generic-section', 'heading', 'card',
+    'flip-trigger', 'grid-section', 'icon', 'text'
   ] as const
 
   // 3. Construct BlockProps
@@ -122,13 +122,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ p
     const hasLayoutContent = Array.isArray(layoutContent) && layoutContent.length > 0
 
     const block: BlockProps = {
+      ...(version?.layout_json || {}),
       id: section.id,
       type: blockType as BlockType,
-      content: hasLayoutContent ? layoutContent : (version?.content_html || []),
-      // Merge layout_json root with nested settings for backward compatibility
-      settings: version?.layout_json ? { ...version.layout_json, ...version.layout_json.settings } : {},
-      is_enabled: section.is_enabled,
-      title: section.title,
       slug: section.slug
     }
 
@@ -155,3 +151,4 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ p
     </main>
   )
 }
+

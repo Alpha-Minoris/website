@@ -5,6 +5,7 @@ import { Pencil, X } from 'lucide-react'
 import { useEditorStore } from '@/lib/stores/editor-store'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -17,7 +18,8 @@ import {
 } from "@/components/ui/alert-dialog"
 
 export function EditorToggle() {
-    const { isEditMode, toggleEditMode, dirtyBlockIds } = useEditorStore()
+    const router = useRouter()
+    const { isEditMode, toggleEditMode, dirtyBlockIds, resetToOriginal } = useEditorStore()
     const [showExitDialog, setShowExitDialog] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
 
@@ -56,6 +58,10 @@ export function EditorToggle() {
     }
 
     const handleDiscardAndExit = () => {
+        // Reset blocks to original state (before any edits)
+        resetToOriginal()
+
+        // Exit edit mode
         toggleEditMode()
         setShowExitDialog(false)
     }

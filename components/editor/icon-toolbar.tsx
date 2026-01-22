@@ -31,7 +31,7 @@ const IconWrapper = ({ name }: { name: string }) => {
 
 
 interface IconToolbarProps {
-    settings: {
+    block: {
         iconName?: string
         color?: string
         backgroundColor?: string
@@ -39,22 +39,23 @@ interface IconToolbarProps {
         width?: string
         height?: string
         isHidden?: boolean
+        [key: string]: any
     }
     onUpdate: (updates: any) => void
     onDelete?: () => void
 }
 
-export function IconToolbar({ settings, onUpdate, onDelete }: IconToolbarProps) {
-    const iconName = settings.iconName || 'sparkles'
-    const [linkUrl, setLinkUrl] = useState(settings.linkUrl || '')
+export function IconToolbar({ block, onUpdate, onDelete }: IconToolbarProps) {
+    const iconName = block.iconName || 'sparkles'
+    const [linkUrl, setLinkUrl] = useState(block.linkUrl || '')
     const [isLinkPopoverOpen, setIsLinkPopoverOpen] = useState(false)
 
-    // Sync local linkUrl when settings change externally
+    // Sync local linkUrl when block change externally
     useMemo(() => {
-        if (settings.linkUrl !== undefined) {
-            setLinkUrl(settings.linkUrl || '')
+        if (block.linkUrl !== undefined) {
+            setLinkUrl(block.linkUrl || '')
         }
-    }, [settings.linkUrl])
+    }, [block.linkUrl])
 
     const handleApplyLink = () => {
         let finalUrl = linkUrl.trim()
@@ -81,7 +82,7 @@ export function IconToolbar({ settings, onUpdate, onDelete }: IconToolbarProps) 
 
     const handleQuickScale = (delta: number) => {
         // More robust parsing: find the first number in the string
-        const currentWidth = settings.width || '32'
+        const currentWidth = block.width || '32'
         const match = currentWidth.match(/(\d+)/)
         const currentSize = match ? parseInt(match[0]) : 32
 
@@ -125,10 +126,10 @@ export function IconToolbar({ settings, onUpdate, onDelete }: IconToolbarProps) 
                             size="icon"
                             className={cn(
                                 "h-7 w-7 rounded-full hover:text-white hover:bg-white/10",
-                                (isLinkPopoverOpen || settings.linkUrl) ? "text-white bg-white/20" : "text-zinc-500"
+                                (isLinkPopoverOpen || block.linkUrl) ? "text-white bg-white/20" : "text-zinc-500"
                             )}
                         >
-                            {settings.linkUrl ? <Unlink className="w-3.5 h-3.5" /> : <Link className="w-3.5 h-3.5" />}
+                            {block.linkUrl ? <Unlink className="w-3.5 h-3.5" /> : <Link className="w-3.5 h-3.5" />}
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent
@@ -233,14 +234,14 @@ export function IconToolbar({ settings, onUpdate, onDelete }: IconToolbarProps) 
                             className="h-7 w-7 rounded-full text-zinc-500 hover:text-white hover:bg-white/10 p-0 overflow-hidden relative group"
                         >
                             {(() => {
-                                const isHex = settings.color?.startsWith('#')
-                                const colorClass = settings.color || "text-accent"
+                                const isHex = block.color?.startsWith('#')
+                                const colorClass = block.color || "text-accent"
                                 return (
                                     <div
                                         className={cn("w-4 h-4 rounded-full border border-white/20 shadow-sm transition-transform group-hover:scale-110",
                                             !isHex ? colorClass.replace('text-', 'bg-') : ""
                                         )}
-                                        style={isHex ? { backgroundColor: settings.color } : {}}
+                                        style={isHex ? { backgroundColor: block.color } : {}}
                                     />
                                 )
                             })()}
@@ -249,7 +250,7 @@ export function IconToolbar({ settings, onUpdate, onDelete }: IconToolbarProps) 
                     <PopoverContent className="p-2 w-auto bg-zinc-900/80 border-white/10 backdrop-blur-2xl shadow-2xl rounded-2xl" side="bottom">
                         <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-2 px-1">Icon Color</p>
                         <ColorPicker
-                            value={settings.color}
+                            value={block.color}
                             onChange={(v) => onUpdate({ color: v })}
                         />
                     </PopoverContent>
@@ -262,14 +263,14 @@ export function IconToolbar({ settings, onUpdate, onDelete }: IconToolbarProps) 
             <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => onUpdate({ isHidden: !settings.isHidden })}
+                onClick={() => onUpdate({ isHidden: !block.isHidden })}
                 className={cn(
                     "h-7 w-7 rounded-full transition-colors",
-                    settings.isHidden ? "text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20" : "text-zinc-500 hover:text-white hover:bg-white/10"
+                    block.isHidden ? "text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20" : "text-zinc-500 hover:text-white hover:bg-white/10"
                 )}
-                title={settings.isHidden ? "Hidden (click to show)" : "Visible (click to hide)"}
+                title={block.isHidden ? "Hidden (click to show)" : "Visible (click to hide)"}
             >
-                {settings.isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                {block.isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
             </Button>
 
             <Separator orientation="vertical" className="h-4 bg-white/10" />
@@ -317,12 +318,12 @@ export function IconToolbar({ settings, onUpdate, onDelete }: IconToolbarProps) 
                     <div className="space-y-1">
                         <div className="flex justify-between text-[10px] text-zinc-500 uppercase tracking-widest font-bold">
                             <span>Width</span>
-                            <span className="text-accent">{settings.width || 'auto'}</span>
+                            <span className="text-accent">{block.width || 'auto'}</span>
                         </div>
                         <Input
                             type="text"
                             placeholder="e.g. 40px, 4rem"
-                            value={settings.width || ''}
+                            value={block.width || ''}
                             onChange={(e) => onUpdate({ width: e.target.value })}
                             className="h-7 text-xs bg-white/5 border-white/10 text-white"
                         />
@@ -330,12 +331,12 @@ export function IconToolbar({ settings, onUpdate, onDelete }: IconToolbarProps) 
                     <div className="space-y-1">
                         <div className="flex justify-between text-[10px] text-zinc-500 uppercase tracking-widest font-bold">
                             <span>Height</span>
-                            <span className="text-accent">{settings.height || 'auto'}</span>
+                            <span className="text-accent">{block.height || 'auto'}</span>
                         </div>
                         <Input
                             type="text"
                             placeholder="e.g. 40px, 4rem"
-                            value={settings.height || ''}
+                            value={block.height || ''}
                             onChange={(e) => onUpdate({ height: e.target.value })}
                             className="h-7 text-xs bg-white/5 border-white/10 text-white"
                         />

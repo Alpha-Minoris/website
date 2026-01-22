@@ -9,8 +9,9 @@ import { EditableText } from '@/components/editor/editable-text'
 import { AddButton, DeleteButton } from '@/components/editor/editable-list-controls'
 import { EditableAsset } from '@/components/editor/editable-asset'
 
-export function HowWeWorkBlock({ id, settings, sectionSlug, slug }: BlockProps) {
-    const folder = sectionSlug || slug
+export function HowWeWorkBlock(block: BlockProps) {
+    const { id, slug } = block
+    const folder = slug
     const { isEditMode, updateBlock } = useEditorStore()
     const sectionRef = useRef<HTMLElement>(null)
     const [activeToolbarPos, setActiveToolbarPos] = useState<{ top: number, left: number } | null>(null)
@@ -28,47 +29,47 @@ export function HowWeWorkBlock({ id, settings, sectionSlug, slug }: BlockProps) 
     }
 
     // Local state
-    const [localSettings, setLocalSettings] = useState<any>({ ...defaultData, ...settings })
+    const [localBlock, setlocalBlock] = useState<any>({ ...defaultData, ...block })
 
 
     // Sync from props
     useEffect(() => {
-        if (settings) {
-            setLocalSettings((prev: any) => ({ ...prev, ...settings }))
+        if (block) {
+            setlocalBlock((prev: any) => ({ ...prev, ...block }))
         }
-    }, [settings])
+    }, [block])
 
-    const saveSettings = useCallback((newSettings: any) => {
-        setLocalSettings(newSettings)
-        updateBlock(id, { settings: newSettings })
+    const saveBlock = useCallback((newblock: any) => {
+        setlocalBlock(newblock)
+        updateBlock(id, { block: newblock })
     }, [id, updateBlock])
 
     const handleTextChange = useCallback((key: string, value: string) => {
-        saveSettings({ ...localSettings, [key]: value })
-    }, [localSettings, saveSettings])
+        saveBlock({ ...localBlock, [key]: value })
+    }, [localBlock, saveBlock])
 
     const handleStepChange = useCallback((index: number, updates: any) => {
-        const steps = [...(localSettings.steps || [])]
+        const steps = [...(localBlock.steps || [])]
         steps[index] = { ...steps[index], ...updates }
-        saveSettings({ ...localSettings, steps })
-    }, [localSettings, saveSettings])
+        saveBlock({ ...localBlock, steps })
+    }, [localBlock, saveBlock])
 
     const handleAddStep = () => {
-        const nextNum = String((localSettings.steps?.length || 0) + 1).padStart(2, '0')
-        const steps = [...(localSettings.steps || []), {
+        const nextNum = String((localBlock.steps?.length || 0) + 1).padStart(2, '0')
+        const steps = [...(localBlock.steps || []), {
             num: nextNum,
             title: 'New Step',
             desc: 'Describe the new step here.',
             asset: { type: 'icon', value: 'Star' }
         }]
-        saveSettings({ ...localSettings, steps })
+        saveBlock({ ...localBlock, steps })
     }
 
     const handleRemoveStep = (index: number) => {
-        const steps = (localSettings.steps || []).filter((_: any, i: number) => i !== index)
+        const steps = (localBlock.steps || []).filter((_: any, i: number) => i !== index)
         // Re-index numbers
         const reindexedSteps = steps.map((s: any, i: number) => ({ ...s, num: String(i + 1).padStart(2, '0') }))
-        saveSettings({ ...localSettings, steps: reindexedSteps })
+        saveBlock({ ...localBlock, steps: reindexedSteps })
     }
 
     const onTextFocus = useCallback((rect: DOMRect) => {
@@ -119,36 +120,36 @@ export function HowWeWorkBlock({ id, settings, sectionSlug, slug }: BlockProps) 
             <div className="container mx-auto px-4">
                 <div className={cn(
                     "mb-16",
-                    localSettings.align === 'left' ? "text-left" :
-                        localSettings.align === 'right' ? "text-right" :
+                    localBlock.align === 'left' ? "text-left" :
+                        localBlock.align === 'right' ? "text-right" :
                             "text-center"
                 )}>
                     <EditableText
-                        tagName={localSettings.level || 'h2'}
-                        value={localSettings.title}
+                        tagName={localBlock.level || 'h2'}
+                        value={localBlock.title}
                         onChange={(v) => handleTextChange('title', v)}
                         isEditMode={isEditMode}
                         onFocus={onTextFocus}
                         onBlur={onTextBlur}
                         className="text-3xl md:text-5xl font-bold font-heading mb-4"
                         style={{
-                            fontFamily: localSettings.fontFamily,
-                            fontSize: localSettings.fontSize,
-                            color: localSettings.color
+                            fontFamily: localBlock.fontFamily,
+                            fontSize: localBlock.fontSize,
+                            color: localBlock.color
                         }}
                     />
                     <EditableText
                         tagName="p"
-                        value={localSettings.tagline}
+                        value={localBlock.tagline}
                         onChange={(v) => handleTextChange('tagline', v)}
                         isEditMode={isEditMode}
                         onFocus={onTextFocus}
                         onBlur={onTextBlur}
                         className="text-muted-foreground text-lg max-w-xl mx-auto"
                         style={{
-                            fontFamily: localSettings.fontFamily,
-                            fontSize: localSettings.fontSize,
-                            color: localSettings.color
+                            fontFamily: localBlock.fontFamily,
+                            fontSize: localBlock.fontSize,
+                            color: localBlock.color
                         }}
                     />
                 </div>
@@ -158,7 +159,7 @@ export function HowWeWorkBlock({ id, settings, sectionSlug, slug }: BlockProps) 
                     <div className="hidden md:block absolute top-12 left-0 right-0 h-0.5 bg-gradient-to-r from-accent/0 via-accent/50 to-accent/0 opacity-30"></div>
 
                     <div className="grid md:grid-cols-4 gap-8">
-                        {localSettings.steps?.map((step: any, idx: number) => (
+                        {localBlock.steps?.map((step: any, idx: number) => (
                             <div key={idx} className="relative pt-8 group h-full flex flex-col">
                                 {/* Number Chip */}
                                 <div className="absolute top-0 left-0 md:left-1/2 md:-translate-x-1/2 w-24 h-24 flex items-center justify-center pointer-events-none">
@@ -195,9 +196,9 @@ export function HowWeWorkBlock({ id, settings, sectionSlug, slug }: BlockProps) 
                                         onBlur={onTextBlur}
                                         className="text-xl font-bold font-heading mb-3"
                                         style={{
-                                            fontFamily: localSettings.fontFamily,
-                                            fontSize: localSettings.fontSize,
-                                            color: localSettings.color
+                                            fontFamily: localBlock.fontFamily,
+                                            fontSize: localBlock.fontSize,
+                                            color: localBlock.color
                                         }}
                                     />
                                     <EditableText
@@ -209,9 +210,9 @@ export function HowWeWorkBlock({ id, settings, sectionSlug, slug }: BlockProps) 
                                         onBlur={onTextBlur}
                                         className="text-sm text-muted-foreground leading-relaxed flex-1"
                                         style={{
-                                            fontFamily: localSettings.fontFamily,
-                                            fontSize: localSettings.fontSize,
-                                            color: localSettings.color
+                                            fontFamily: localBlock.fontFamily,
+                                            fontSize: localBlock.fontSize,
+                                            color: localBlock.color
                                         }}
                                     />
                                     {isEditMode && (
@@ -234,3 +235,7 @@ export function HowWeWorkBlock({ id, settings, sectionSlug, slug }: BlockProps) 
         </section>
     )
 }
+
+
+
+

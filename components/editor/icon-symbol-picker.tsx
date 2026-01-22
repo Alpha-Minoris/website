@@ -62,38 +62,41 @@ export const IconSymbolPicker = memo(({ onInsertSymbol, onInsertIcon }: IconSymb
     }, [search])
 
     return (
-        <div className="w-[320px] h-[360px] flex flex-col pt-2">
+        <div className="w-[360px] h-[400px] flex flex-col">
             <Tabs defaultValue="icons" className="w-full h-full flex flex-col">
-                <div className="px-3 pb-2">
-                    <TabsList className="w-full grid grid-cols-2">
-                        <TabsTrigger value="icons" className="text-xs">
-                            <Smile className="w-3.5 h-3.5 mr-2" />
+                <div className="px-3 pt-3 pb-2">
+                    <TabsList className="w-full grid grid-cols-2 mb-3">
+                        <TabsTrigger value="icons" className="text-xs gap-2">
+                            <Smile className="w-3.5 h-3.5" />
                             Icons
                         </TabsTrigger>
-                        <TabsTrigger value="symbols" className="text-xs">
-                            <Type className="w-3.5 h-3.5 mr-2" />
+                        <TabsTrigger value="symbols" className="text-xs gap-2">
+                            <Type className="w-3.5 h-3.5" />
                             Symbols
                         </TabsTrigger>
                     </TabsList>
                 </div>
 
-                <div className="px-3 pb-2">
+                <div className="px-3 pb-3">
                     <div className="relative">
-                        <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-zinc-500" />
+                        <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-zinc-500 pointer-events-none" />
                         <Input
                             placeholder="Search..."
-                            className="pl-8 bg-zinc-900 border-zinc-800 h-8 text-xs focus-visible:ring-1 focus-visible:ring-zinc-700"
+                            className="pl-8 bg-zinc-900 border-zinc-800 h-9 text-xs focus-visible:ring-1 focus-visible:ring-zinc-700"
                             value={search}
                             onChange={(e) => {
                                 setSearch(e.target.value)
                                 setLimit(60)
                             }}
+                            onKeyDown={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onClick={(e) => e.stopPropagation()}
                         />
                     </div>
                 </div>
 
                 <TabsContent value="icons" className="flex-1 min-h-0 pl-3 pr-1">
-                    <ScrollArea className="h-[260px] pr-3">
+                    <ScrollArea className="h-[300px] pr-3">
                         <div className="grid grid-cols-6 gap-1 pb-4">
                             {displayedIcons.map((name) => (
                                 <button
@@ -125,7 +128,7 @@ export const IconSymbolPicker = memo(({ onInsertSymbol, onInsertIcon }: IconSymb
                 </TabsContent>
 
                 <TabsContent value="symbols" className="flex-1 min-h-0 pl-3 pr-1">
-                    <ScrollArea className="h-[260px] pr-3">
+                    <ScrollArea className="h-[300px] pr-3">
                         <div className="space-y-4 pb-4">
                             {Object.entries(filteredSymbols).map(([category, chars]) => (
                                 <div key={category}>

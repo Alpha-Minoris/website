@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "jest"
+    "test": "jest",
+    "backup-prod": "node scripts/backup-prod.js",
+    "delete-archived": "node scripts/STEP4-delete-archived.js",
+    "restore-draft": "node scripts/STEP6-restore-draft.js",
+    "verify-published": "node scripts/verify-published-flat.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

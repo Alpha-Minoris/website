@@ -57,7 +57,7 @@ export default async function PreviewPage({ params }: PreviewPageProps) {
         id: section.id,
         type: blockType as BlockType,
         content: hasLayoutContent ? layoutContent : (version.content_html || []),
-        settings: version.layout_json ? { ...version.layout_json, ...version.layout_json.settings } : {},
+        ...version.layout_json, // Spread all flat properties directly
         is_enabled: true,
         title: section.title,
         slug: section.slug

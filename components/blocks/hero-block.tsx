@@ -10,8 +10,9 @@ import { AddButton, DeleteButton } from '@/components/editor/editable-list-contr
 import { EditableAsset } from '@/components/editor/editable-asset'
 import { LogoRibbon } from './hero/logo-ribbon'
 
-export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
-    const folder = sectionSlug || slug
+export function HeroBlock(block: BlockProps) {
+    const { id, slug } = block
+    const folder = slug
     const { isEditMode, updateBlock } = useEditorStore()
     const sectionRef = useRef<HTMLElement>(null)
     const [activeToolbarPos, setActiveToolbarPos] = useState<{ top: number, left: number } | null>(null)
@@ -40,58 +41,51 @@ export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
         ]
     }
 
-    // Local state
-    const [localSettings, setLocalSettings] = useState<any>({ ...defaultData, ...settings })
+    // Local state - entire block
+    const [localBlock, setLocalBlock] = useState<any>({ ...defaultData, ...block })
 
-    // Sync from props
-    useEffect(() => {
-        if (settings) {
-            setLocalSettings((prev: any) => ({ ...prev, ...settings }))
-        }
-    }, [settings])
-
-    const saveSettings = useCallback((newSettings: any) => {
-        setLocalSettings(newSettings)
-        updateBlock(id, { settings: newSettings })
-    }, [id, updateBlock])
+    const saveBlock = useCallback((updates: any) => {
+        const updatedBlock = { ...localBlock, ...updates }
+        setLocalBlock(updatedBlock)
+        updateBlock(id, updatedBlock)
+    }, [id, localBlock, updateBlock])
 
     const handleTextChange = useCallback((key: string, value: string) => {
-        const newSettings = { ...localSettings, [key]: value }
-        saveSettings(newSettings)
-    }, [localSettings, saveSettings])
+        saveBlock({ [key]: value })
+    }, [saveBlock])
 
     const handleLabelChange = useCallback((index: number, updates: any) => {
-        const labels = [...(localSettings.labels || [])]
+        const labels = [...(localBlock.labels || [])]
         labels[index] = { ...labels[index], ...updates }
-        saveSettings({ ...localSettings, labels })
-    }, [localSettings, saveSettings])
+        saveBlock({ labels })
+    }, [localBlock, saveBlock])
 
     const handleAddLabel = () => {
-        const labels = [...(localSettings.labels || []), { text: "New Feature", asset: { type: 'icon', value: 'CheckCircle' } }]
-        saveSettings({ ...localSettings, labels })
+        const labels = [...(localBlock.labels || []), { text: "New Feature", asset: { type: 'icon', value: 'CheckCircle' } }]
+        saveBlock({ labels })
     }
 
     const handleRemoveLabel = (index: number) => {
-        const labels = [...(localSettings.labels || [])]
+        const labels = [...(localBlock.labels || [])]
         labels.splice(index, 1)
-        saveSettings({ ...localSettings, labels })
+        saveBlock({ labels })
     }
 
     const handleAddLogo = () => {
-        const logos = [...(localSettings.logos || []), { name: "New Partner", asset: { type: 'icon', value: 'Globe' } }]
-        saveSettings({ ...localSettings, logos })
+        const logos = [...(localBlock.logos || []), { name: "New Partner", asset: { type: 'icon', value: 'Globe' } }]
+        saveBlock({ logos })
     }
 
     const handleRemoveLogo = (index: number) => {
-        const logos = [...(localSettings.logos || [])]
+        const logos = [...(localBlock.logos || [])]
         logos.splice(index, 1)
-        saveSettings({ ...localSettings, logos })
+        saveBlock({ logos })
     }
 
     const handleLogoUpdate = (index: number, updates: any) => {
-        const logos = [...(localSettings.logos || [])]
+        const logos = [...(localBlock.logos || [])]
         logos[index] = { ...logos[index], ...updates }
-        saveSettings({ ...localSettings, logos })
+        saveBlock({ logos })
     }
 
     const onTextFocus = useCallback((rect: DOMRect) => {
@@ -133,14 +127,14 @@ export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
             <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-transparent pointer-events-none"></div>
 
             {/* Flying Icons (Background) */}
-            <LogoRibbon logos={localSettings.logos} />
+            <LogoRibbon logos={localBlock.logos} />
 
             {/* Logo Admin Overlay */}
             {isEditMode && (
                 <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-4 bg-black/80 p-4 rounded-3xl border border-white/10 backdrop-blur-2xl shadow-2xl scale-90 lg:scale-100 min-w-[320px]">
                     <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Manage Partners & Tools</p>
                     <div className="flex flex-wrap gap-3 justify-center">
-                        {localSettings.logos?.map((logo: any, idx: number) => (
+                        {localBlock.logos?.map((logo: any, idx: number) => (
                             <div key={idx} className="relative group/logo flex flex-col items-center gap-1">
                                 <EditableAsset
                                     type={logo.asset.type}
@@ -193,28 +187,28 @@ export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                 id="hero-content-container"
                 className={cn(
                     "container mx-auto px-4 z-10 flex flex-col justify-center",
-                    localSettings.align === 'left' ? "items-start text-left" :
-                        localSettings.align === 'right' ? "items-end text-right" :
+                    localBlock.align === 'left' ? "items-start text-left" :
+                        localBlock.align === 'right' ? "items-end text-right" :
                             "items-center text-center"
                 )}
             >
                 <div className={cn(
                     "space-y-8 max-w-4xl",
-                    localSettings.align === 'left' ? "mx-0" :
-                        localSettings.align === 'right' ? "mx-0 ml-auto" :
+                    localBlock.align === 'left' ? "mx-0" :
+                        localBlock.align === 'right' ? "mx-0 ml-auto" :
                             "mx-auto"
                 )}>
                     {/* Eyebrow */}
                     <span className={cn(
                         "inline-flex items-center gap-2 h-7 px-3 rounded-lg bg-white/5 border border-white/10 backdrop-blur-sm",
-                        localSettings.align === 'left' ? "mr-auto" :
-                            localSettings.align === 'right' ? "ml-auto" :
+                        localBlock.align === 'left' ? "mr-auto" :
+                            localBlock.align === 'right' ? "ml-auto" :
                                 "mx-auto"
                     )}>
                         <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse shrink-0"></span>
                         <EditableText
-                            value={typeof localSettings.eyebrow === 'string'
-                                ? localSettings.eyebrow.replace(/<[^>]*>/g, '')
+                            value={typeof localBlock.eyebrow === 'string'
+                                ? localBlock.eyebrow.replace(/<[^>]*>/g, '')
                                 : 'AI Automation Agency'}
                             onChange={(v) => handleTextChange('eyebrow', v)}
                             isEditMode={isEditMode}
@@ -226,48 +220,48 @@ export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
 
                     {/* Title */}
                     <EditableText
-                        tagName={localSettings.level || 'h1'}
-                        value={localSettings.title}
+                        tagName={localBlock.level || 'h1'}
+                        value={localBlock.title}
                         onChange={(v) => handleTextChange('title', v)}
                         isEditMode={isEditMode}
                         onFocus={onTextFocus}
                         onBlur={onTextBlur}
                         className="text-5xl lg:text-8xl font-bold font-heading leading-[1.05] text-white tracking-tight"
                         style={{
-                            fontFamily: localSettings.fontFamily,
-                            fontSize: localSettings.fontSize,
-                            color: localSettings.color
+                            fontFamily: localBlock.fontFamily,
+                            fontSize: localBlock.fontSize,
+                            color: localBlock.color
                         }}
                     />
 
                     {/* Tagline */}
                     <EditableText
                         tagName="p"
-                        value={localSettings.tagline}
+                        value={localBlock.tagline}
                         onChange={(v) => handleTextChange('tagline', v)}
                         isEditMode={isEditMode}
                         onFocus={onTextFocus}
                         onBlur={onTextBlur}
                         className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto"
                         style={{
-                            fontFamily: localSettings.fontFamily,
-                            fontSize: localSettings.fontSize,
-                            color: localSettings.color
+                            fontFamily: localBlock.fontFamily,
+                            fontSize: localBlock.fontSize,
+                            color: localBlock.color
                         }}
                     />
 
                     {/* Buttons */}
                     <div className={cn(
                         "flex flex-col sm:flex-row gap-4 items-center",
-                        localSettings.align === 'left' ? "justify-start" :
-                            localSettings.align === 'right' ? "justify-end" :
+                        localBlock.align === 'left' ? "justify-start" :
+                            localBlock.align === 'right' ? "justify-end" :
                                 "justify-center"
                     )}>
                         <div className="relative group">
                             <Button size="lg" className="h-12 px-8 text-base bg-white text-black hover:bg-white/90 shadow-[0_0_30px_rgba(255,255,255,0.1)] rounded-2xl">
                                 <EditableText
-                                    value={localSettings.primaryButton?.text || "Button"}
-                                    onChange={(v) => handleTextChange('primaryButton', { ...localSettings.primaryButton, text: v })}
+                                    value={localBlock.primaryButton?.text || "Button"}
+                                    onChange={(v) => handleTextChange('primaryButton', { ...localBlock.primaryButton, text: v })}
                                     isEditMode={isEditMode}
                                     onFocus={onTextFocus}
                                     onBlur={onTextBlur}
@@ -277,8 +271,8 @@ export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                         <div className="relative group">
                             <Button variant="outline" size="lg" className="h-12 px-8 text-base border-white/20 text-white hover:bg-white/10 rounded-2xl backdrop-blur-sm">
                                 <EditableText
-                                    value={localSettings.secondaryButton?.text || "Button"}
-                                    onChange={(v) => handleTextChange('secondaryButton', { ...localSettings.secondaryButton, text: v })}
+                                    value={localBlock.secondaryButton?.text || "Button"}
+                                    onChange={(v) => handleTextChange('secondaryButton', { ...localBlock.secondaryButton, text: v })}
                                     isEditMode={isEditMode}
                                     onFocus={onTextFocus}
                                     onBlur={onTextBlur}
@@ -290,11 +284,11 @@ export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                     {/* Features/Labels */}
                     <div className={cn(
                         "flex flex-wrap gap-8 text-sm text-muted-foreground pt-8 items-center",
-                        localSettings.align === 'left' ? "justify-start" :
-                            localSettings.align === 'right' ? "justify-end" :
+                        localBlock.align === 'left' ? "justify-start" :
+                            localBlock.align === 'right' ? "justify-end" :
                                 "justify-center"
                     )}>
-                        {localSettings.labels?.map((item: any, i: number) => (
+                        {localBlock.labels?.map((item: any, i: number) => (
                             <div key={i} className="flex items-center gap-3 group relative">
                                 <EditableAsset
                                     type={item.asset?.type || 'icon'}
@@ -333,3 +327,4 @@ export function HeroBlock({ id, settings, sectionSlug, slug }: BlockProps) {
         </section>
     )
 }
+

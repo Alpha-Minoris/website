@@ -15,8 +15,9 @@ import { EditableText } from '@/components/editor/editable-text'
 import { AddButton, DeleteButton } from '@/components/editor/editable-list-controls'
 import { EditableAsset } from '@/components/editor/editable-asset'
 
-export function FAQBlock({ id, settings, sectionSlug, slug }: BlockProps) {
-    const folder = sectionSlug || slug
+export function FAQBlock(block: BlockProps) {
+    const { id, slug } = block
+    const folder = slug
     const { isEditMode, updateBlock } = useEditorStore()
     const sectionRef = useRef<HTMLElement>(null)
     const [activeToolbarPos, setActiveToolbarPos] = useState<{ top: number, left: number } | null>(null)
@@ -33,41 +34,34 @@ export function FAQBlock({ id, settings, sectionSlug, slug }: BlockProps) {
         ]
     }
 
-    // Local state
-    const [localSettings, setLocalSettings] = useState<any>({ ...defaultData, ...settings })
+    // Local state - entire block
+    const [localBlock, setLocalBlock] = useState<any>({ ...defaultData, ...block })
 
-
-    // Sync from props
-    useEffect(() => {
-        if (settings) {
-            setLocalSettings((prev: any) => ({ ...prev, ...settings }))
-        }
-    }, [settings])
-
-    const saveSettings = useCallback((newSettings: any) => {
-        setLocalSettings(newSettings)
-        updateBlock(id, { settings: newSettings })
-    }, [id, updateBlock])
+    const saveBlock = useCallback((updates: any) => {
+        const updatedBlock = { ...localBlock, ...updates }
+        setLocalBlock(updatedBlock)
+        updateBlock(id, updatedBlock)
+    }, [id, localBlock, updateBlock])
 
     const handleTextChange = useCallback((key: string, value: string) => {
-        saveSettings({ ...localSettings, [key]: value })
-    }, [localSettings, saveSettings])
+        saveBlock({ ...localBlock, [key]: value })
+    }, [localBlock, saveBlock])
 
     const handleItemChange = useCallback((index: number, updates: any) => {
-        const items = [...(localSettings.items || [])]
+        const items = [...(localBlock.items || [])]
         items[index] = { ...items[index], ...updates }
-        saveSettings({ ...localSettings, items })
-    }, [localSettings, saveSettings])
+        saveBlock({ ...localBlock, items })
+    }, [localBlock, saveBlock])
 
     const handleAddItem = () => {
-        const items = [...(localSettings.items || []), { q: 'New Question', a: 'New Answer', asset: { type: 'icon', value: 'HelpCircle' } }]
-        saveSettings({ ...localSettings, items })
+        const items = [...(localBlock.items || []), { q: 'New Question', a: 'New Answer', asset: { type: 'icon', value: 'HelpCircle' } }]
+        saveBlock({ ...localBlock, items })
     }
 
     const handleRemoveItem = (index: number) => {
-        const items = [...(localSettings.items || [])]
+        const items = [...(localBlock.items || [])]
         items.splice(index, 1)
-        saveSettings({ ...localSettings, items })
+        saveBlock({ ...localBlock, items })
     }
 
     const onTextFocus = useCallback((rect: DOMRect) => {
@@ -118,28 +112,28 @@ export function FAQBlock({ id, settings, sectionSlug, slug }: BlockProps) {
             <div className="container mx-auto px-4 max-w-3xl">
                 <div className={cn(
                     "mb-12 relative",
-                    localSettings.align === 'left' ? "text-left" :
-                        localSettings.align === 'right' ? "text-right" :
+                    (localBlock as any).align === 'left' ? "text-left" :
+                        (localBlock as any).align === 'right' ? "text-right" :
                             "text-center"
                 )}>
                     <EditableText
-                        tagName={localSettings.level || 'h2'}
-                        value={localSettings.title}
+                        tagName={localBlock.level || 'h2'}
+                        value={localBlock.title}
                         onChange={(v) => handleTextChange('title', v)}
                         isEditMode={isEditMode}
                         onFocus={onTextFocus}
                         onBlur={onTextBlur}
                         className="text-3xl md:text-5xl font-bold font-heading mb-4"
                         style={{
-                            fontFamily: localSettings.fontFamily,
-                            fontSize: localSettings.fontSize,
-                            color: localSettings.color
+                            fontFamily: localBlock.fontFamily,
+                            fontSize: localBlock.fontSize,
+                            color: localBlock.color
                         }}
                     />
                 </div>
 
                 <Accordion type="single" collapsible className="w-full space-y-4">
-                    {localSettings.items?.map((item: any, i: number) => (
+                    {localBlock.items?.map((item: any, i: number) => (
                         <AccordionItem key={i} value={`item-${i}`} className="group border border-white/10 bg-white/5 rounded-lg px-4 data-[state=open]:border-accent/40 data-[state=open]:bg-white/10 transition-all relative">
                             {isEditMode && (
                                 <DeleteButton
@@ -173,9 +167,9 @@ export function FAQBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                         onBlur={onTextBlur}
                                         className="w-full"
                                         style={{
-                                            fontFamily: localSettings.fontFamily,
-                                            fontSize: localSettings.fontSize,
-                                            color: localSettings.color
+                                            fontFamily: localBlock.fontFamily,
+                                            fontSize: localBlock.fontSize,
+                                            color: localBlock.color
                                         }}
                                     />
                                 </div>
@@ -189,9 +183,9 @@ export function FAQBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                     onFocus={onTextFocus}
                                     onBlur={onTextBlur}
                                     style={{
-                                        fontFamily: localSettings.fontFamily,
-                                        fontSize: localSettings.fontSize,
-                                        color: localSettings.color
+                                        fontFamily: localBlock.fontFamily,
+                                        fontSize: localBlock.fontSize,
+                                        color: localBlock.color
                                     }}
                                 />
                             </AccordionContent>
@@ -208,3 +202,5 @@ export function FAQBlock({ id, settings, sectionSlug, slug }: BlockProps) {
         </section>
     )
 }
+
+

@@ -75,8 +75,8 @@ export default async function EditPage() {
     const knownBlockTypes = [
         'hero', 'mission', 'services', 'packages', 'how-we-work',
         'team', 'testimonials', 'faq', 'contact', 'case-studies',
-        'rich-text', 'generic-section', 'heading', 'card',
-        'flip-trigger', 'grid-section', 'icon'
+        'footer', 'rich-text', 'generic-section', 'heading', 'card',
+        'flip-trigger', 'grid-section', 'icon', 'text'
     ] as const
 
     const blocks: BlockProps[] = sections.map(section => {
@@ -92,15 +92,14 @@ export default async function EditPage() {
         const layoutContent = version?.layout_json?.content
         const hasLayoutContent = Array.isArray(layoutContent) && layoutContent.length > 0
 
+        // Spread layout_json for content (including HTML-rich fields for rendering)
+        // Then override metadata fields INCLUDING title from website_sections
         const block: BlockProps = {
+            ...(version?.layout_json || {}),
             id: section.id,
             type: blockType as BlockType,
-            content: hasLayoutContent ? layoutContent : (version?.content_html || []),
-            // Merge layout_json root with nested settings for backward compatibility  
-            settings: version?.layout_json ? { ...version.layout_json, ...version.layout_json.settings } : {},
-            is_enabled: section.is_enabled,
-            title: section.title,
-            slug: section.slug
+            slug: section.slug,
+            title: section.title  // Use clean title from website_sections table
         }
 
         return block

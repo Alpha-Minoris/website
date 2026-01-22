@@ -6,7 +6,8 @@ import { CaseStudyGridClient } from './case-study-grid-client'
 import { useEffect, useState } from 'react'
 import { useEditorStore } from '@/lib/stores/editor-store'
 
-export function CaseStudyGridBlock({ id, settings }: BlockProps) {
+export function CaseStudyGridBlock(block: BlockProps) {
+    const { id } = block
     const { isEditMode } = useEditorStore()
     const [caseStudies, setCaseStudies] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
@@ -35,9 +36,11 @@ export function CaseStudyGridBlock({ id, settings }: BlockProps) {
             <CaseStudyGridClient
                 id={id}
                 caseStudies={caseStudies}
-                settings={settings}
+                block={block}
                 isEditMode={isEditMode}
             />
         </section>
     )
 }
+
+

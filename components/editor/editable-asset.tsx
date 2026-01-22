@@ -283,12 +283,12 @@ export function EditableAsset({
                                         Choose / Upload Image
                                     </Button>
 
-                                    {onUpdate && (
+                                    {type === 'image' && onUpdate && (
                                         <div className="flex justify-between items-center border-t border-white/10 pt-3">
                                             <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Mask Editor</p>
                                             <ImageMaskControl
                                                 imageUrl={value}
-                                                settings={maskSettings}
+                                                settings={maskSettings || { x: 50, y: 50, scale: 100, shape: 'square' }}
                                                 onChange={(s) => onUpdate({ maskSettings: s })}
                                             />
                                         </div>

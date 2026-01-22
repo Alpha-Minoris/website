@@ -31,38 +31,38 @@ type CaseStudy = {
 interface CaseStudyGridClientProps {
     id: string
     caseStudies: CaseStudy[]
-    settings?: any
+    block?: any
     isEditMode: boolean
 }
 
-export function CaseStudyGridClient({ id, caseStudies, settings, isEditMode }: CaseStudyGridClientProps) {
+export function CaseStudyGridClient({ id, caseStudies, block, isEditMode }: CaseStudyGridClientProps) {
     const { updateBlock } = useEditorStore()
     const sectionRef = useRef<HTMLDivElement>(null)
     const [activeToolbarPos, setActiveToolbarPos] = useState<{ top: number, left: number } | null>(null)
     const [selectedStudy, setSelectedStudy] = useState<CaseStudy | null>(null)
     const [open, setOpen] = useState(false)
 
-    // Local state for settings
-    const [localSettings, setLocalSettings] = useState<any>({
+    // Local state
+    const [localBlock, setLocalBlock] = useState<any>({
         title: 'Recent Case Studies',
         tagline: 'Real results from real deployments.',
-        ...settings
+        ...block
     })
 
 
     useEffect(() => {
-        if (settings) {
-            setLocalSettings((prev: any) => ({ ...prev, ...settings }))
+        if (block) {
+            setLocalBlock((prev: any) => ({ ...prev, ...block }))
         }
-    }, [settings])
+    }, [block])
 
-    const saveSettings = useCallback((newSettings: any) => {
-        setLocalSettings(newSettings)
-        updateBlock(id, { settings: newSettings })
+    const saveBlock = useCallback((newBlock: any) => {
+        setLocalBlock(newBlock)
+        updateBlock(id, newBlock)
     }, [id, updateBlock])
 
     const handleTextChange = (key: string, value: string) => {
-        saveSettings({ ...localSettings, [key]: value })
+        saveBlock({ ...localBlock, [key]: value })
     }
 
     const onTextFocus = useCallback((rect: DOMRect) => {
@@ -105,7 +105,7 @@ export function CaseStudyGridClient({ id, caseStudies, settings, isEditMode }: C
                 <div className="space-y-4 max-w-2xl">
                     <EditableText
                         tagName="h2"
-                        value={localSettings.title}
+                        value={localBlock.title}
                         onChange={(v) => handleTextChange('title', v)}
                         isEditMode={isEditMode}
                         onFocus={onTextFocus}
@@ -114,7 +114,7 @@ export function CaseStudyGridClient({ id, caseStudies, settings, isEditMode }: C
                     />
                     <EditableText
                         tagName="p"
-                        value={localSettings.tagline}
+                        value={localBlock.tagline}
                         onChange={(v) => handleTextChange('tagline', v)}
                         isEditMode={isEditMode}
                         onFocus={onTextFocus}

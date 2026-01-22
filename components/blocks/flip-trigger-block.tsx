@@ -7,10 +7,11 @@ import { updateBlockContent } from '@/actions/block-actions'
 import { Button } from '@/components/ui/button'
 import { useEditorStore } from '@/lib/stores/editor-store'
 
-export function FlipTriggerBlock({ id, content, settings, sectionId }: BlockProps) {
+export function FlipTriggerBlock(block: BlockProps) {
+    const { id, content, sectionId } = block
     const { isEditMode, setSelectedBlockId, updateBlock } = useEditorStore()
     const textContent = typeof content === 'string' ? content : "Learn more →"
-    const action = settings?.action || 'flip' // flip | reverse
+    const action = block.action || 'flip' // flip | reverse
 
     return (
         <div
@@ -61,3 +62,5 @@ export function FlipTriggerBlock({ id, content, settings, sectionId }: BlockProp
         </div>
     )
 }
+
+

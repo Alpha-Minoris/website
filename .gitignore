@@ -45,3 +45,6 @@ supabase/
 
 # Test scripts
 tests/
+
+# Backups and test data
+backups/

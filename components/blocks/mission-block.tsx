@@ -26,7 +26,7 @@ interface Feature {
     }
 }
 
-interface MissionSettings {
+interface Missionblock {
     title: string
     description: string
     features: Feature[]
@@ -38,14 +38,15 @@ interface MissionSettings {
     level?: 'div' | 'h1' | 'h2' | 'h3' | 'h4' | 'label' | 'p' | 'span'
 }
 
-export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
-    const folder = sectionSlug || slug
+export function MissionBlock(block: BlockProps) {
+    const { id, slug } = block
+    const folder = slug
     const { isEditMode, updateBlock } = useEditorStore()
     const sectionRef = useRef<HTMLElement>(null)
     const [activeToolbarPos, setActiveToolbarPos] = useState<{ top: number, left: number } | null>(null)
 
     // Default Data
-    const defaultData: MissionSettings = {
+    const defaultData: Missionblock = {
         title: 'We bridge the gap between <span class="text-accent">Human Strategy</span> and <span class="text-accent">AI Execution</span>.',
         description: 'Most businesses are drowning in manual tasks while AI tools sit unused. We don\'t just "install AI" — we architect intelligent workflows that free your team to focus on what matters.',
         features: [
@@ -64,39 +65,39 @@ export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
     }
 
     // Local state
-    const [localSettings, setLocalSettings] = useState<MissionSettings>({ ...defaultData, ...settings })
+    const [localBlock, setlocalBlock] = useState<Missionblock>({ ...defaultData, ...block })
 
     // Sync from props
     useEffect(() => {
-        if (settings) {
-            setLocalSettings((prev: any) => ({ ...prev, ...settings }))
+        if (block) {
+            setlocalBlock((prev: any) => ({ ...prev, ...block }))
         }
-    }, [settings])
+    }, [block])
 
-    const saveSettings = useCallback((newSettings: MissionSettings) => {
-        setLocalSettings(newSettings)
-        updateBlock(id, { settings: newSettings })
+    const saveBlock = useCallback((newblock: Missionblock) => {
+        setlocalBlock(newblock)
+        updateBlock(id, { block: newblock })
     }, [id, updateBlock])
 
     const handleTextChange = useCallback((key: string, value: string) => {
-        saveSettings({ ...localSettings, [key]: value })
-    }, [localSettings, saveSettings])
+        saveBlock({ ...localBlock, [key]: value })
+    }, [localBlock, saveBlock])
 
     const handleFeatureChange = useCallback((index: number, updates: Partial<Feature>) => {
-        const features = [...(localSettings.features || [])]
+        const features = [...(localBlock.features || [])]
         features[index] = { ...features[index], ...updates }
-        saveSettings({ ...localSettings, features })
-    }, [localSettings, saveSettings])
+        saveBlock({ ...localBlock, features })
+    }, [localBlock, saveBlock])
 
     const handleAddFeature = () => {
-        const features = [...(localSettings.features || []), { title: 'New Feature', description: 'Feature description', icon: 'CheckCircle' }]
-        saveSettings({ ...localSettings, features })
+        const features = [...(localBlock.features || []), { title: 'New Feature', description: 'Feature description', icon: 'CheckCircle' }]
+        saveBlock({ ...localBlock, features })
     }
 
     const handleRemoveFeature = (index: number) => {
-        const features = [...(localSettings.features || [])]
+        const features = [...(localBlock.features || [])]
         features.splice(index, 1)
-        saveSettings({ ...localSettings, features })
+        saveBlock({ ...localBlock, features })
     }
 
     const onTextFocus = useCallback((rect: DOMRect) => {
@@ -153,45 +154,45 @@ export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                 {/* Left: Text */}
                 <div className={cn(
                     "space-y-8",
-                    localSettings.align === 'left' ? "text-left items-start" :
-                        localSettings.align === 'right' ? "text-right items-end" :
+                    localBlock.align === 'left' ? "text-left items-start" :
+                        localBlock.align === 'right' ? "text-right items-end" :
                             "text-center md:text-left items-center md:items-start"
                 )}>
                     <EditableText
-                        tagName={localSettings.level || 'h2'}
-                        value={localSettings.title}
+                        tagName={localBlock.level || 'h2'}
+                        value={localBlock.title}
                         onChange={(v) => handleTextChange('title', v)}
                         isEditMode={isEditMode}
                         onFocus={onTextFocus}
                         onBlur={onTextBlur}
                         className="text-4xl md:text-5xl font-bold font-heading"
                         style={{
-                            fontFamily: localSettings.fontFamily,
-                            fontSize: localSettings.fontSize,
-                            color: localSettings.color
+                            fontFamily: localBlock.fontFamily,
+                            fontSize: localBlock.fontSize,
+                            color: localBlock.color
                         }}
                     />
 
                     <div className={cn(
                         "space-y-6 text-lg text-muted-foreground leading-relaxed",
-                        localSettings.align === 'center' ? "mx-auto" : ""
+                        localBlock.align === 'center' ? "mx-auto" : ""
                     )}>
                         <EditableText
                             tagName="p"
-                            value={localSettings.description}
+                            value={localBlock.description}
                             onChange={(v) => handleTextChange('description', v)}
                             isEditMode={isEditMode}
                             onFocus={onTextFocus}
                             onBlur={onTextBlur}
                             style={{
-                                fontFamily: localSettings.fontFamily,
-                                fontSize: localSettings.fontSize,
-                                color: localSettings.color
+                                fontFamily: localBlock.fontFamily,
+                                fontSize: localBlock.fontSize,
+                                color: localBlock.color
                             }}
                         />
 
                         <div className="grid gap-4 pt-4">
-                            {localSettings.features?.map((feature: Feature, i: number) => (
+                            {localBlock.features?.map((feature: Feature, i: number) => (
                                 <div key={i} className="flex items-start gap-3 group relative">
                                     <EditableAsset
                                         type={feature.asset?.type || 'icon'}
@@ -218,9 +219,9 @@ export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                             onBlur={onTextBlur}
                                             className="text-white font-semibold"
                                             style={{
-                                                fontFamily: localSettings.fontFamily,
-                                                fontSize: localSettings.fontSize,
-                                                color: localSettings.color
+                                                fontFamily: localBlock.fontFamily,
+                                                fontSize: localBlock.fontSize,
+                                                color: localBlock.color
                                             }}
                                         />
                                         <EditableText
@@ -232,9 +233,9 @@ export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                             onBlur={onTextBlur}
                                             className="text-sm"
                                             style={{
-                                                fontFamily: localSettings.fontFamily,
-                                                fontSize: localSettings.fontSize,
-                                                color: localSettings.color
+                                                fontFamily: localBlock.fontFamily,
+                                                fontSize: localBlock.fontSize,
+                                                color: localBlock.color
                                             }}
                                         />
                                     </div>
@@ -262,3 +263,7 @@ export function MissionBlock({ id, settings, sectionSlug, slug }: BlockProps) {
         </section>
     )
 }
+
+
+
+

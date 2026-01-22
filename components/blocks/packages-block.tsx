@@ -13,8 +13,9 @@ import { EditableText } from '@/components/editor/editable-text'
 import { AddButton, DeleteButton } from '@/components/editor/editable-list-controls'
 import { EditableAsset } from '@/components/editor/editable-asset'
 
-export function PackagesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
-    const folder = sectionSlug || slug
+export function PackagesBlock(block: BlockProps) {
+    const { id, slug } = block
+    const folder = slug
     const { isEditMode, updateBlock } = useEditorStore()
     const sectionRef = useRef<HTMLElement>(null)
     const [activeToolbarPos, setActiveToolbarPos] = useState<{ top: number, left: number } | null>(null)
@@ -63,76 +64,69 @@ export function PackagesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
         ]
     }
 
-    // Local state
-    const [localSettings, setLocalSettings] = useState<any>({ ...defaultData, ...settings })
 
+    // Local state - only initialized once from props, not continuously synced
+    const [localBlock, setlocalBlock] = useState<any>({ ...defaultData, ...block })
 
-    // Sync from props
-    useEffect(() => {
-        if (settings) {
-            setLocalSettings((prev: any) => ({ ...prev, ...settings }))
-        }
-    }, [settings])
-
-    const saveSettings = useCallback((newSettings: any) => {
-        setLocalSettings(newSettings)
-        updateBlock(id, { settings: newSettings })
+    const saveBlock = useCallback((newblock: any) => {
+        setlocalBlock(newblock)
+        updateBlock(id, { block: newblock })
     }, [id, updateBlock])
 
     const handleTextChange = useCallback((key: string, value: string) => {
-        saveSettings({ ...localSettings, [key]: value })
-    }, [localSettings, saveSettings])
+        saveBlock({ ...localBlock, [key]: value })
+    }, [localBlock, saveBlock])
 
     const handlePackageUpdate = useCallback((index: number, updates: any) => {
-        const packages = [...(localSettings.packages || [])]
+        const packages = [...(localBlock.packages || [])]
         packages[index] = { ...packages[index], ...updates }
-        saveSettings({ ...localSettings, packages })
-    }, [localSettings, saveSettings])
+        saveBlock({ ...localBlock, packages })
+    }, [localBlock, saveBlock])
 
     const handleAddPackage = () => {
-        const packages = [...(localSettings.packages || []), {
+        const packages = [...(localBlock.packages || []), {
             id: Math.random().toString(36).substr(2, 9),
             name: 'New Package',
             desc: 'Package description.',
             features: [{ text: 'New Feature', asset: { type: 'icon', value: 'Check' } }]
         }]
-        saveSettings({ ...localSettings, packages })
+        saveBlock({ ...localBlock, packages })
     }
 
     const handleRemovePackage = (index: number) => {
-        const packages = (localSettings.packages || []).filter((_: any, i: number) => i !== index)
-        saveSettings({ ...localSettings, packages })
+        const packages = (localBlock.packages || []).filter((_: any, i: number) => i !== index)
+        saveBlock({ ...localBlock, packages })
     }
 
     const handleAddFeature = (pkgIndex: number) => {
-        const packages = [...(localSettings.packages || [])]
+        const packages = [...(localBlock.packages || [])]
         const currentFeatures = Array.isArray(packages[pkgIndex].features) ? packages[pkgIndex].features : []
         packages[pkgIndex].features = [...currentFeatures, { text: "New Feature", asset: { type: 'icon', value: 'Check' } }]
-        saveSettings({ ...localSettings, packages })
+        saveBlock({ ...localBlock, packages })
     }
 
     const handleRemoveFeature = (pkgIndex: number, featIndex: number) => {
-        const packages = [...(localSettings.packages || [])]
+        const packages = [...(localBlock.packages || [])]
         packages[pkgIndex].features = packages[pkgIndex].features.filter((_: any, i: number) => i !== featIndex)
-        saveSettings({ ...localSettings, packages })
+        saveBlock({ ...localBlock, packages })
     }
 
     const handleFeatureChange = (pkgIndex: number, featIndex: number, updates: any) => {
-        const packages = [...(localSettings.packages || [])]
+        const packages = [...(localBlock.packages || [])]
         const currentFeat = typeof packages[pkgIndex].features[featIndex] === 'string'
             ? { text: packages[pkgIndex].features[featIndex], asset: { type: 'icon', value: 'Check' } }
             : packages[pkgIndex].features[featIndex]
 
         packages[pkgIndex].features[featIndex] = { ...currentFeat, ...updates }
-        saveSettings({ ...localSettings, packages })
+        saveBlock({ ...localBlock, packages })
     }
 
     const toggleHighlight = (index: number) => {
-        const packages = (localSettings.packages || []).map((pkg: any, i: number) => ({
+        const packages = (localBlock.packages || []).map((pkg: any, i: number) => ({
             ...pkg,
             highlight: i === index ? !pkg.highlight : false
         }))
-        saveSettings({ ...localSettings, packages })
+        saveBlock({ ...localBlock, packages })
     }
 
     const onTextFocus = useCallback((rect: DOMRect) => {
@@ -183,42 +177,42 @@ export function PackagesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
             <div className="container mx-auto px-4">
                 <div className={cn(
                     "mb-16 space-y-4",
-                    localSettings.align === 'left' ? "text-left items-start" :
-                        localSettings.align === 'right' ? "text-right items-end" :
+                    localBlock.align === 'left' ? "text-left items-start" :
+                        localBlock.align === 'right' ? "text-right items-end" :
                             "text-center items-center"
                 )}>
                     <EditableText
-                        tagName={localSettings.level || 'h2'}
-                        value={localSettings.title}
+                        tagName={localBlock.level || 'h2'}
+                        value={localBlock.title}
                         onChange={(v) => handleTextChange('title', v)}
                         isEditMode={isEditMode}
                         onFocus={onTextFocus}
                         onBlur={onTextBlur}
                         className="text-3xl md:text-5xl font-bold font-heading"
                         style={{
-                            fontFamily: localSettings.fontFamily,
-                            fontSize: localSettings.fontSize,
-                            color: localSettings.color
+                            fontFamily: localBlock.fontFamily,
+                            fontSize: localBlock.fontSize,
+                            color: localBlock.color
                         }}
                     />
                     <EditableText
                         tagName="p"
-                        value={localSettings.tagline}
+                        value={localBlock.tagline}
                         onChange={(v) => handleTextChange('tagline', v)}
                         isEditMode={isEditMode}
                         onFocus={onTextFocus}
                         onBlur={onTextBlur}
                         className="text-muted-foreground text-lg"
                         style={{
-                            fontFamily: localSettings.fontFamily,
-                            fontSize: localSettings.fontSize,
-                            color: localSettings.color
+                            fontFamily: localBlock.fontFamily,
+                            fontSize: localBlock.fontSize,
+                            color: localBlock.color
                         }}
                     />
                 </div>
 
                 <div className="flex flex-wrap justify-center gap-8 max-w-6xl mx-auto items-stretch">
-                    {localSettings.packages?.map((pkg: any, idx: number) => (
+                    {localBlock.packages?.map((pkg: any, idx: number) => (
                         <TiltCard key={idx} className={cn("w-full md:w-[calc(33.33%-22px)] min-w-[300px] relative group", pkg.highlight ? "z-10" : "")}>
                             {/* Admin Controls */}
                             {isEditMode && (
@@ -255,9 +249,9 @@ export function PackagesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                             onFocus={onTextFocus}
                                             onBlur={onTextBlur}
                                             style={{
-                                                fontFamily: localSettings.fontFamily,
-                                                fontSize: localSettings.fontSize,
-                                                color: localSettings.color
+                                                fontFamily: localBlock.fontFamily,
+                                                fontSize: localBlock.fontSize,
+                                                color: localBlock.color
                                             }}
                                         />
                                     </CardTitle>
@@ -269,9 +263,9 @@ export function PackagesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                             onFocus={onTextFocus}
                                             onBlur={onTextBlur}
                                             style={{
-                                                fontFamily: localSettings.fontFamily,
-                                                fontSize: localSettings.fontSize,
-                                                color: localSettings.color
+                                                fontFamily: localBlock.fontFamily,
+                                                fontSize: localBlock.fontSize,
+                                                color: localBlock.color
                                             }}
                                         />
                                     </CardDescription>
@@ -308,9 +302,9 @@ export function PackagesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
                                                         onBlur={onTextBlur}
                                                         className="flex-1"
                                                         style={{
-                                                            fontFamily: localSettings.fontFamily,
-                                                            fontSize: localSettings.fontSize,
-                                                            color: localSettings.color
+                                                            fontFamily: localBlock.fontFamily,
+                                                            fontSize: localBlock.fontSize,
+                                                            color: localBlock.color
                                                         }}
                                                     />
                                                     <button
@@ -359,3 +353,7 @@ export function PackagesBlock({ id, settings, sectionSlug, slug }: BlockProps) {
         </section>
     )
 }
+
+
+
+

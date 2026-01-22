@@ -84,10 +84,10 @@ function TooltipContentSideBottom({ label }: { label: string }) {
 interface CardToolbarProps {
     blockId: string
     sectionId?: string
-    settings: any
+    block: BlockProps
 }
 
-export function CardToolbar({ blockId, sectionId, settings }: CardToolbarProps) {
+export function CardToolbar({ blockId, sectionId, block }: CardToolbarProps) {
     const { updateBlock: updateStoreBlock, blocks } = useEditorStore()
 
     // Helper to find block content for auto-injection check
@@ -119,15 +119,15 @@ export function CardToolbar({ blockId, sectionId, settings }: CardToolbarProps) 
 
     // Toggle Mode (Simple <-> Flip)
     const toggleMode = async () => {
-        const newMode = settings?.mode === 'flip' ? 'simple' : 'flip'
+        const newMode = block.mode === 'flip' ? 'simple' : 'flip'
 
-        updateStoreBlock(blockId, { settings: { ...settings, mode: newMode } })
-        await updateBlock(blockId, { settings: { ...settings, mode: newMode } })
+        updateStoreBlock(blockId, { ...block, mode: newMode })
+        await updateBlock(blockId, { ...block, mode: newMode })
     }
 
     const handleColorChange = useCallback((key: 'color' | 'backgroundColor' | 'borderColor', value: string) => {
-        updateStoreBlock(blockId, { settings: { ...settings, [key]: value } })
-    }, [blockId, settings, updateStoreBlock])
+        updateStoreBlock(blockId, { ...block, [key]: value })
+    }, [blockId, block, updateStoreBlock])
 
     return (
         <Card className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex items-center gap-1.5 p-1.5 bg-zinc-900/80 border-white/10 backdrop-blur-2xl text-white z-50 shadow-2xl animate-in fade-in slide-in-from-top-2 rounded-full w-auto">
@@ -136,10 +136,10 @@ export function CardToolbar({ blockId, sectionId, settings }: CardToolbarProps) 
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <Button variant="ghost" size="sm" onClick={toggleMode} className="hover:bg-zinc-800 h-8 w-8 p-0 rounded-full">
-                            {settings?.mode === 'flip' ? <FlipHorizontal className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                            {block.mode === 'flip' ? <FlipHorizontal className="w-4 h-4" /> : <Square className="w-4 h-4" />}
                         </Button>
                     </TooltipTrigger>
-                    <TooltipContent><p>{settings?.mode === 'flip' ? "Switch to Simple" : "Switch to Flip"}</p></TooltipContent>
+                    <TooltipContent><p>{block.mode === 'flip' ? "Switch to Simple" : "Switch to Flip"}</p></TooltipContent>
                 </Tooltip>
             </TooltipProvider>
 
@@ -149,13 +149,13 @@ export function CardToolbar({ blockId, sectionId, settings }: CardToolbarProps) 
             <div className="flex items-center gap-1.5">
                 <ColorControl
                     label="Background"
-                    value={settings?.backgroundColor}
+                    value={block.backgroundColor}
                     onChange={(v) => handleColorChange('backgroundColor', v)}
                     defaultHex="transparent"
                 />
                 <ColorControl
                     label="Border"
-                    value={settings?.borderColor}
+                    value={block.borderColor}
                     onChange={(v) => handleColorChange('borderColor', v)}
                     defaultHex="transparent"
                 />
