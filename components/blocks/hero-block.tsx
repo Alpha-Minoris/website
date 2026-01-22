@@ -44,46 +44,60 @@ export function HeroBlock(block: BlockProps) {
     // Local state - entire block
     const [localBlock, setLocalBlock] = useState<any>({ ...defaultData, ...block })
 
+    // Use ref to always get latest state (fixes stale closure in saveBlock)
+    const localBlockRef = useRef(localBlock)
+    useEffect(() => {
+        localBlockRef.current = localBlock
+    }, [localBlock])
+
     const saveBlock = useCallback((updates: any) => {
-        const updatedBlock = { ...localBlock, ...updates }
+        const currentBlock = localBlockRef.current
+        const updatedBlock = { ...currentBlock, ...updates }
         setLocalBlock(updatedBlock)
+        localBlockRef.current = updatedBlock
         updateBlock(id, updatedBlock)
-    }, [id, localBlock, updateBlock])
+    }, [id, updateBlock])
 
     const handleTextChange = useCallback((key: string, value: string) => {
         saveBlock({ [key]: value })
     }, [saveBlock])
 
     const handleLabelChange = useCallback((index: number, updates: any) => {
-        const labels = [...(localBlock.labels || [])]
+        const currentBlock = localBlockRef.current
+        const labels = [...(currentBlock.labels || [])]
         labels[index] = { ...labels[index], ...updates }
         saveBlock({ labels })
-    }, [localBlock, saveBlock])
+    }, [saveBlock])
 
     const handleAddLabel = () => {
-        const labels = [...(localBlock.labels || []), { text: "New Feature", asset: { type: 'icon', value: 'CheckCircle' } }]
+        const currentBlock = localBlockRef.current
+        const labels = [...(currentBlock.labels || []), { text: "New Feature", asset: { type: 'icon', value: 'CheckCircle' } }]
         saveBlock({ labels })
     }
 
     const handleRemoveLabel = (index: number) => {
-        const labels = [...(localBlock.labels || [])]
+        const currentBlock = localBlockRef.current
+        const labels = [...(currentBlock.labels || [])]
         labels.splice(index, 1)
         saveBlock({ labels })
     }
 
     const handleAddLogo = () => {
-        const logos = [...(localBlock.logos || []), { name: "New Partner", asset: { type: 'icon', value: 'Globe' } }]
+        const currentBlock = localBlockRef.current
+        const logos = [...(currentBlock.logos || []), { name: "New Partner", asset: { type: 'icon', value: 'Globe' } }]
         saveBlock({ logos })
     }
 
     const handleRemoveLogo = (index: number) => {
-        const logos = [...(localBlock.logos || [])]
+        const currentBlock = localBlockRef.current
+        const logos = [...(currentBlock.logos || [])]
         logos.splice(index, 1)
         saveBlock({ logos })
     }
 
     const handleLogoUpdate = (index: number, updates: any) => {
-        const logos = [...(localBlock.logos || [])]
+        const currentBlock = localBlockRef.current
+        const logos = [...(currentBlock.logos || [])]
         logos[index] = { ...logos[index], ...updates }
         saveBlock({ logos })
     }

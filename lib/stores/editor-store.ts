@@ -106,11 +106,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     })),
     // Recursive update helper
     updateBlock: (id: string, updates: Partial<BlockProps>) => set((state) => {
+        // DEFENSE LAYER: Unwrap accidental { block: ... } wrapper if present
+        // This prevents corruption from components that accidentally wrap their data
+        let cleanUpdates = updates as any
+        if ('block' in cleanUpdates && typeof cleanUpdates.block === 'object' && cleanUpdates.block !== null) {
+            console.warn('[EditorStore.updateBlock] Unwrapping accidental { block: ... } wrapper')
+            cleanUpdates = cleanUpdates.block
+        }
+
         const updateRecursive = (blocks: BlockProps[]): BlockProps[] => {
             return blocks.map((block) => {
                 if (block.id === id) {
                     // Replace entire block with updates - blocks are FLAT, no settings wrapper
-                    return { ...block, ...updates }
+                    return { ...block, ...cleanUpdates }
                 }
                 // Recurse into content
                 if (Array.isArray(block.content)) {

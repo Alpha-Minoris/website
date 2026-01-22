@@ -32,24 +32,35 @@ export function ServicesBlock(block: BlockProps) {
     // Local state stores ENTIRE FLAT block
     const [localBlock, setLocalBlock] = useState<any>({ ...defaultData, ...block })
 
+    // Use ref to always get latest state (fixes stale closure in saveBlock)
+    const localBlockRef = useRef(localBlock)
+    useEffect(() => {
+        localBlockRef.current = localBlock
+    }, [localBlock])
+
     const saveBlock = useCallback((updates: any) => {
-        const updatedBlock = { ...localBlock, ...updates }
+        // Use ref to get LATEST state, not stale closure value
+        const currentBlock = localBlockRef.current
+        const updatedBlock = { ...currentBlock, ...updates }
         setLocalBlock(updatedBlock)
+        localBlockRef.current = updatedBlock  // Update ref immediately
         updateBlock(id, updatedBlock)  // Send entire FLAT block
-    }, [id, localBlock, updateBlock])
+    }, [id, updateBlock])
 
     const handleTextChange = useCallback((key: string, value: string) => {
         saveBlock({ [key]: value })
     }, [saveBlock])
 
     const handleServiceUpdate = useCallback((index: number, data: any) => {
-        const services = [...(localBlock.services || [])]
+        const currentBlock = localBlockRef.current
+        const services = [...(currentBlock.services || [])]
         services[index] = { ...services[index], ...data }
         saveBlock({ services })
-    }, [localBlock, saveBlock])
+    }, [saveBlock])
 
     const handleAddService = () => {
-        const services = [...(localBlock.services || []), {
+        const currentBlock = localBlockRef.current
+        const services = [...(currentBlock.services || []), {
             id: Math.random().toString(36).substr(2, 9),
             title: 'New Service',
             asset: { type: 'icon', value: 'Zap' },
@@ -61,7 +72,8 @@ export function ServicesBlock(block: BlockProps) {
     }
 
     const handleRemoveService = (index: number) => {
-        const services = [...(localBlock.services || [])]
+        const currentBlock = localBlockRef.current
+        const services = [...(currentBlock.services || [])]
         services.splice(index, 1)
         saveBlock({ services })
     }

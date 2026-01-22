@@ -35,6 +35,11 @@ export function TeamBlock(block: BlockProps) {
     // Local state
     const [localBlock, setlocalBlock] = useState<any>({ ...defaultData, ...block })
 
+    // Use ref to always get latest state (fixes stale closure in saveBlock)
+    const localBlockRef = useRef(localBlock)
+    useEffect(() => {
+        localBlockRef.current = localBlock
+    }, [localBlock])
 
     // Sync from props
     useEffect(() => {
@@ -45,29 +50,34 @@ export function TeamBlock(block: BlockProps) {
 
     const saveBlock = useCallback((newblock: any) => {
         setlocalBlock(newblock)
-        updateBlock(id, { block: newblock })
+        localBlockRef.current = newblock
+        updateBlock(id, newblock)
     }, [id, updateBlock])
 
     const handleTextChange = useCallback((key: string, value: string) => {
-        saveBlock({ ...localBlock, [key]: value })
-    }, [localBlock, saveBlock])
+        const currentBlock = localBlockRef.current
+        saveBlock({ ...currentBlock, [key]: value })
+    }, [saveBlock])
 
     const handleMemberChange = useCallback((index: number, key: string, value: any) => {
-        const members = [...(localBlock.members || [])]
+        const currentBlock = localBlockRef.current
+        const members = [...(currentBlock.members || [])]
         members[index] = { ...members[index], [key]: value }
-        saveBlock({ ...localBlock, members })
-    }, [localBlock, saveBlock])
+        saveBlock({ ...currentBlock, members })
+    }, [saveBlock])
 
     const handleSocialChange = useCallback((memberIdx: number, socialIdx: number, updates: any) => {
-        const members = [...(localBlock.members || [])]
+        const currentBlock = localBlockRef.current
+        const members = [...(currentBlock.members || [])]
         const socials = [...(members[memberIdx].socials || [])]
         socials[socialIdx] = { ...socials[socialIdx], ...updates }
         members[memberIdx] = { ...members[memberIdx], socials }
-        saveBlock({ ...localBlock, members })
-    }, [localBlock, saveBlock])
+        saveBlock({ ...currentBlock, members })
+    }, [saveBlock])
 
     const handleAddSocial = (memberIdx: number) => {
-        const members = [...(localBlock.members || [])]
+        const currentBlock = localBlockRef.current
+        const members = [...(currentBlock.members || [])]
         const socials = [...(members[memberIdx].socials || []), {
             id: Math.random().toString(36).substr(2, 9),
             type: 'icon',
@@ -75,19 +85,21 @@ export function TeamBlock(block: BlockProps) {
             url: '#'
         }]
         members[memberIdx] = { ...members[memberIdx], socials }
-        saveBlock({ ...localBlock, members })
+        saveBlock({ ...currentBlock, members })
     }
 
     const handleRemoveSocial = (memberIdx: number, socialIdx: number) => {
-        const members = [...(localBlock.members || [])]
+        const currentBlock = localBlockRef.current
+        const members = [...(currentBlock.members || [])]
         const socials = [...(members[memberIdx].socials || [])]
         socials.splice(socialIdx, 1)
         members[memberIdx] = { ...members[memberIdx], socials }
-        saveBlock({ ...localBlock, members })
+        saveBlock({ ...currentBlock, members })
     }
 
     const handleAddMember = () => {
-        const members = [...(localBlock.members || []), {
+        const currentBlock = localBlockRef.current
+        const members = [...(currentBlock.members || []), {
             id: Math.random().toString(36).substr(2, 9),
             name: 'New Member',
             role: 'Expert Role',
@@ -96,13 +108,14 @@ export function TeamBlock(block: BlockProps) {
             isHidden: false,
             socials: []
         }]
-        saveBlock({ ...localBlock, members })
+        saveBlock({ ...currentBlock, members })
     }
 
     const handleRemoveMember = (index: number) => {
-        const members = [...(localBlock.members || [])]
+        const currentBlock = localBlockRef.current
+        const members = [...(currentBlock.members || [])]
         members.splice(index, 1)
-        saveBlock({ ...localBlock, members })
+        saveBlock({ ...currentBlock, members })
     }
 
     const onTextFocus = useCallback((rect: DOMRect) => {

@@ -49,6 +49,11 @@ export function CaseStudyGridClient({ id, caseStudies, block, isEditMode }: Case
         ...block
     })
 
+    // Use ref to always get latest state (fixes stale closure in saveBlock)
+    const localBlockRef = useRef(localBlock)
+    useEffect(() => {
+        localBlockRef.current = localBlock
+    }, [localBlock])
 
     useEffect(() => {
         if (block) {
@@ -58,11 +63,13 @@ export function CaseStudyGridClient({ id, caseStudies, block, isEditMode }: Case
 
     const saveBlock = useCallback((newBlock: any) => {
         setLocalBlock(newBlock)
+        localBlockRef.current = newBlock
         updateBlock(id, newBlock)
     }, [id, updateBlock])
 
     const handleTextChange = (key: string, value: string) => {
-        saveBlock({ ...localBlock, [key]: value })
+        const currentBlock = localBlockRef.current
+        saveBlock({ ...currentBlock, [key]: value })
     }
 
     const onTextFocus = useCallback((rect: DOMRect) => {

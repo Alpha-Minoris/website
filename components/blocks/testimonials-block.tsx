@@ -22,14 +22,22 @@ export function TestimonialsBlock(block: BlockProps) {
         ...block
     })
 
+    // Use ref to always get latest state (fixes stale closure in saveBlock)
+    const localBlockRef = useRef(localBlock)
+    useEffect(() => {
+        localBlockRef.current = localBlock
+    }, [localBlock])
+
     const saveBlock = useCallback((updates: any) => {
-        const updatedBlock = { ...localBlock, ...updates }
+        const currentBlock = localBlockRef.current
+        const updatedBlock = { ...currentBlock, ...updates }
         setLocalBlock(updatedBlock)
+        localBlockRef.current = updatedBlock
         updateBlock(id, updatedBlock)
-    }, [id, localBlock, updateBlock])
+    }, [id, updateBlock])
 
     const handleTextChange = (key: string, value: string) => {
-        saveBlock({ ...localBlock, [key]: value })
+        saveBlock({ [key]: value })
     }
 
     const onTextFocus = useCallback((rect: DOMRect) => {

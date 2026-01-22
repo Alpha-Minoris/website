@@ -31,6 +31,11 @@ export function HowWeWorkBlock(block: BlockProps) {
     // Local state
     const [localBlock, setlocalBlock] = useState<any>({ ...defaultData, ...block })
 
+    // Use ref to always get latest state (fixes stale closure in saveBlock)
+    const localBlockRef = useRef(localBlock)
+    useEffect(() => {
+        localBlockRef.current = localBlock
+    }, [localBlock])
 
     // Sync from props
     useEffect(() => {
@@ -41,35 +46,40 @@ export function HowWeWorkBlock(block: BlockProps) {
 
     const saveBlock = useCallback((newblock: any) => {
         setlocalBlock(newblock)
-        updateBlock(id, { block: newblock })
+        localBlockRef.current = newblock
+        updateBlock(id, newblock)
     }, [id, updateBlock])
 
     const handleTextChange = useCallback((key: string, value: string) => {
-        saveBlock({ ...localBlock, [key]: value })
-    }, [localBlock, saveBlock])
+        const currentBlock = localBlockRef.current
+        saveBlock({ ...currentBlock, [key]: value })
+    }, [saveBlock])
 
     const handleStepChange = useCallback((index: number, updates: any) => {
-        const steps = [...(localBlock.steps || [])]
+        const currentBlock = localBlockRef.current
+        const steps = [...(currentBlock.steps || [])]
         steps[index] = { ...steps[index], ...updates }
-        saveBlock({ ...localBlock, steps })
-    }, [localBlock, saveBlock])
+        saveBlock({ ...currentBlock, steps })
+    }, [saveBlock])
 
     const handleAddStep = () => {
-        const nextNum = String((localBlock.steps?.length || 0) + 1).padStart(2, '0')
-        const steps = [...(localBlock.steps || []), {
+        const currentBlock = localBlockRef.current
+        const nextNum = String((currentBlock.steps?.length || 0) + 1).padStart(2, '0')
+        const steps = [...(currentBlock.steps || []), {
             num: nextNum,
             title: 'New Step',
             desc: 'Describe the new step here.',
             asset: { type: 'icon', value: 'Star' }
         }]
-        saveBlock({ ...localBlock, steps })
+        saveBlock({ ...currentBlock, steps })
     }
 
     const handleRemoveStep = (index: number) => {
-        const steps = (localBlock.steps || []).filter((_: any, i: number) => i !== index)
+        const currentBlock = localBlockRef.current
+        const steps = (currentBlock.steps || []).filter((_: any, i: number) => i !== index)
         // Re-index numbers
         const reindexedSteps = steps.map((s: any, i: number) => ({ ...s, num: String(i + 1).padStart(2, '0') }))
-        saveBlock({ ...localBlock, steps: reindexedSteps })
+        saveBlock({ ...currentBlock, steps: reindexedSteps })
     }
 
     const onTextFocus = useCallback((rect: DOMRect) => {

@@ -37,31 +37,42 @@ export function FAQBlock(block: BlockProps) {
     // Local state - entire block
     const [localBlock, setLocalBlock] = useState<any>({ ...defaultData, ...block })
 
+    // Use ref to always get latest state (fixes stale closure in saveBlock)
+    const localBlockRef = useRef(localBlock)
+    useEffect(() => {
+        localBlockRef.current = localBlock
+    }, [localBlock])
+
     const saveBlock = useCallback((updates: any) => {
-        const updatedBlock = { ...localBlock, ...updates }
+        const currentBlock = localBlockRef.current
+        const updatedBlock = { ...currentBlock, ...updates }
         setLocalBlock(updatedBlock)
+        localBlockRef.current = updatedBlock
         updateBlock(id, updatedBlock)
-    }, [id, localBlock, updateBlock])
+    }, [id, updateBlock])
 
     const handleTextChange = useCallback((key: string, value: string) => {
-        saveBlock({ ...localBlock, [key]: value })
-    }, [localBlock, saveBlock])
+        saveBlock({ [key]: value })
+    }, [saveBlock])
 
     const handleItemChange = useCallback((index: number, updates: any) => {
-        const items = [...(localBlock.items || [])]
+        const currentBlock = localBlockRef.current
+        const items = [...(currentBlock.items || [])]
         items[index] = { ...items[index], ...updates }
-        saveBlock({ ...localBlock, items })
-    }, [localBlock, saveBlock])
+        saveBlock({ items })
+    }, [saveBlock])
 
     const handleAddItem = () => {
-        const items = [...(localBlock.items || []), { q: 'New Question', a: 'New Answer', asset: { type: 'icon', value: 'HelpCircle' } }]
-        saveBlock({ ...localBlock, items })
+        const currentBlock = localBlockRef.current
+        const items = [...(currentBlock.items || []), { q: 'New Question', a: 'New Answer', asset: { type: 'icon', value: 'HelpCircle' } }]
+        saveBlock({ items })
     }
 
     const handleRemoveItem = (index: number) => {
-        const items = [...(localBlock.items || [])]
+        const currentBlock = localBlockRef.current
+        const items = [...(currentBlock.items || [])]
         items.splice(index, 1)
-        saveBlock({ ...localBlock, items })
+        saveBlock({ items })
     }
 
     const onTextFocus = useCallback((rect: DOMRect) => {

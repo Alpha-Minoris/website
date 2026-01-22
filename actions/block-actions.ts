@@ -51,15 +51,23 @@ export async function updateBlock(blockId: string, updates: any) {
         const draftVersion = await getOrCreateDraftVersion(sectionRow.id)
         console.log(`[updateBlock] Using draft version ${draftVersion.id}`)
 
-        // SIMPLE: Client sends clean flat data, just filter metadata and save
-        const { id, slug, type, ...layoutData } = updates
+        // DEFENSE LAYER: Unwrap any { block: ... } nesting (handles multiple levels)
+        // This prevents corruption from ever being saved to the database
+        let cleanUpdates = updates
+        while ('block' in cleanUpdates && typeof (cleanUpdates as any).block === 'object' && (cleanUpdates as any).block !== null) {
+            console.warn('[SERVER updateBlock] Unwrapping nested { block: ... } wrapper')
+            cleanUpdates = (cleanUpdates as any).block
+        }
+
+        // Filter metadata and save flat data
+        const { id, slug, type, ...layoutData } = cleanUpdates
 
         console.log(`[SERVER updateBlock] ===== SAVE for ${sectionRow.slug} =====`)
         console.log(`[SERVER updateBlock] Received:`, JSON.stringify(updates, null, 2))
         console.log(`[SERVER updateBlock] Saving:`, JSON.stringify(layoutData, null, 2))
         console.log(`[SERVER updateBlock] =============================================`)
 
-        // Save directly - NO transformation needed, client already sent clean data
+        // Save directly - data is now guaranteed clean and flat
         const { error: updateError } = await supabase
             .from('website_section_versions')
             .update({ layout_json: layoutData })

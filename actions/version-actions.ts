@@ -84,7 +84,7 @@ export async function createPageBackup(
 
     if (includePublished) {
         selectFields += `,
-        website_section_versions_published:website_section_versions!website_sections_published_version_id_fkey (
+        website_section_versions_published:website_section_versions!fk_published_version (
             layout_json,
             content_html
         )`
@@ -92,7 +92,7 @@ export async function createPageBackup(
 
     if (includeDraft) {
         selectFields += `,
-        website_section_versions_draft:website_section_versions!website_sections_draft_version_id_fkey (
+        website_section_versions_draft:website_section_versions!fk_draft_version (
             layout_json,
             content_html
         )`
@@ -194,20 +194,55 @@ export async function deleteBackup(backupId: string) {
 }
 
 /**
- * Restore entire page from a backup
- * @param backupId - ID of the backup to restore
- * @param options - Restore options
- * @param options.restorePublished - Restore published (production) versions (default: true)
- * @param options.restoreDraft - Restore draft (staging) versions (default: false)
+ * Import a backup from uploaded JSON
+ * @param name - Name for the backup
+ * @param snapshotJson - The snapshot data from uploaded JSON file
+ * @param backupType - Whether this backup was from 'published' or 'draft'
  */
-export async function restoreFromBackup(
-    backupId: string,
-    options: {
-        restorePublished?: boolean
-        restoreDraft?: boolean
-    } = {}
+export async function importBackupFromJson(
+    name: string,
+    snapshotJson: any[],
+    backupType: 'published' | 'draft'
 ) {
-    const { restorePublished = true, restoreDraft = false } = options
+    const supabase = await createAdminClient()
+
+    // Validate the snapshot structure
+    if (!Array.isArray(snapshotJson)) {
+        throw new Error('Invalid backup format: expected an array of sections')
+    }
+
+    // Basic validation of each section
+    for (const section of snapshotJson) {
+        if (!section.section_id && !section.title) {
+            throw new Error('Invalid backup format: each section must have section_id or title')
+        }
+    }
+
+    const { data, error } = await supabase
+        .from('website_backups')
+        .insert({
+            name: `[Imported] ${name}`,
+            snapshot_json: snapshotJson,
+            backup_type: backupType
+        })
+        .select()
+        .single()
+
+    if (error) {
+        console.error('[importBackupFromJson] Error:', error)
+        throw error
+    }
+
+    return data
+}
+
+/**
+ * Restore entire page from a backup - ALWAYS restores as DRAFT for safety
+ * The backup_type indicates the SOURCE of the snapshot (published or draft),
+ * but restoration is always to draft. User can then publish if satisfied.
+ * @param backupId - ID of the backup to restore
+ */
+export async function restoreFromBackup(backupId: string) {
     const supabase = await createAdminClient()
 
     // 1. Get the backup
@@ -221,64 +256,62 @@ export async function restoreFromBackup(
     if (!backup.snapshot_json) throw new Error("Backup contains no data")
 
     const snapshots = backup.snapshot_json as any[]
+    const backupType = backup.backup_type as 'published' | 'draft' | 'both'
 
-    // 2. For each snapshot, restore requested versions
+    // 2. For each snapshot, restore as DRAFT
     for (const snap of snapshots) {
-        const updates: any = {}
+        // Determine which layout to use - prefer matching backup_type, fallback to other
+        let layoutJson = null
+        let contentHtml = null
 
-        // Restore published version
-        if (restorePublished && snap.published_layout_json) {
-            const { data: newPubVersion, error: createError } = await supabase
-                .from('website_section_versions')
-                .insert({
-                    section_id: snap.section_id,
-                    status: 'published',
-                    layout_json: snap.published_layout_json,
-                    content_html: snap.published_content_html
-                })
-                .select()
-                .single()
-
-            if (createError) {
-                console.error(`[restoreFromBackup] Error creating published version for ${snap.section_id}:`, createError)
-                continue
-            }
-
-            updates.published_version_id = newPubVersion.id
+        if (backupType === 'published' && snap.published_layout_json) {
+            layoutJson = snap.published_layout_json
+            contentHtml = snap.published_content_html
+        } else if (backupType === 'draft' && snap.draft_layout_json) {
+            layoutJson = snap.draft_layout_json
+            contentHtml = snap.draft_content_html
+        } else if (snap.published_layout_json) {
+            // Fallback to published if available
+            layoutJson = snap.published_layout_json
+            contentHtml = snap.published_content_html
+        } else if (snap.draft_layout_json) {
+            // Fallback to draft if available
+            layoutJson = snap.draft_layout_json
+            contentHtml = snap.draft_content_html
         }
 
-        // Restore draft version
-        if (restoreDraft && snap.draft_layout_json) {
-            const { data: newDraftVersion, error: createError } = await supabase
-                .from('website_section_versions')
-                .insert({
-                    section_id: snap.section_id,
-                    status: 'draft',
-                    layout_json: snap.draft_layout_json,
-                    content_html: snap.draft_content_html
-                })
-                .select()
-                .single()
-
-            if (createError) {
-                console.error(`[restoreFromBackup] Error creating draft version for ${snap.section_id}:`, createError)
-                continue
-            }
-
-            updates.draft_version_id = newDraftVersion.id
+        if (!layoutJson) {
+            console.warn(`[restoreFromBackup] No layout data for section ${snap.section_id}, skipping`)
+            continue
         }
 
-        // Apply updates only if we have something to update
-        if (Object.keys(updates).length > 0) {
-            await supabase
-                .from('website_sections')
-                .update(updates)
-                .eq('id', snap.section_id)
+        // Create new DRAFT version
+        const { data: newDraftVersion, error: createError } = await supabase
+            .from('website_section_versions')
+            .insert({
+                section_id: snap.section_id,
+                status: 'draft',
+                layout_json: layoutJson,
+                content_html: contentHtml
+            })
+            .select()
+            .single()
+
+        if (createError) {
+            console.error(`[restoreFromBackup] Error creating draft version for ${snap.section_id}:`, createError)
+            continue
         }
+
+        // Update section to point to new draft
+        await supabase
+            .from('website_sections')
+            .update({ draft_version_id: newDraftVersion.id })
+            .eq('id', snap.section_id)
     }
 
     revalidatePath('/')
-    return { success: true }
+    revalidatePath('/edit')
+    return { success: true, restoredAsDraft: true }
 }
 
 /**

@@ -33,41 +33,53 @@ export function FooterBlock(block: BlockProps) {
     // Toolbar Positioning
     const [activeToolbarPos, setActiveToolbarPos] = useState<{ top: number, left: number } | null>(null)
 
+    // Use ref to always get latest state (fixes stale closure in saveBlock)
+    const localBlockRef = useRef(localBlock)
+    useEffect(() => {
+        localBlockRef.current = localBlock
+    }, [localBlock])
+
     // Sync from props
     useEffect(() => {
         setLocalBlock(block || {})
     }, [block])
 
     const saveBlock = useCallback((updates: any) => {
-        const updatedBlock = { ...localBlock, ...updates }
+        const currentBlock = localBlockRef.current
+        const updatedBlock = { ...currentBlock, ...updates }
         setLocalBlock(updatedBlock)
+        localBlockRef.current = updatedBlock
         updateBlock(id, updatedBlock)
-    }, [id, localBlock, updateBlock])
+    }, [id, updateBlock])
 
     const handleTextChange = useCallback((key: string, value: string) => {
-        if (localBlock[key] === value) return
+        const currentBlock = localBlockRef.current
+        if (currentBlock[key] === value) return
         saveBlock({ [key]: value })
-    }, [localBlock, saveBlock])
+    }, [saveBlock])
 
     const handleListChange = useCallback((listKey: string, index: number, value: string) => {
-        const list = [...(localBlock[listKey] || [])]
+        const currentBlock = localBlockRef.current
+        const list = [...(currentBlock[listKey] || [])]
         if (list[index] === value) return
         list[index] = value
         saveBlock({ [listKey]: list })
-    }, [localBlock, saveBlock])
+    }, [saveBlock])
 
     const handleAddItem = (listKey: string) => {
+        const currentBlock = localBlockRef.current
         const defaultValue = "New Item"
-        const list = [...(localBlock[listKey] || [])]
+        const list = [...(currentBlock[listKey] || [])]
         const newItem = `<a href="#">${defaultValue}</a>`
         list.push(newItem)
-        saveBlock({ ...localBlock, [listKey]: list })
+        saveBlock({ [listKey]: list })
     }
 
     const handleRemoveItem = (listKey: string, index: number) => {
-        const list = [...(localBlock[listKey] || [])]
+        const currentBlock = localBlockRef.current
+        const list = [...(currentBlock[listKey] || [])]
         list.splice(index, 1)
-        saveBlock({ ...localBlock, [listKey]: list })
+        saveBlock({ [listKey]: list })
     }
 
     const handleLogoUpdate = (type: 'icon' | 'image', value: string) => {

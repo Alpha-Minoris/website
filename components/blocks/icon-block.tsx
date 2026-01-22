@@ -71,18 +71,20 @@ export function IconBlock(block: BlockProps) {
     if (isHidden && !isEditMode) return null
 
     const handleUpdate = (updates: any) => {
+        // Send FLAT updates - no { block: ... } wrapper
         const newblock = { ...block, ...updates }
-        updateBlock(id, { block: newblock })
+        updateBlock(id, newblock)
     }
 
     const handleChange = (type: 'icon' | 'image', value: string) => {
+        // Send FLAT updates - no { block: ... } wrapper
         const newblock = {
             ...block,
             type,
             value,
             iconName: type === 'icon' ? value : undefined
         }
-        updateBlock(id, { block: newblock })
+        updateBlock(id, newblock as any)
     }
 
     return (

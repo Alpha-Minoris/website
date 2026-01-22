@@ -68,65 +68,80 @@ export function PackagesBlock(block: BlockProps) {
     // Local state - only initialized once from props, not continuously synced
     const [localBlock, setlocalBlock] = useState<any>({ ...defaultData, ...block })
 
+    // Use ref to always get latest state (fixes stale closure in saveBlock)
+    const localBlockRef = useRef(localBlock)
+    useEffect(() => {
+        localBlockRef.current = localBlock
+    }, [localBlock])
+
     const saveBlock = useCallback((newblock: any) => {
         setlocalBlock(newblock)
-        updateBlock(id, { block: newblock })
+        localBlockRef.current = newblock
+        updateBlock(id, newblock)
     }, [id, updateBlock])
 
     const handleTextChange = useCallback((key: string, value: string) => {
-        saveBlock({ ...localBlock, [key]: value })
-    }, [localBlock, saveBlock])
+        const currentBlock = localBlockRef.current
+        saveBlock({ ...currentBlock, [key]: value })
+    }, [saveBlock])
 
     const handlePackageUpdate = useCallback((index: number, updates: any) => {
-        const packages = [...(localBlock.packages || [])]
+        const currentBlock = localBlockRef.current
+        const packages = [...(currentBlock.packages || [])]
         packages[index] = { ...packages[index], ...updates }
-        saveBlock({ ...localBlock, packages })
-    }, [localBlock, saveBlock])
+        saveBlock({ ...currentBlock, packages })
+    }, [saveBlock])
 
     const handleAddPackage = () => {
-        const packages = [...(localBlock.packages || []), {
+        const currentBlock = localBlockRef.current
+        const packages = [...(currentBlock.packages || []), {
             id: Math.random().toString(36).substr(2, 9),
             name: 'New Package',
             desc: 'Package description.',
             features: [{ text: 'New Feature', asset: { type: 'icon', value: 'Check' } }]
         }]
-        saveBlock({ ...localBlock, packages })
+        saveBlock({ ...currentBlock, packages })
     }
 
     const handleRemovePackage = (index: number) => {
-        const packages = (localBlock.packages || []).filter((_: any, i: number) => i !== index)
-        saveBlock({ ...localBlock, packages })
+        const currentBlock = localBlockRef.current
+        const packages = (currentBlock.packages || []).filter((_: any, i: number) => i !== index)
+        saveBlock({ ...currentBlock, packages })
     }
 
     const handleAddFeature = (pkgIndex: number) => {
-        const packages = [...(localBlock.packages || [])]
+        const currentBlock = localBlockRef.current
+        const packages = [...(currentBlock.packages || [])]
         const currentFeatures = Array.isArray(packages[pkgIndex].features) ? packages[pkgIndex].features : []
         packages[pkgIndex].features = [...currentFeatures, { text: "New Feature", asset: { type: 'icon', value: 'Check' } }]
-        saveBlock({ ...localBlock, packages })
+        saveBlock({ ...currentBlock, packages })
     }
 
     const handleRemoveFeature = (pkgIndex: number, featIndex: number) => {
-        const packages = [...(localBlock.packages || [])]
+        const currentBlock = localBlockRef.current
+        const packages = [...(currentBlock.packages || [])]
         packages[pkgIndex].features = packages[pkgIndex].features.filter((_: any, i: number) => i !== featIndex)
-        saveBlock({ ...localBlock, packages })
+        saveBlock({ ...currentBlock, packages })
     }
 
     const handleFeatureChange = (pkgIndex: number, featIndex: number, updates: any) => {
-        const packages = [...(localBlock.packages || [])]
+        const currentBlock = localBlockRef.current
+        const packages = [...(currentBlock.packages || [])]
         const currentFeat = typeof packages[pkgIndex].features[featIndex] === 'string'
             ? { text: packages[pkgIndex].features[featIndex], asset: { type: 'icon', value: 'Check' } }
             : packages[pkgIndex].features[featIndex]
 
         packages[pkgIndex].features[featIndex] = { ...currentFeat, ...updates }
-        saveBlock({ ...localBlock, packages })
+        saveBlock({ ...currentBlock, packages })
     }
 
     const toggleHighlight = (index: number) => {
-        const packages = (localBlock.packages || []).map((pkg: any, i: number) => ({
+        const currentBlock = localBlockRef.current
+        const packages = (currentBlock.packages || []).map((pkg: any, i: number) => ({
             ...pkg,
             highlight: i === index ? !pkg.highlight : false
         }))
-        saveBlock({ ...localBlock, packages })
+        saveBlock({ ...currentBlock, packages })
     }
 
     const onTextFocus = useCallback((rect: DOMRect) => {

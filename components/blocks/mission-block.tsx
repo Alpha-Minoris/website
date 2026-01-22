@@ -67,6 +67,12 @@ export function MissionBlock(block: BlockProps) {
     // Local state
     const [localBlock, setlocalBlock] = useState<Missionblock>({ ...defaultData, ...block })
 
+    // Use ref to always get latest state (fixes stale closure in saveBlock)
+    const localBlockRef = useRef(localBlock)
+    useEffect(() => {
+        localBlockRef.current = localBlock
+    }, [localBlock])
+
     // Sync from props
     useEffect(() => {
         if (block) {
@@ -76,28 +82,33 @@ export function MissionBlock(block: BlockProps) {
 
     const saveBlock = useCallback((newblock: Missionblock) => {
         setlocalBlock(newblock)
-        updateBlock(id, { block: newblock })
+        localBlockRef.current = newblock
+        updateBlock(id, newblock as any)
     }, [id, updateBlock])
 
     const handleTextChange = useCallback((key: string, value: string) => {
-        saveBlock({ ...localBlock, [key]: value })
-    }, [localBlock, saveBlock])
+        const currentBlock = localBlockRef.current
+        saveBlock({ ...currentBlock, [key]: value })
+    }, [saveBlock])
 
     const handleFeatureChange = useCallback((index: number, updates: Partial<Feature>) => {
-        const features = [...(localBlock.features || [])]
+        const currentBlock = localBlockRef.current
+        const features = [...(currentBlock.features || [])]
         features[index] = { ...features[index], ...updates }
-        saveBlock({ ...localBlock, features })
-    }, [localBlock, saveBlock])
+        saveBlock({ ...currentBlock, features })
+    }, [saveBlock])
 
     const handleAddFeature = () => {
-        const features = [...(localBlock.features || []), { title: 'New Feature', description: 'Feature description', icon: 'CheckCircle' }]
-        saveBlock({ ...localBlock, features })
+        const currentBlock = localBlockRef.current
+        const features = [...(currentBlock.features || []), { title: 'New Feature', description: 'Feature description', icon: 'CheckCircle' }]
+        saveBlock({ ...currentBlock, features })
     }
 
     const handleRemoveFeature = (index: number) => {
-        const features = [...(localBlock.features || [])]
+        const currentBlock = localBlockRef.current
+        const features = [...(currentBlock.features || [])]
         features.splice(index, 1)
-        saveBlock({ ...localBlock, features })
+        saveBlock({ ...currentBlock, features })
     }
 
     const onTextFocus = useCallback((rect: DOMRect) => {

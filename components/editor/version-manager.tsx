@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     History,
@@ -18,7 +18,10 @@ import {
     Clock,
     CheckCircle2,
     AlertCircle,
-    Lock
+    Lock,
+    FileJson,
+    FileText,
+    Upload
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -31,7 +34,8 @@ import {
     deleteVersion,
     deleteBackup,
     revertToVersion,
-    restoreFromBackup
+    restoreFromBackup,
+    importBackupFromJson
 } from '@/actions/version-actions'
 import { ConfirmationModal } from '@/components/ui/confirmation-modal'
 import { useEditorStore } from '@/lib/stores/editor-store'
@@ -65,6 +69,108 @@ function formatBytes(bytes: number): string {
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
 }
 
+// Download backup as JSON file
+function downloadBackupAsJson(backup: any) {
+    const jsonString = JSON.stringify(backup.snapshot_json, null, 2)
+    const blob = new Blob([jsonString], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `backup_${backup.name.replace(/[^a-z0-9]/gi, '_')}_${new Date(backup.created_at).toISOString().split('T')[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+}
+
+// Convert backup to Markdown format
+function convertBackupToMarkdown(backup: any): string {
+    const sections = backup.snapshot_json as any[]
+    const lines: string[] = [
+        `# Website Backup: ${backup.name}`,
+        ``,
+        `**Created:** ${new Date(backup.created_at).toLocaleString()}`,
+        `**Type:** ${backup.backup_type}`,
+        `**Sections:** ${sections.length}`,
+        ``,
+        `---`,
+        ``
+    ]
+
+    sections.forEach((section, index) => {
+        lines.push(`## ${index + 1}. ${section.title || 'Untitled Section'}`)
+        lines.push(``)
+
+        // Published version
+        if (section.published_layout_json) {
+            lines.push(`### Published Version`)
+            lines.push(``)
+            const layout = section.published_layout_json
+            if (layout.title) lines.push(`**Title:** ${layout.title}`)
+            if (layout.subtitle) lines.push(`**Subtitle:** ${layout.subtitle}`)
+            if (layout.description) lines.push(`**Description:** ${layout.description}`)
+
+            // Handle items/features/services arrays
+            const itemArrays = ['items', 'features', 'services', 'packages', 'members', 'steps', 'testimonials']
+            itemArrays.forEach(key => {
+                if (Array.isArray(layout[key]) && layout[key].length > 0) {
+                    lines.push(``)
+                    lines.push(`**${key.charAt(0).toUpperCase() + key.slice(1)}:**`)
+                    layout[key].forEach((item: any, i: number) => {
+                        const itemTitle = item.title || item.name || item.question || `Item ${i + 1}`
+                        const itemDesc = item.description || item.answer || item.content || ''
+                        lines.push(`- **${itemTitle}**${itemDesc ? `: ${itemDesc.substring(0, 200)}${itemDesc.length > 200 ? '...' : ''}` : ''}`)
+                    })
+                }
+            })
+            lines.push(``)
+        }
+
+        // Draft version
+        if (section.draft_layout_json) {
+            lines.push(`### Draft Version`)
+            lines.push(``)
+            const layout = section.draft_layout_json
+            if (layout.title) lines.push(`**Title:** ${layout.title}`)
+            if (layout.subtitle) lines.push(`**Subtitle:** ${layout.subtitle}`)
+            if (layout.description) lines.push(`**Description:** ${layout.description}`)
+
+            const itemArrays = ['items', 'features', 'services', 'packages', 'members', 'steps', 'testimonials']
+            itemArrays.forEach(key => {
+                if (Array.isArray(layout[key]) && layout[key].length > 0) {
+                    lines.push(``)
+                    lines.push(`**${key.charAt(0).toUpperCase() + key.slice(1)}:**`)
+                    layout[key].forEach((item: any, i: number) => {
+                        const itemTitle = item.title || item.name || item.question || `Item ${i + 1}`
+                        const itemDesc = item.description || item.answer || item.content || ''
+                        lines.push(`- **${itemTitle}**${itemDesc ? `: ${itemDesc.substring(0, 200)}${itemDesc.length > 200 ? '...' : ''}` : ''}`)
+                    })
+                }
+            })
+            lines.push(``)
+        }
+
+        lines.push(`---`)
+        lines.push(``)
+    })
+
+    return lines.join('\n')
+}
+
+// Download backup as Markdown file
+function downloadBackupAsMarkdown(backup: any) {
+    const markdown = convertBackupToMarkdown(backup)
+    const blob = new Blob([markdown], { type: 'text/markdown' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `backup_${backup.name.replace(/[^a-z0-9]/gi, '_')}_${new Date(backup.created_at).toISOString().split('T')[0]}.md`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+}
+
 interface VersionManagerProps {
     isOpen: boolean
     onClose: () => void
@@ -80,11 +186,11 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
     const [allVersionsMap, setAllVersionsMap] = useState<Map<string, any[]>>(new Map())
     const [backupName, setBackupName] = useState('')
 
-    // Backup Options State
-    const [backupOptions, setBackupOptions] = useState({
-        includePublished: true,
-        includeDraft: false
-    })
+    // Backup source type: 'published' or 'draft' (not both)
+    const [backupSourceType, setBackupSourceType] = useState<'published' | 'draft'>('published')
+
+    // File input ref for JSON import
+    const fileInputRef = React.useRef<HTMLInputElement>(null)
 
     // Restore Options State
     const [restoreModalOpen, setRestoreModalOpen] = useState(false)
@@ -169,14 +275,50 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
         if (!backupName.trim()) return
         setLoading(true)
         try {
-            await createPageBackup(backupName, backupOptions)
+            // Convert sourceType to options format expected by createPageBackup
+            const options = {
+                includePublished: backupSourceType === 'published',
+                includeDraft: backupSourceType === 'draft'
+            }
+            await createPageBackup(backupName, options)
             setBackupName('')
-            setBackupOptions({ includePublished: true, includeDraft: false })
+            setBackupSourceType('published')
             await refreshData()
         } catch (err) {
             console.error(err)
+            alert(err instanceof Error ? err.message : 'Failed to create backup')
         } finally {
             setLoading(false)
+        }
+    }
+
+    const handleImportJson = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0]
+        if (!file) return
+
+        setLoading(true)
+        try {
+            const text = await file.text()
+            const json = JSON.parse(text)
+
+            // Prompt for name 
+            const name = prompt('Enter a name for this imported backup:', file.name.replace('.json', ''))
+            if (!name) {
+                setLoading(false)
+                return
+            }
+
+            await importBackupFromJson(name, json, backupSourceType)
+            await refreshData()
+            alert('Backup imported successfully!')
+        } catch (err) {
+            console.error(err)
+            alert(err instanceof Error ? err.message : 'Failed to import backup')
+        } finally {
+            setLoading(false)
+            if (fileInputRef.current) {
+                fileInputRef.current.value = ''
+            }
         }
     }
 
@@ -218,10 +360,8 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
         if (!restoreOptions) return
         setLoading(true)
         try {
-            await restoreFromBackup(restoreOptions.backupId, {
-                restorePublished: restoreOptions.restorePublished,
-                restoreDraft: restoreOptions.restoreDraft
-            })
+            // Always restores as draft for safety - user can publish if satisfied
+            await restoreFromBackup(restoreOptions.backupId)
             setRestoreModalOpen(false)
             setRestoreOptions(null)
             window.location.reload()
@@ -332,7 +472,7 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
                                                 )}
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-xs font-bold truncate leading-tight">
-                                                        {section.title || section.type?.replace(/-/g, ' ') || 'Untitled'}
+                                                        {section.displayTitle || section.slug?.replace(/-/g, ' ') || 'Untitled'}
                                                     </p>
                                                     <p className="text-[9px] text-zinc-500 font-mono mt-0.5 opacity-60">
                                                         ID: {section.id.slice(0, 8)}
@@ -361,7 +501,7 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
                                         <div className="flex items-center justify-between pb-6 border-b border-white/5">
                                             <div>
                                                 <h3 className="text-lg font-bold text-white leading-none">
-                                                    {blocks.find(b => b.id === focusSectionId)?.slug?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || "Section History"}
+                                                    {blocks.find(b => b.id === focusSectionId)?.displayTitle || blocks.find(b => b.id === focusSectionId)?.slug?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || "Section History"}
                                                 </h3>
                                                 <p className="text-[10px] text-zinc-500 tracking-wider font-mono mt-1">
                                                     {versions.length} version{versions.length !== 1 ? 's' : ''} ·
@@ -547,49 +687,72 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
                                             </div>
                                         </div>
                                         <div className="flex flex-col gap-3">
-                                            {/* Backup Options */}
+                                            {/* Source Type Toggle */}
                                             <div className="flex items-center gap-4 bg-black/40 p-3 rounded-2xl ring-1 ring-white/10">
-                                                <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Include:</span>
-                                                <label className="flex items-center gap-2 cursor-pointer group">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={backupOptions.includePublished}
-                                                        onChange={(e) => setBackupOptions({ ...backupOptions, includePublished: e.target.checked })}
-                                                        className="w-4 h-4 rounded border-white/20 bg-white/5 text-green-500 focus:ring-green-500/50"
-                                                    />
-                                                    <span className="text-xs text-zinc-400 group-hover:text-white transition-colors">
-                                                        Published <span className="text-green-500">(Production)</span>
-                                                    </span>
-                                                </label>
-                                                <label className="flex items-center gap-2 cursor-pointer group">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={backupOptions.includeDraft}
-                                                        onChange={(e) => setBackupOptions({ ...backupOptions, includeDraft: e.target.checked })}
-                                                        className="w-4 h-4 rounded border-white/20 bg-white/5 text-yellow-500 focus:ring-yellow-500/50"
-                                                    />
-                                                    <span className="text-xs text-zinc-400 group-hover:text-white transition-colors">
-                                                        Draft <span className="text-yellow-500">(Staging)</span>
-                                                    </span>
-                                                </label>
+                                                <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Source:</span>
+                                                <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setBackupSourceType('published')}
+                                                        className={cn(
+                                                            "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                                                            backupSourceType === 'published'
+                                                                ? "bg-green-500/20 text-green-400 ring-1 ring-green-500/30"
+                                                                : "text-zinc-500 hover:text-white"
+                                                        )}
+                                                    >
+                                                        Published
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setBackupSourceType('draft')}
+                                                        className={cn(
+                                                            "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                                                            backupSourceType === 'draft'
+                                                                ? "bg-yellow-500/20 text-yellow-400 ring-1 ring-yellow-500/30"
+                                                                : "text-zinc-500 hover:text-white"
+                                                        )}
+                                                    >
+                                                        Draft
+                                                    </button>
+                                                </div>
                                             </div>
 
-                                            {/* Backup Name Input */}
+                                            {/* Backup Name Input and Buttons */}
                                             <div className="flex items-center gap-3 bg-black/40 p-2 pl-4 rounded-full ring-1 ring-white/10 focus-within:ring-blue-500/50 transition-all">
                                                 <Input
                                                     placeholder="Label this snapshot..."
-                                                    className="h-8 w-64 bg-transparent border-0 text-sm focus-visible:ring-0 placeholder:text-zinc-600 font-medium"
+                                                    className="h-8 w-48 bg-transparent border-0 text-sm focus-visible:ring-0 placeholder:text-zinc-600 font-medium"
                                                     value={backupName}
                                                     onChange={(e) => setBackupName(e.target.value)}
                                                 />
                                                 <Button
                                                     size="sm"
                                                     onClick={handleCreateBackup}
-                                                    disabled={loading || !backupName.trim() || (!backupOptions.includePublished && !backupOptions.includeDraft)}
+                                                    disabled={loading || !backupName.trim()}
                                                     className="h-8 px-4 bg-indigo-500 hover:bg-indigo-400 text-white font-bold rounded-full shadow-lg transition-all disabled:opacity-30"
                                                 >
                                                     <Download className="w-3.5 h-3.5 mr-2" />
                                                     Snapshot
+                                                </Button>
+
+                                                {/* JSON Import Button */}
+                                                <input
+                                                    ref={fileInputRef}
+                                                    type="file"
+                                                    accept=".json"
+                                                    className="hidden"
+                                                    onChange={handleImportJson}
+                                                />
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    disabled={loading}
+                                                    className="h-8 px-3 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 font-bold rounded-full transition-all disabled:opacity-30"
+                                                >
+                                                    <Upload className="w-3.5 h-3.5 mr-1.5" />
+                                                    Import
                                                 </Button>
                                             </div>
                                         </div>
@@ -606,7 +769,18 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
                                                 <div className="flex items-start justify-between relative z-10">
                                                     <div className="flex flex-col">
                                                         <h4 className="font-bold text-white group-hover:text-indigo-300 transition-colors text-lg truncate pr-16">{b.name}</h4>
-                                                        <div className="flex items-center gap-2 mt-2">
+                                                        <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                                            {/* Backup Type Badge */}
+                                                            <span className={cn(
+                                                                "px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest ring-1",
+                                                                b.backup_type === 'published'
+                                                                    ? "bg-green-500/10 text-green-400 ring-green-500/20"
+                                                                    : b.backup_type === 'draft'
+                                                                        ? "bg-yellow-500/10 text-yellow-400 ring-yellow-500/20"
+                                                                        : "bg-blue-500/10 text-blue-400 ring-blue-500/20"
+                                                            )}>
+                                                                {b.backup_type === 'published' ? '🟢 Production' : b.backup_type === 'draft' ? '🟡 Draft' : '🔵 Both'}
+                                                            </span>
                                                             <span className="px-2 py-0.5 rounded-md bg-white/5 text-[9px] font-black uppercase tracking-widest text-zinc-500 ring-1 ring-white/5">
                                                                 {Array.isArray(b.snapshot_json) ? b.snapshot_json.length : 0} Sections
                                                             </span>
@@ -618,6 +792,29 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
                                                     </div>
                                                 </div>
 
+                                                {/* Download buttons row */}
+                                                <div className="flex items-center gap-2 relative z-10">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="flex-1 h-8 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 border-0 font-bold text-[10px] uppercase tracking-wider rounded-xl transition-all"
+                                                        onClick={() => downloadBackupAsJson(b)}
+                                                    >
+                                                        <FileJson className="w-3.5 h-3.5 mr-1.5" />
+                                                        JSON
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="flex-1 h-8 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 hover:text-purple-300 border-0 font-bold text-[10px] uppercase tracking-wider rounded-xl transition-all"
+                                                        onClick={() => downloadBackupAsMarkdown(b)}
+                                                    >
+                                                        <FileText className="w-3.5 h-3.5 mr-1.5" />
+                                                        Markdown
+                                                    </Button>
+                                                </div>
+
+                                                {/* Action buttons row */}
                                                 <div className="flex items-center gap-3 mt-auto relative z-10">
                                                     <Button
                                                         variant="secondary"
@@ -626,14 +823,14 @@ export function VersionManager({ isOpen, onClose }: VersionManagerProps) {
                                                         onClick={() => {
                                                             setRestoreOptions({
                                                                 backupId: b.id,
-                                                                restorePublished: true,
-                                                                restoreDraft: false
+                                                                restorePublished: false,
+                                                                restoreDraft: true
                                                             })
                                                             setRestoreModalOpen(true)
                                                         }}
                                                     >
                                                         <RotateCcw className="w-4 h-4 mr-2" />
-                                                        Restore Point
+                                                        Restore as Draft
                                                     </Button>
                                                     <Button
                                                         variant="ghost"
