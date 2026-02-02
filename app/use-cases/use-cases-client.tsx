@@ -47,7 +47,7 @@ interface FooterBlockData {
 }
 
 export default function UseCasesClient({ footerBlock }: { footerBlock?: FooterBlockData | null }) {
-  const useCases: UseCase[] = pocData.use_cases;
+  const useCases = pocData.use_cases as UseCase[];
   
   // All original state from index.html
   const [bookmarks, setBookmarks] = useState<string[]>([]);
