@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Home, Search, Bookmark, Filter, X, Share2 } from 'lucide-react';
+import { Home, Search, Bookmark, Filter, X, Share2, ChevronDown } from 'lucide-react';
+import { FooterStatic } from './footer-static';
 import pocData from '@/poc_database.json';
 
 interface UseCase {
@@ -32,7 +33,20 @@ interface UseCase {
   tags: string[];
 }
 
-export default function UseCasesClient() {
+interface FooterBlockData {
+  logoType?: 'icon' | 'image';
+  logoValue?: string;
+  brandTitle?: string;
+  tagline?: string;
+  legalLinks?: string[];
+  companyLines?: string[];
+  sitemapLinks?: string[];
+  socialLinks?: string[];
+  legalTitle?: string;
+  companyTitle?: string;
+}
+
+export default function UseCasesClient({ footerBlock }: { footerBlock?: FooterBlockData | null }) {
   const useCases: UseCase[] = pocData.use_cases;
   
   // All original state from index.html
@@ -40,7 +54,10 @@ export default function UseCasesClient() {
   const [selectedUseCase, setSelectedUseCase] = useState<UseCase | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('roi-desc');
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const [showBookmarksOnly, setShowBookmarksOnly] = useState(false);
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: '', visible: false });
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
   
   // Filter states - all original
   const [industryFilters, setIndustryFilters] = useState<string[]>([]);
@@ -55,6 +72,17 @@ export default function UseCasesClient() {
   useEffect(() => {
     const saved = localStorage.getItem('useCaseBookmarks');
     if (saved) setBookmarks(JSON.parse(saved));
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
+        setShowSortDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   // Toggle bookmark
@@ -77,6 +105,7 @@ export default function UseCasesClient() {
   // Original filtering logic - EXACTLY as in index.html
   const filteredUseCases = useMemo(() => {
     let filtered = useCases.filter(uc => {
+      if (showBookmarksOnly && !bookmarks.includes(uc.id)) return false;
       if (industryFilters.length && !industryFilters.includes(uc.industry)) return false;
       if (functionFilters.length && !functionFilters.includes(uc.function)) return false;
       if (aiTypeFilters.length && !aiTypeFilters.includes(uc.aiType)) return false;
@@ -108,7 +137,15 @@ export default function UseCasesClient() {
     }
 
     return filtered;
-  }, [useCases, industryFilters, functionFilters, aiTypeFilters, timeFilters, roiMin, impactMin, complexityMax, searchQuery, sortBy]);
+  }, [useCases, industryFilters, functionFilters, aiTypeFilters, timeFilters, roiMin, impactMin, complexityMax, searchQuery, sortBy, showBookmarksOnly, bookmarks]);
+
+  // Sort options
+  const sortOptions = [
+    { value: 'roi-desc', label: 'Highest ROI' },
+    { value: 'impact-desc', label: 'Highest Impact' },
+    { value: 'complexity-asc', label: 'Lowest Complexity' },
+    { value: 'title-asc', label: 'Title A-Z' },
+  ];
 
   // Get unique values - EXACTLY as in index.html
   const industries = [...new Set(useCases.map(u => u.industry))].sort();
@@ -178,16 +215,15 @@ export default function UseCasesClient() {
       </nav>
 
       {/* Hero Section - With gradient */}
-      <section className="pt-32 pb-16 px-4 sm:px-6 lg:px-8" style={{ background: 'radial-gradient(ellipse at top, rgba(6, 182, 212, 0.12) 0%, transparent 60%)' }}>
+      <section className="pt-32 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20 mb-6">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.08] mb-6 backdrop-blur-sm">
             <span className="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
             <span className="text-accent text-sm font-medium tracking-wide uppercase">AI Strategy, Built and Delivered</span>
           </div>
           
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight font-heading text-white">
-            Discover AI Use Cases.<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent to-accent/70 glow-text">End to End.</span>
+            Discover AI Use Cases
           </h1>
           
           <p className="text-muted-foreground text-lg sm:text-xl max-w-2xl mx-auto mb-10">
@@ -198,7 +234,7 @@ export default function UseCasesClient() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
             <Button 
               onClick={scrollToDashboard}
-              className="bg-accent hover:bg-accent/90 text-white rounded-full px-7 py-3 text-base font-medium transition-all hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgba(6,182,212,0.4)]"
+              className="bg-accent hover:bg-accent/90 text-white rounded-full px-7 py-3 text-base font-medium transition-all hover:-translate-y-0.5"
             >
               <Search className="w-4 h-4 mr-2" />
               Explore Use Cases
@@ -206,7 +242,7 @@ export default function UseCasesClient() {
             <Button 
               variant="outline"
               onClick={() => document.getElementById('analytics')?.scrollIntoView({ behavior: 'smooth' })}
-              className="border-white/20 text-white hover:bg-white/10 rounded-full px-7 py-3 text-base font-medium transition-all"
+              className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] text-white hover:bg-white/[0.08] rounded-full px-7 py-3 text-base font-medium transition-all"
             >
               <Filter className="w-4 h-4 mr-2" />
               View Analytics
@@ -215,35 +251,23 @@ export default function UseCasesClient() {
           
           {/* Quick Stats - Glass cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
-            <div className="bg-card/40 border border-border/50 rounded-xl p-5 text-center backdrop-blur-sm">
+            <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-5 text-center shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
               <div className="text-3xl font-bold text-accent font-heading drop-shadow-[0_0_20px_rgba(6,182,212,0.3)]">{useCases.length}</div>
               <div className="text-muted-foreground text-sm mt-1">Use Cases</div>
             </div>
-            <div className="bg-card/40 border border-border/50 rounded-xl p-5 text-center backdrop-blur-sm">
+            <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-5 text-center shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
               <div className="text-3xl font-bold text-accent font-heading drop-shadow-[0_0_20px_rgba(6,182,212,0.3)]">{industries.length}</div>
               <div className="text-muted-foreground text-sm mt-1">Industries</div>
             </div>
-            <div className="bg-card/40 border border-border/50 rounded-xl p-5 text-center backdrop-blur-sm">
+            <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-5 text-center shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
               <div className="text-3xl font-bold text-accent font-heading drop-shadow-[0_0_20px_rgba(6,182,212,0.3)]">{functions.length}</div>
               <div className="text-muted-foreground text-sm mt-1">Functions</div>
             </div>
-            <div className="bg-card/40 border border-border/50 rounded-xl p-5 text-center backdrop-blur-sm">
+            <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-5 text-center shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
               <div className="text-3xl font-bold text-accent font-heading drop-shadow-[0_0_20px_rgba(6,182,212,0.3)]">{avgROI}</div>
               <div className="text-muted-foreground text-sm mt-1">Avg ROI</div>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Logo Marquee */}
-      <section className="py-8 border-y border-border/30 overflow-hidden">
-        <div className="flex animate-scroll whitespace-nowrap">
-          {['OpenAI', 'Anthropic', 'Microsoft', 'Google', 'Amazon', 'Meta', 'NVIDIA', 'HuggingFace', 'LangChain', 'Claude', 'ChatGPT', 'Copilot'].map((logo, i) => (
-            <span key={i} className="text-2xl font-bold text-muted-foreground/40 mx-8 hover:text-muted-foreground hover:grayscale-0 transition-all grayscale">{logo}</span>
-          ))}
-          {['OpenAI', 'Anthropic', 'Microsoft', 'Google', 'Amazon', 'Meta', 'NVIDIA', 'HuggingFace', 'LangChain', 'Claude', 'ChatGPT', 'Copilot'].map((logo, i) => (
-            <span key={`dup-${i}`} className="text-2xl font-bold text-muted-foreground/40 mx-8 hover:text-muted-foreground hover:grayscale-0 transition-all grayscale">{logo}</span>
-          ))}
         </div>
       </section>
 
@@ -259,7 +283,7 @@ export default function UseCasesClient() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search use cases by keyword, industry, or function..."
-                className="w-full bg-card/50 border border-border/50 rounded-full pl-14 pr-6 py-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/50 transition-all"
+                className="w-full bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-full pl-14 pr-6 py-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/50 focus:bg-white/[0.05] transition-all shadow-[0_8px_32px_rgba(0,0,0,0.12)]"
               />
             </div>
           </div>
@@ -267,7 +291,7 @@ export default function UseCasesClient() {
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Filters Sidebar - Glass card */}
             <aside className="lg:w-72 flex-shrink-0">
-              <div className="bg-card/40 border border-border/50 rounded-2xl p-6 backdrop-blur-xl sticky top-24">
+              <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-6 sticky top-24 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="font-semibold text-lg text-white">Filters</h3>
                   <button onClick={clearFilters} className="text-accent text-sm hover:underline">Clear All</button>
@@ -281,8 +305,8 @@ export default function UseCasesClient() {
                       <label key={ind} className="flex items-center gap-3 text-sm text-muted-foreground cursor-pointer hover:text-accent transition-colors py-1">
                         <div 
                           onClick={() => toggleFilter('industry', ind, industryFilters, setIndustryFilters)}
-                          className={`w-[18px] h-[18px] rounded border flex items-center justify-center transition-all ${
-                            industryFilters.includes(ind) ? 'bg-accent border-accent' : 'border-accent/30 hover:border-accent/60'
+                          className={`w-[18px] h-[18px] rounded flex items-center justify-center transition-all ${
+                            industryFilters.includes(ind) ? 'bg-accent' : 'bg-white/[0.05] border border-white/[0.1] hover:border-accent/50'
                           }`}
                         >
                           {industryFilters.includes(ind) && <span className="text-white text-xs">✓</span>}
@@ -342,7 +366,7 @@ export default function UseCasesClient() {
                     max="5"
                     value={roiMin}
                     onChange={(e) => setRoiMin(parseInt(e.target.value))}
-                    className="w-full h-1 bg-accent/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(6,182,212,0.5)]"
+                    className="w-full h-1 bg-white/[0.1] rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent"
                   />
                   <div className="flex justify-between text-xs text-muted-foreground mt-2">
                     <span>1+</span>
@@ -360,7 +384,7 @@ export default function UseCasesClient() {
                     max="5"
                     value={impactMin}
                     onChange={(e) => setImpactMin(parseInt(e.target.value))}
-                    className="w-full h-1 bg-accent/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(6,182,212,0.5)]"
+                    className="w-full h-1 bg-white/[0.1] rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent"
                   />
                   <div className="flex justify-between text-xs text-muted-foreground mt-2">
                     <span>1+</span>
@@ -378,7 +402,7 @@ export default function UseCasesClient() {
                     max="5"
                     value={complexityMax}
                     onChange={(e) => setComplexityMax(parseInt(e.target.value))}
-                    className="w-full h-1 bg-accent/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(6,182,212,0.5)]"
+                    className="w-full h-1 bg-white/[0.1] rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent"
                   />
                   <div className="flex justify-between text-xs text-muted-foreground mt-2">
                     <span>1</span>
@@ -411,24 +435,61 @@ export default function UseCasesClient() {
             
             {/* Results Grid */}
             <main className="flex-1">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
                 <div className="text-muted-foreground">
-                  Showing {filteredUseCases.length} of {useCases.length} use cases
+                  Showing {filteredUseCases.length} of {showBookmarksOnly ? bookmarks.length : useCases.length} use cases
                 </div>
-                <select 
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="bg-card/50 border border-border/50 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-accent/50"
-                >
-                  <option value="roi-desc">Highest ROI</option>
-                  <option value="impact-desc">Highest Impact</option>
-                  <option value="complexity-asc">Lowest Complexity</option>
-                  <option value="title-asc">Title A-Z</option>
-                </select>
+                <div className="flex items-center gap-3">
+                  {/* Bookmark Filter Button */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowBookmarksOnly(!showBookmarksOnly)}
+                    className={`rounded-xl gap-2 ${showBookmarksOnly ? 'bg-accent/20 text-accent' : 'text-muted-foreground hover:text-white'}`}
+                  >
+                    <Bookmark className={`w-4 h-4 ${showBookmarksOnly ? 'fill-current' : ''}`} />
+                    {showBookmarksOnly ? 'Show All' : 'Bookmarks'}
+                    {bookmarks.length > 0 && (
+                      <span className="ml-1 text-xs bg-accent/20 px-2 py-0.5 rounded-full">{bookmarks.length}</span>
+                    )}
+                  </Button>
+
+                  {/* Custom Sort Dropdown */}
+                  <div className="relative" ref={sortDropdownRef}>
+                    <button
+                      onClick={() => setShowSortDropdown(!showSortDropdown)}
+                      className="flex items-center gap-2 bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-xl px-4 py-2 text-sm hover:bg-white/[0.05] transition-colors shadow-[0_8px_32px_rgba(0,0,0,0.12)]"
+                    >
+                      {sortOptions.find(o => o.value === sortBy)?.label}
+                      <ChevronDown className={`w-4 h-4 transition-transform ${showSortDropdown ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    {showSortDropdown && (
+                      <div className="absolute right-0 top-full mt-2 w-48 bg-white/[0.05] backdrop-blur-2xl border border-white/[0.08] rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.24)] overflow-hidden z-50">
+                        {sortOptions.map((option) => (
+                          <button
+                            key={option.value}
+                            onClick={() => {
+                              setSortBy(option.value);
+                              setShowSortDropdown(false);
+                            }}
+                            className={`w-full text-left px-4 py-3 text-sm transition-colors ${
+                              sortBy === option.value 
+                                ? 'bg-accent/20 text-accent' 
+                                : 'text-muted-foreground hover:bg-white/[0.05] hover:text-white'
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
               
               {filteredUseCases.length === 0 ? (
-                <div className="text-center py-20">
+                <div className="text-center py-20 bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-8 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
                   <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground">No use cases match your filters.</p>
                   <Button onClick={clearFilters} className="mt-4 bg-accent hover:bg-accent/90">Clear Filters</Button>
@@ -439,14 +500,14 @@ export default function UseCasesClient() {
                     <div
                       key={uc.id}
                       onClick={() => setSelectedUseCase(uc)}
-                      className="group bg-card/40 border border-border/50 rounded-2xl p-6 backdrop-blur-sm hover:border-accent/40 hover:shadow-[0_0_30px_rgba(6,182,212,0.1)] transition-all cursor-pointer hover:scale-[1.02]"
+                      className="group bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.12)] hover:bg-white/[0.05] transition-all cursor-pointer hover:scale-[1.02]"
                     >
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex gap-2 flex-wrap">
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-purple-500/15 text-purple-400 border border-purple-500/30">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-purple-500/10 text-purple-400">
                             {uc.industry}
                           </span>
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-accent/15 text-accent border border-accent/30">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-accent/10 text-accent">
                             {uc.function}
                           </span>
                         </div>
@@ -461,10 +522,18 @@ export default function UseCasesClient() {
                       <h3 className="font-semibold text-lg mb-2 line-clamp-2 text-white group-hover:text-accent transition-colors">{uc.title}</h3>
                       <p className="text-muted-foreground text-sm mb-4 line-clamp-2">{uc.description}</p>
                       
-                      <div className="flex items-center gap-4 mb-4 text-sm">
+                      <div className="flex items-center gap-4 mb-4 text-sm flex-wrap">
                         <div className="flex items-center gap-1">
-                          <span className="text-muted-foreground">ROI:</span>
-                          <span className="text-accent">{'★'.repeat(uc.roiRating)}{'☆'.repeat(5-uc.roiRating)}</span>
+                          <span className="text-muted-foreground text-xs">ROI:</span>
+                          <span className="text-yellow-400">{'★'.repeat(uc.roiRating)}{'☆'.repeat(5-uc.roiRating)}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-muted-foreground text-xs">Impact:</span>
+                          <span className="text-yellow-400">{'★'.repeat(uc.impactRating)}{'☆'.repeat(5-uc.impactRating)}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-muted-foreground text-xs">Complexity:</span>
+                          <span className="text-yellow-400">{'★'.repeat(uc.complexityRating)}{'☆'.repeat(5-uc.complexityRating)}</span>
                         </div>
                       </div>
                       
@@ -481,7 +550,7 @@ export default function UseCasesClient() {
                       
                       <div className="mt-4 pt-4 border-t border-border/30 flex gap-2 flex-wrap">
                         {uc.tags.slice(0, 3).map((tag, i) => (
-                          <span key={i} className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-accent/10 text-accent/90 border border-accent/20">
+                          <span key={i} className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-white/[0.05] text-accent/90">
                             {tag}
                           </span>
                         ))}
@@ -500,34 +569,71 @@ export default function UseCasesClient() {
         <div className="max-w-7xl mx-auto">
           <h2 className="text-3xl font-bold mb-10 text-center text-white font-heading">Analytics Overview</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-card/40 border border-border/50 rounded-2xl p-6 backdrop-blur-sm">
-              <h3 className="font-semibold mb-4 text-white">Use Cases by Industry</h3>
-              <div className="space-y-3">
-                {Object.entries(stats.by_industry).slice(0, 8).map(([industry, count]) => (
-                  <div key={industry} className="flex items-center gap-3">
-                    <span className="text-sm text-muted-foreground w-40 truncate">{industry}</span>
-                    <div className="flex-1 h-2 bg-border/30 rounded-full overflow-hidden">
-                      <div className="h-full bg-accent rounded-full" style={{ width: `${(count as number / useCases.length) * 100}%` }} />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Industry Distribution - Donut Chart Style */}
+            <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
+              <h3 className="font-semibold mb-6 text-white text-center">By Industry</h3>
+              <div className="grid grid-cols-2 gap-3">
+                {Object.entries(stats.by_industry).map(([industry, count], i) => (
+                  <div key={industry} className="flex items-center gap-2">
+                    <div 
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: `hsl(${195 + i * 30}, 86%, ${30 + (i % 3) * 15}%)` }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs text-muted-foreground truncate">{industry}</div>
+                      <div className="text-sm font-medium text-white">{count as number}</div>
                     </div>
-                    <span className="text-sm font-medium text-white w-8">{count}</span>
                   </div>
                 ))}
               </div>
             </div>
-            
-            <div className="bg-card/40 border border-border/50 rounded-2xl p-6 backdrop-blur-sm">
-              <h3 className="font-semibold mb-4 text-white">Use Cases by Function</h3>
+
+            {/* Function Distribution */}
+            <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
+              <h3 className="font-semibold mb-6 text-white text-center">By Function</h3>
               <div className="space-y-3">
                 {Object.entries(stats.by_function).map(([func, count]) => (
-                  <div key={func} className="flex items-center gap-3">
-                    <span className="text-sm text-muted-foreground w-40 truncate">{func}</span>
-                    <div className="flex-1 h-2 bg-border/30 rounded-full overflow-hidden">
-                      <div className="h-full bg-accent rounded-full" style={{ width: `${(count as number / useCases.length) * 100}%` }} />
+                  <div key={func} className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground truncate flex-1">{func}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-20 h-1.5 bg-border/30 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-accent rounded-full"
+                          style={{ width: `${(count as number / 32) * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-medium text-white w-6 text-right">{count as number}</span>
                     </div>
-                    <span className="text-sm font-medium text-white w-8">{count}</span>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* AI Type & Investment Stats */}
+            <div className="space-y-6">
+              <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
+                <h3 className="font-semibold mb-4 text-white">By AI Technology</h3>
+                <div className="space-y-2">
+                  {Object.entries(stats.by_ai_type).map(([type, count]) => (
+                    <div key={type} className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{type}</span>
+                      <span className="text-white font-medium">{count as number}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
+                <h3 className="font-semibold mb-4 text-white">By Investment Range</h3>
+                <div className="space-y-2">
+                  {Object.entries(stats.by_investment_range).map(([range, count]) => (
+                    <div key={range} className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{range}</span>
+                      <span className="text-white font-medium">{count as number}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -535,53 +641,32 @@ export default function UseCasesClient() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border/30 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-accent/70 flex items-center justify-center shadow-glow">
-                <span className="text-white font-bold text-lg">α</span>
-              </div>
-              <span className="font-semibold text-lg text-white font-heading">Use Case Overview</span>
-            </div>
-            <div className="text-muted-foreground text-sm">
-              Building the automated future, one use case at a time.
-            </div>
-            <div className="flex gap-6">
-              <a href="#" className="text-muted-foreground hover:text-accent transition-colors"><Linkedin className="w-5 h-5" /></a>
-              <a href="#" className="text-muted-foreground hover:text-accent transition-colors"><Share2 className="w-5 h-5" /></a>
-            </div>
-          </div>
-          <div className="mt-8 pt-8 border-t border-border/20 text-center text-muted-foreground text-sm">
-            © {new Date().getFullYear()} Use Case Overview. All rights reserved.
-          </div>
-        </div>
-      </footer>
+      <FooterStatic footerBlock={footerBlock} />
 
       {/* Detail Modal */}
       {selectedUseCase && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div 
-            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setSelectedUseCase(null)}
           />
-          <div className="relative bg-card/90 border border-border/50 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-auto p-6 md:p-10 backdrop-blur-xl">
+          <div className="relative bg-white/[0.03] backdrop-blur-2xl border border-white/[0.08] rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-auto p-6 md:p-10 shadow-[0_8px_32px_rgba(0,0,0,0.24)]">
             <button 
               onClick={() => setSelectedUseCase(null)}
-              className="absolute top-4 right-4 w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center hover:border-accent transition-colors"
+              className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/[0.05] border border-white/[0.1] flex items-center justify-center hover:bg-white/[0.1] transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
 
             <div className="mb-6">
               <div className="flex gap-2 mb-4 flex-wrap">
-                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-purple-500/15 text-purple-400 border border-purple-500/30">
+                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-purple-500/10 text-purple-400">
                   {selectedUseCase.industry}
                 </span>
-                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-accent/15 text-accent border border-accent/30">
+                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-accent/10 text-accent">
                   {selectedUseCase.function}
                 </span>
-                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-accent/10 text-accent/80 border border-accent/20">
+                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-white/[0.05] text-accent/80">
                   {selectedUseCase.aiType}
                 </span>
               </div>
@@ -591,16 +676,16 @@ export default function UseCasesClient() {
 
             {/* Stats */}
             <div className="grid grid-cols-3 gap-4 mb-8">
-              <div className="bg-card/50 border border-border/50 rounded-xl p-4 text-center">
-                <div className="text-2xl font-bold text-accent drop-shadow-[0_0_20px_rgba(6,182,212,0.3)]">{selectedUseCase.roiRating}/5</div>
+              <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-xl p-4 text-center shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
+                <div className="text-2xl font-bold text-yellow-400">{'★'.repeat(selectedUseCase.roiRating)}{'☆'.repeat(5-selectedUseCase.roiRating)}</div>
                 <div className="text-sm text-muted-foreground mt-1">ROI Rating</div>
               </div>
-              <div className="bg-card/50 border border-border/50 rounded-xl p-4 text-center">
-                <div className="text-2xl font-bold text-accent drop-shadow-[0_0_20px_rgba(6,182,212,0.3)]">{selectedUseCase.impactRating}/5</div>
+              <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-xl p-4 text-center shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
+                <div className="text-2xl font-bold text-yellow-400">{'★'.repeat(selectedUseCase.impactRating)}{'☆'.repeat(5-selectedUseCase.impactRating)}</div>
                 <div className="text-sm text-muted-foreground mt-1">Impact</div>
               </div>
-              <div className="bg-card/50 border border-border/50 rounded-xl p-4 text-center">
-                <div className="text-2xl font-bold text-accent drop-shadow-[0_0_20px_rgba(6,182,212,0.3)]">{selectedUseCase.complexityRating}/5</div>
+              <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-xl p-4 text-center shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
+                <div className="text-2xl font-bold text-yellow-400">{'★'.repeat(selectedUseCase.complexityRating)}{'☆'.repeat(5-selectedUseCase.complexityRating)}</div>
                 <div className="text-sm text-muted-foreground mt-1">Complexity</div>
               </div>
             </div>
@@ -612,10 +697,10 @@ export default function UseCasesClient() {
                 Case Studies
               </h3>
               {selectedUseCase.caseStudies.map((cs, i) => (
-                <div key={i} className="bg-card/50 border border-border/50 rounded-xl p-4 mb-4">
+                <div key={i} className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-xl p-4 mb-4 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
                   <div className="flex justify-between items-start mb-2">
                     <span className="font-medium text-white">{cs.company}</span>
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs bg-accent/10 text-accent/80 border border-accent/20">{cs.vendor}</span>
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs bg-white/[0.05] text-accent/80">{cs.vendor}</span>
                   </div>
                   <p className="text-muted-foreground text-sm mb-2">{cs.outcome}</p>
                   {cs.metrics && (
@@ -733,20 +818,11 @@ export default function UseCasesClient() {
       )}
 
       {/* Toast */}
-      <div className={`fixed bottom-6 right-6 z-50 bg-card/90 border border-border/50 rounded-xl px-6 py-4 shadow-lg backdrop-blur-xl transition-all duration-300 ${toast.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}>
+      <div className={`fixed bottom-6 right-6 z-50 bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-xl px-6 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.24)] transition-all duration-300 ${toast.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}>
         {toast.message}
       </div>
 
-      {/* Animation styles */}
-      <style jsx>{`
-        @keyframes scroll {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .animate-scroll {
-          animation: scroll 30s linear infinite;
-        }
-      `}</style>
+
     </div>
   );
 }

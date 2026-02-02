@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import UseCasesClient from "./use-cases-client";
+import { getSections, getVersions } from '@/lib/cache/page-cache'
 
 export const metadata: Metadata = {
   title: "Use Cases - Alpha Minoris",
@@ -9,6 +10,19 @@ export const metadata: Metadata = {
 // PUBLIC ROUTE: No authentication required
 export const dynamic = 'force-static';
 
-export default function UseCasesPage() {
-  return <UseCasesClient />;
+export default async function UseCasesPage() {
+  // Fetch footer data from database
+  let footerBlock = null;
+  try {
+    const sections = await getSections();
+    const footerSection = sections?.find(s => s.slug === 'footer');
+    if (footerSection) {
+      const versions = await getVersions([footerSection.id]);
+      footerBlock = versions?.[0]?.layout_json || null;
+    }
+  } catch (e) {
+    console.error('Error fetching footer:', e);
+  }
+
+  return <UseCasesClient footerBlock={footerBlock} />;
 }
