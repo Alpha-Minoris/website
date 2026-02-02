@@ -107,8 +107,6 @@ export default function middleware(request: NextRequest) {
  * - /view/* (all view routes)
  * - /use-cases (new use cases page)
  */
-export default middleware
-
 export const config = {
     matcher: [
         '/',
